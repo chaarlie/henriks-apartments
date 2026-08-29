@@ -225,7 +225,7 @@ export const content: SiteContent = {
     ],
     background: bucketPhoto(
       "17.jpg",
-      "Fully equipped kitchen with black tile, granite counters and open shelving",
+      "Pool terrace with sun loungers and cabanas at the property in El Batey, Sosúa",
     ),
   },
 

@@ -23,9 +23,7 @@ function loadPsv(): Promise<PsvModules> {
     psvPromise = Promise.all([
       import("@photo-sphere-viewer/core"),
       import("@photo-sphere-viewer/virtual-tour-plugin"),
-      // @ts-expect-error css module imports have no types
       import("@photo-sphere-viewer/core/index.css"),
-      // @ts-expect-error css module imports have no types
       import("@photo-sphere-viewer/virtual-tour-plugin/index.css"),
     ]).then(([core, tour]) => ({
       Viewer: core.Viewer,

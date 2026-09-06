@@ -9,6 +9,7 @@
 @theme {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", monospace;
+  --font-spec: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
 
   --color-page: #eaf1f8; /* section backgrounds */
   --color-surface: #ffffff; /* cards, header, footer */
@@ -41,4 +42,43 @@ body {
 /* Large display type uses tight negative tracking; helper for headlines. */
 .text-balance-pretty {
   text-wrap: pretty;
+}
+
+/*
+  Visible keyboard focus for every interactive element. Unlayered, so it wins
+  over Tailwind's layered `outline-none` utility. :focus-visible keeps the ring
+  keyboard-only; the reset below suppresses it on pointer/mouse focus.
+*/
+:focus-visible {
+  outline: 2px solid var(--color-deep);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Staggered fade/rise for the hero "getting around" panel rows. Reduced-motion
+   (below) collapses the duration, so it snaps to the final state with no flash. */
+@keyframes heroFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Honor the user's reduced-motion preference: neutralize transitions,
+   animations, and smooth scrolling for anyone who asks for less movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

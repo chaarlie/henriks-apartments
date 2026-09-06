@@ -53,13 +53,18 @@ export interface EstimateLine {
 export interface Estimate {
   nights: number;
   months: number;
+  mode: "nightly" | "monthly";
   total: number;
   lines: EstimateLine[];
   totalDisplay: string;
 }
 
-/** Date-range cost estimate: rent × whole months + metered power + deposit,
- *  less the long-stay discount. Months are billed from nights (30.4/mo). */
+/** Stays of this many nights or more are billed monthly; shorter ones nightly. */
+export const MONTHLY_FROM_NIGHTS = 28;
+
+/** Date-range cost estimate. Short stays bill by the night (utilities included);
+ *  long stays bill by whole months + metered power + deposit, less the long-stay
+ *  discount. Months are billed from nights (30.4/mo). */
 export function computeEstimate(
   unit: Unit,
   start: number | null,
@@ -68,15 +73,27 @@ export function computeEstimate(
   content: SiteContent,
 ): Estimate {
   const n = nights(start, end);
+  const d = (usd: number) => display(usd, currency, content.fxRate);
+
+  // ── Short / vacation stay → nightly ──
+  if (n > 0 && n < MONTHLY_FROM_NIGHTS) {
+    const rent = unit.priceNightlyUsd * n;
+    const lines: EstimateLine[] = [
+      { key: "rent", label: `${n} night${n > 1 ? "s" : ""} × ${d(unit.priceNightlyUsd)}`, value: d(rent) },
+      { key: "utilities", label: "Power, water & 200 Mbps fibre", value: "Included", teal: true },
+    ];
+    return { nights: n, months: 0, mode: "nightly", total: rent, lines, totalDisplay: d(rent) };
+  }
+
+  // ── Long stay (or no dates yet) → monthly ──
   const months = n ? Math.max(1, Math.ceil(n / 30.4)) : 1;
   const rent = unit.priceUsd * months;
   const power = content.power.baseUsd * months;
   const pct = content.discounts
-    .filter((d) => months >= d.months)
-    .reduce((best, d) => Math.max(best, d.pct), 0);
+    .filter((dd) => months >= dd.months)
+    .reduce((best, dd) => Math.max(best, dd.pct), 0);
   const discount = Math.round(rent * pct);
   const total = rent + power + unit.priceUsd - discount;
-  const d = (usd: number) => display(usd, currency, content.fxRate);
 
   const lines: EstimateLine[] = [
     { key: "rent", label: `Rent, ${months} × ${d(unit.priceUsd)}`, value: d(rent) },
@@ -93,5 +110,5 @@ export function computeEstimate(
     });
   }
 
-  return { nights: n, months, total, lines, totalDisplay: d(total) };
+  return { nights: n, months, mode: "monthly", total, lines, totalDisplay: d(total) };
 }

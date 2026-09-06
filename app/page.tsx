@@ -7,6 +7,7 @@ import Search from "@/app/components/landing/Search";
 import ApartmentCards from "@/app/components/landing/ApartmentCards";
 import Amenities from "@/app/components/landing/Amenities";
 import Calendar from "@/app/components/Calendar";
+import LocationMap from "@/app/components/landing/LocationMap";
 
 export default function Home() {
   return (
@@ -22,6 +23,7 @@ export default function Home() {
           eyebrow="Any range, any length"
           sub="Tap a move-in date, then a move-out date. Your range filters the apartments above and carries through to each unit."
         />
+        <LocationMap />
       </main>
       <Footer />
     </BookingProvider>

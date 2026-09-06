@@ -95,6 +95,8 @@ export interface Unit {
   tagline: string;
   /** monthly rent in USD (the canonical price; DOP is derived via fxRate) */
   priceUsd: number;
+  /** nightly rate in USD for short/vacation stays */
+  priceNightlyUsd: number;
   /** first available day, ISO (yyyy-mm-dd) */
   availableFrom: string;
   spec: { area: string; bath: string; sleeps: string };
@@ -371,6 +373,7 @@ export const content: SiteContent = {
       name: "Studio",
       tagline: "El Batey · courtyard view",
       priceUsd: 650,
+      priceNightlyUsd: 58,
       availableFrom: "2026-09-05",
       spec: { area: "34 m²", bath: "1 bath", sleeps: "Sleeps 2" },
       chips: ["Sleeps 2", "Split AC", "200 Mbps"],
@@ -409,6 +412,7 @@ export const content: SiteContent = {
       name: "One-bedroom suite",
       tagline: "Sosúa · pool & 24/7 gym",
       priceUsd: 950, // PLACEHOLDER — listing was for sale (€171,330), set the real monthly rent
+      priceNightlyUsd: 82, // PLACEHOLDER
       availableFrom: "2026-09-01",
       spec: { area: "90 m²", bath: "1.5 baths", sleeps: "Sleeps 2" },
       chips: ["90 m²", "Pool & gym", "Furnished"],
@@ -448,6 +452,7 @@ export const content: SiteContent = {
       name: "Two bedroom",
       tagline: "El Batey · partial ocean view",
       priceUsd: 1250,
+      priceNightlyUsd: 110,
       availableFrom: "2026-10-01",
       spec: { area: "78 m²", bath: "2 baths", sleeps: "Sleeps 5" },
       chips: ["Sleeps 5", "Roof access", "Ocean view"],
@@ -491,6 +496,7 @@ export const content: SiteContent = {
       name: "Garden loft",
       tagline: "El Batey · garden view",
       priceUsd: 850,
+      priceNightlyUsd: 72,
       availableFrom: "2026-09-01",
       spec: { area: "44 m²", bath: "1 bath", sleeps: "Sleeps 2" },
       chips: ["Sleeps 2", "Garden view", "Ground floor"],

@@ -50,6 +50,7 @@ export default function Header({
       ? [
           { label: "Apartments", href: "#units" },
           { label: "Amenities", href: "#amenities" },
+          { label: "Location", href: "#location" },
         ]
       : [
           { label: "Apartments", href: "/#units" },

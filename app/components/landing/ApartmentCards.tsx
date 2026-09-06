@@ -30,8 +30,13 @@ function Card({ unit, currency, start }: { unit: Unit; currency: Currency; start
       <span className="absolute left-3.5 top-3.5 rounded-full bg-white/90 px-[11px] py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink">
         {unit.chips[0]}
       </span>
-      <span className="absolute right-3.5 top-3.5 rounded-full bg-ink/60 px-[13px] py-[7px] text-sm font-bold text-white backdrop-blur">
-        {display(unit.priceUsd, currency, content.fxRate)}/mo
+      <span className="absolute right-3.5 top-3.5 rounded-2xl bg-ink/60 px-3 py-1.5 text-right text-white backdrop-blur">
+        <span className="block text-sm font-bold leading-none">
+          {display(unit.priceNightlyUsd, currency, content.fxRate)}<span className="font-medium">/night</span>
+        </span>
+        <span className="mt-1 block text-[10px] leading-none text-white/75">
+          {display(unit.priceUsd, currency, content.fxRate)}/mo
+        </span>
       </span>
       <div className="absolute inset-x-0 bottom-0 p-5 text-white">
         <h3 className="text-[24px] font-semibold leading-tight">{unit.name}</h3>

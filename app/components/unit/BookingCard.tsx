@@ -11,9 +11,11 @@ export default function BookingCard({ unit }: { unit: Unit }) {
 
   const note =
     start !== null && end !== null ? `${pretty(start)} to ${pretty(end)}` : undefined;
-  const rangeSub = est.nights
-    ? `${est.nights} nights · billed as ${est.months} month${est.months > 1 ? "s" : ""}`
-    : "Pick your dates for an exact estimate.";
+  const rangeSub = !est.nights
+    ? "Pick your dates for an exact estimate."
+    : est.mode === "nightly"
+      ? `${est.nights} night${est.nights > 1 ? "s" : ""} · billed nightly`
+      : `${est.nights} nights · billed as ${est.months} month${est.months > 1 ? "s" : ""}`;
 
   return (
     <div className="sticky top-[116px] rounded-2xl border border-hair bg-surface p-[22px] shadow-[0_18px_44px_-28px_rgba(6,43,68,0.4)]">
@@ -36,14 +38,22 @@ export default function BookingCard({ unit }: { unit: Unit }) {
         </span>
       </div>
 
-      <div className="mt-3.5 flex items-baseline gap-2">
-        <b className="font-mono text-[34px] font-medium tracking-[-0.03em]">
-          {display(unit.priceUsd, currency, content.fxRate)}
-        </b>
-        <span className="text-sm text-copy">/ month</span>
+      <div className="mt-3.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="flex items-baseline gap-1.5">
+          <b className="font-mono text-[30px] font-medium tracking-[-0.03em]">
+            {display(unit.priceNightlyUsd, currency, content.fxRate)}
+          </b>
+          <span className="text-sm text-copy">/ night</span>
+        </span>
+        <span className="flex items-baseline gap-1.5 text-copy">
+          <b className="font-mono text-lg font-medium tracking-[-0.02em] text-ink">
+            {display(unit.priceUsd, currency, content.fxRate)}
+          </b>
+          <span className="text-sm">/ month</span>
+        </span>
       </div>
       <p className="mt-1 text-sm leading-[1.6] text-copy">
-        Water, garbage and 200 Mbps fibre included. Power metered separately.
+        Nightly stays include everything. Monthly: water, garbage &amp; 200 Mbps fibre included, power metered.
       </p>
 
       <div className="my-5 h-px bg-hair-soft" />

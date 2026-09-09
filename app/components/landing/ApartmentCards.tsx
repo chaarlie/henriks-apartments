@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { content, type Unit } from "@/lib/content";
+import { type Unit } from "@/lib/content";
 import { display, type Currency } from "@/lib/money";
 import { pretty, today } from "@/lib/dates";
 import { availableFrom, availableForDates, matchesFilters } from "@/lib/filter";
-import { useBooking } from "@/lib/booking";
+import { useBooking, useContent } from "@/lib/booking";
 
 function Card({ unit, currency, start }: { unit: Unit; currency: Currency; start: number | null }) {
+  const content = useContent();
   const ok = availableForDates(unit, start);
   const from = availableFrom(unit);
   const availLabel = from <= today ? "Free now" : `Free ${pretty(from)}`;
@@ -63,6 +64,7 @@ function Card({ unit, currency, start }: { unit: Unit; currency: Currency; start
 
 export default function ApartmentCards() {
   const { currency, setCurrency, start, kw, layout, maxRent } = useBooking();
+  const content = useContent();
   const list = content.units.filter((u) => matchesFilters(u, kw, layout, maxRent));
 
   return (

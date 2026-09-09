@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { content, unitBySlug } from "@/lib/content";
+import { getSiteContent, getUnit, getUnitSlugs } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
@@ -10,8 +10,8 @@ import MediaViewer from "@/app/components/unit/MediaViewer";
 import UnitContent from "@/app/components/unit/UnitContent";
 import BookingCard from "@/app/components/unit/BookingCard";
 
-export function generateStaticParams() {
-  return content.units.map((u) => ({ slug: u.slug }));
+export async function generateStaticParams() {
+  return (await getUnitSlugs()).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -20,7 +20,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const unit = unitBySlug(slug);
+  const [unit, content] = await Promise.all([getUnit(slug), getSiteContent()]);
   if (!unit) return {};
   return {
     title: `${unit.name} · ${content.property.name}`,
@@ -34,7 +34,7 @@ export default async function UnitPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const unit = unitBySlug(slug);
+  const [unit, content] = await Promise.all([getUnit(slug), getSiteContent()]);
   if (!unit) notFound();
 
   const facts = [unit.spec.area, unit.spec.bath, unit.spec.sleeps, "Split AC", "200 Mbps fibre", "Pool view"];
@@ -81,7 +81,7 @@ export default async function UnitPage({
 
         <Calendar heading="Availability" eyebrow="Any range, any length" sub="Tap a move-in date, then a move-out date." />
       </main>
-      <Footer />
+      <Footer content={content} />
     </BookingProvider>
   );
 }

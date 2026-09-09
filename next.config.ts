@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
         hostname: "jdomxbzbovlnnlxoqngs.supabase.co",
         pathname: "/storage/v1/**",
       },
+      {
+        // Sanity image asset CDN (unit galleries, hero, panoramas).
+        protocol: "https",
+        hostname: "cdn.sanity.io",
+        pathname: "/images/**",
+      },
     ],
   },
 };

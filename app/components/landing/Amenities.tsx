@@ -1,6 +1,6 @@
-import { content } from "@/lib/content";
+import type { PropertyAmenity } from "@/lib/content";
 
-export default function Amenities() {
+export default function Amenities({ amenities }: { amenities: PropertyAmenity[] }) {
   return (
     <section id="amenities" className="scroll-mt-28 pt-[70px]">
       <div className="mx-auto max-w-[1200px] px-7">
@@ -9,7 +9,7 @@ export default function Amenities() {
           Amenities across the property
         </h2>
         <div className="mt-[26px] grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-          {content.amenities.map((a) => (
+          {amenities.map((a) => (
             <div key={a.title} className="rounded-2xl border border-hair bg-surface p-5">
               <div className="flex h-[42px] w-[42px] items-center justify-center rounded-[11px] bg-page text-lagoon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]">

@@ -6,15 +6,25 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "studio": "sanity dev --port 3333",
+    "studio:deploy": "sanity deploy",
+    "typegen": "sanity schema extract --enforce-required-fields --path=./sanity/extract.json && sanity typegen generate"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.39.6",
     "@photo-sphere-viewer/core": "^5.15.1",
     "@photo-sphere-viewer/markers-plugin": "^5.15.1",
     "@photo-sphere-viewer/virtual-tour-plugin": "^5.15.1",
+    "@sanity/client": "^7.27.0",
+    "@sanity/image-url": "^1.2.0",
+    "@sanity/vision": "^5.31.2",
     "next": "16.3.3",
+    "next-sanity": "^12.4.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "sanity": "^5.31.2",
+    "styled-components": "^6.5.3",
     "three": "^0.185.1"
   },
   "devDependencies": {

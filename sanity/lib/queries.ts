@@ -21,8 +21,8 @@ export const availabilityQuery = groq`
  * Address/terms/amenities come from the singletons unless the unit overrides them.
  */
 export const unitQuery = groq`
-  *[_type == "unit" && slug.current == $slug][0]{
-    name, code, tagline, priceUsd, availableFrom, spec, chips, keywords,
+  *[_type == "unit" && slug.current == $slug && hidden != true][0]{
+    name, code, tagline, priceUsd, priceNightlyUsd, availableFrom, spec, chips, keywords,
     "slug": slug.current,
     coverImage, gallery, tour, about, space,
 
@@ -40,9 +40,9 @@ export const unitQuery = groq`
 export const landingQuery = groq`{
   "hero":     *[_type == "hero"][0],
   "location": *[_type == "location"][0]{heading, addressLine, distances},
-  "settings": *[_type == "siteSettings"][0]{propertyName, whatsappNumber, fxRate, powerBaseUsd, propertyAmenities},
-  "units":    *[_type == "unit"] | order(priceUsd asc){
-    "slug": slug.current, name, code, tagline, priceUsd, availableFrom, spec, chips, keywords, coverImage
+  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, fxRate, powerBaseUsd, discounts, propertyAmenities},
+  "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
+    "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, availableFrom, spec, chips, keywords, coverImage
   }
 }`
 

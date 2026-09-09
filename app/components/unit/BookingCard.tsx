@@ -1,12 +1,13 @@
 "use client";
 
-import { content, type Unit } from "@/lib/content";
+import { type Unit } from "@/lib/content";
 import { display, whatsappHref, type Currency } from "@/lib/money";
 import { computeEstimate, pretty } from "@/lib/dates";
-import { useBooking } from "@/lib/booking";
+import { useBooking, useContent } from "@/lib/booking";
 
 export default function BookingCard({ unit }: { unit: Unit }) {
   const { currency, setCurrency, start, end } = useBooking();
+  const content = useContent();
   const est = computeEstimate(unit, start, end, currency, content);
 
   const note =

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { content, type Unit } from "@/lib/content";
+import { type Unit } from "@/lib/content";
 import { whatsappHref } from "@/lib/money";
 import { pretty, today } from "@/lib/dates";
 import { availableFrom, availableForDates, matchesFilters } from "@/lib/filter";
-import { useBooking } from "@/lib/booking";
+import { useBooking, useContent } from "@/lib/booking";
 
 function scrollToCalendar() {
   const el = document.getElementById("availability");
@@ -44,6 +44,7 @@ export default function Header({
   unit?: Unit;
 }) {
   const { start, end, kw, layout, maxRent } = useBooking();
+  const content = useContent();
 
   const links =
     mode === "landing"

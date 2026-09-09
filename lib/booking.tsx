@@ -36,6 +36,16 @@ interface BookingState {
 
 const Ctx = createContext<BookingState | null>(null);
 
+// Exposes the fetched SiteContent to the client component tree, so components
+// read it from context instead of importing the static lib/content module.
+const ContentCtx = createContext<SiteContent | null>(null);
+
+export function useContent(): SiteContent {
+  const ctx = useContext(ContentCtx);
+  if (!ctx) throw new Error("useContent must be used within BookingProvider");
+  return ctx;
+}
+
 interface Range {
   start: number | null;
   end: number | null;
@@ -91,7 +101,11 @@ export function BookingProvider({
     [currency, range, pick, setRange, clearDates, offset, setOffset, blocked, kw, layout, maxRent],
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <ContentCtx.Provider value={content}>
+      <Ctx.Provider value={value}>{children}</Ctx.Provider>
+    </ContentCtx.Provider>
+  );
 }
 
 export function useBooking(): BookingState {

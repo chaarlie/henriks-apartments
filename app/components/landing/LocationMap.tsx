@@ -1,4 +1,4 @@
-import { content } from "@/lib/content";
+import type { SiteContent } from "@/lib/content";
 
 /**
  * Landing-only location section: an embedded map pinned to the property near the
@@ -6,7 +6,7 @@ import { content } from "@/lib/content";
  * the hero; this section adds the actual map Henrik asked for. Not shown on unit
  * pages.
  */
-export default function LocationMap() {
+export default function LocationMap({ content }: { content: SiteContent }) {
   const { location } = content;
   return (
     <section id="location" className="scroll-mt-28 pb-[84px] pt-[70px]">

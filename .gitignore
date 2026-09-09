@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 /mockups
+# Sanity typegen artifact (regenerate with npm run typegen)
+sanity/extract.json
+
+# Sanity Studio runtime cache
+.sanity/

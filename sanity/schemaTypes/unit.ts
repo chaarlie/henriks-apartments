@@ -27,6 +27,7 @@ export const unit = defineType({
   ],
   fields: [
     defineField({name: 'name', title: 'Name', type: 'string', group: 'overview', validation: (r) => r.required()}),
+    defineField({name: 'hidden', title: 'Hidden from site', type: 'boolean', group: 'overview', initialValue: false, description: 'When on, the apartment is taken off the public site and all its dates are blocked.'}),
     defineField({name: 'code', title: 'Unit code', type: 'string', group: 'overview'}),
     defineField({
       name: 'slug',
@@ -66,8 +67,21 @@ export const unit = defineType({
         defineArrayMember({
           type: 'object',
           fields: [
+            defineField({
+              name: 'stopId',
+              title: 'Stop ID',
+              type: 'string',
+              description: 'Stable id used by hotspot links, e.g. "living", "kitchen".',
+              validation: (r) => r.required(),
+            }),
             defineField({name: 'name', title: 'Stop name', type: 'string'}),
-            defineField({name: 'panorama', title: 'Panorama (equirectangular)', type: 'image'}),
+            defineField({
+              name: 'panorama',
+              title: 'Panorama (Supabase bucket path)',
+              type: 'string',
+              description:
+                'Object path in the henriks-apartments bucket, e.g. "101/101-living-room.JPG". Served downscaled via the render endpoint.',
+            }),
             defineField({
               name: 'links',
               title: 'Hotspots',
@@ -76,14 +90,14 @@ export const unit = defineType({
                 defineArrayMember({
                   type: 'object',
                   fields: [
-                    defineField({name: 'to', title: 'Links to stop', type: 'string'}),
+                    defineField({name: 'to', title: 'Links to stop ID', type: 'string'}),
                     defineField({name: 'yaw', title: 'Yaw', type: 'string', description: 'e.g. "30deg"'}),
                   ],
                 }),
               ],
             }),
           ],
-          preview: {select: {title: 'name'}},
+          preview: {select: {title: 'name', subtitle: 'stopId'}},
         }),
       ],
     }),

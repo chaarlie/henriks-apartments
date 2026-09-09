@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { content } from "@/lib/content";
+import { useContent } from "@/lib/booking";
 import VideoModal from "@/app/components/VideoModal";
 
 export default function Hero() {
-  const { hero, location } = content;
+  const { hero, location } = useContent();
   const [playing, setPlaying] = useState(false);
 
   return (

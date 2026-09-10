@@ -8,7 +8,19 @@ import { pretty, today } from "@/lib/dates";
 import { availableFrom, availableForDates, matchesFilters } from "@/lib/filter";
 import { useBooking, useContent } from "@/lib/booking";
 
-function Card({ unit, currency, start }: { unit: Unit; currency: Currency; start: number | null }) {
+function Card({
+  unit,
+  currency,
+  start,
+  selected,
+  onSelect,
+}: {
+  unit: Unit;
+  currency: Currency;
+  start: number | null;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   const content = useContent();
   const ok = availableForDates(unit, start);
   const from = availableFrom(unit);
@@ -18,7 +30,7 @@ function Card({ unit, currency, start }: { unit: Unit; currency: Currency; start
       href={`/apartments/${unit.slug}`}
       className={`group relative block aspect-[3/4] overflow-hidden rounded-2xl bg-ink shadow-[0_10px_30px_-20px_rgba(6,43,68,0.5)] transition-transform hover:-translate-y-1 sm:aspect-[3/3.5] ${
         ok ? "" : "grayscale-[0.45]"
-      }`}
+      } ${selected ? "ring-2 ring-olive ring-offset-2 ring-offset-page" : ""}`}
     >
       <Image
         src={unit.image.url}
@@ -58,12 +70,25 @@ function Card({ unit, currency, start }: { unit: Unit; currency: Currency; start
       <span className="absolute bottom-5 right-[18px] translate-y-1.5 rounded-full bg-white px-[15px] py-[9px] text-[13px] font-bold text-ink opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
         View →
       </span>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          onSelect();
+        }}
+        aria-pressed={selected}
+        className={`absolute left-3.5 bottom-5 rounded-full px-[13px] py-[7px] text-xs font-bold transition-colors ${
+          selected ? "bg-olive text-white" : "bg-white/90 text-ink hover:bg-white"
+        }`}
+      >
+        {selected ? "Selected ✓" : "Use in cost estimate"}
+      </button>
     </Link>
   );
 }
 
 export default function ApartmentCards() {
-  const { currency, setCurrency, start, kw, layout, maxRent } = useBooking();
+  const { currency, setCurrency, start, kw, layout, maxRent, selectedSlug, setSelected } = useBooking();
   const content = useContent();
   const list = content.units.filter((u) => matchesFilters(u, kw, layout, maxRent));
 
@@ -97,7 +122,14 @@ export default function ApartmentCards() {
         {list.length ? (
           <div className="grid gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
             {list.map((u) => (
-              <Card key={u.slug} unit={u} currency={currency} start={start} />
+              <Card
+                key={u.slug}
+                unit={u}
+                currency={currency}
+                start={start}
+                selected={u.slug === selectedSlug}
+                onSelect={() => setSelected(u.slug)}
+              />
             ))}
           </div>
         ) : (

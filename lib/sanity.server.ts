@@ -113,12 +113,13 @@ function cardUnit(u: RawUnit): Unit {
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
     image: img(u.coverImage, u.name),
-    // Heavy fields aren't read on the landing/provider; keep the type satisfied.
+    // The landing carousel reads gallery + space; the rest stay empty here and
+    // are fetched per-unit by getUnit.
     about: [],
-    space: [],
+    space: u.space ?? [],
     amenities: { inside: [], building: [] },
     terms: [],
-    gallery: [],
+    gallery: (u.gallery ?? []).map((g) => img(g, u.name)),
     tour: [],
   };
 }

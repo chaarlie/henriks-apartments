@@ -25,6 +25,9 @@ interface BookingState {
   offset: number;
   setOffset: (fn: (o: number) => number) => void;
   blocked: (t: number) => boolean;
+  /** slug of the unit shared across the landing carousel, cards, and cost estimator */
+  selectedSlug: string;
+  setSelected: (slug: string) => void;
   /** landing search filters */
   kw: string;
   setKw: (s: string) => void;
@@ -64,6 +67,7 @@ export function BookingProvider({
   const [kw, setKw] = useState("");
   const [layout, setLayout] = useState("");
   const [maxRent, setMaxRent] = useState("");
+  const [selectedSlug, setSelected] = useState(() => content.units[0]?.slug ?? "");
 
   const blocked = useMemo(() => makeBlocked(content), [content]);
   const setOffset = useCallback((fn: (o: number) => number) => setOffsetState(fn), []);
@@ -96,9 +100,10 @@ export function BookingProvider({
       currency, setCurrency,
       start: range.start, end: range.end, pick, setRange, clearDates,
       offset, setOffset, blocked,
+      selectedSlug, setSelected,
       kw, setKw, layout, setLayout, maxRent, setMaxRent,
     }),
-    [currency, range, pick, setRange, clearDates, offset, setOffset, blocked, kw, layout, maxRent],
+    [currency, range, pick, setRange, clearDates, offset, setOffset, blocked, selectedSlug, kw, layout, maxRent],
   );
 
   return (

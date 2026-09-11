@@ -3,92 +3,115 @@
 import Link from "next/link";
 import Image from "next/image";
 import { type Unit } from "@/lib/content";
-import { display, type Currency } from "@/lib/money";
+import { display, whatsappHref, type Currency } from "@/lib/money";
 import { pretty, today } from "@/lib/dates";
-import { availableFrom, availableForDates, matchesFilters } from "@/lib/filter";
+import { availableFrom, matchesFilters } from "@/lib/filter";
+import { availableForDates } from "@/lib/availability";
 import { useBooking, useContent } from "@/lib/booking";
 
 function Card({
   unit,
   currency,
   start,
+  end,
   selected,
   onSelect,
 }: {
   unit: Unit;
   currency: Currency;
   start: number | null;
+  end: number | null;
   selected: boolean;
   onSelect: () => void;
 }) {
   const content = useContent();
-  const ok = availableForDates(unit, start);
+  const ok = availableForDates(content, unit, start, end);
   const from = availableFrom(unit);
   const availLabel = from <= today ? "Free now" : `Free ${pretty(from)}`;
+
   return (
-    <Link
-      href={`/apartments/${unit.slug}`}
-      className={`group relative block aspect-[3/4] overflow-hidden rounded-2xl bg-ink shadow-[0_10px_30px_-20px_rgba(6,43,68,0.5)] transition-transform hover:-translate-y-1 sm:aspect-[3/3.5] ${
-        ok ? "" : "grayscale-[0.45]"
-      } ${selected ? "ring-2 ring-olive ring-offset-2 ring-offset-page" : ""}`}
+    <div
+      className={`flex flex-col overflow-hidden rounded-2xl border bg-surface transition-opacity ${
+        selected ? "border-olive" : "border-hair"
+      } ${ok ? "" : "opacity-50"}`}
     >
-      <Image
-        src={unit.image.url}
-        alt={unit.image.alt}
-        fill
-        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-        className={`object-cover transition-transform duration-500 group-hover:scale-105 ${ok ? "" : "opacity-70"}`}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/30 to-ink/90" aria-hidden />
-      <span className="absolute left-3.5 top-3.5 rounded-full bg-white/90 px-[11px] py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink">
-        {unit.chips[0]}
-      </span>
-      <span className="absolute right-3.5 top-3.5 rounded-2xl bg-ink/60 px-3 py-1.5 text-right text-white backdrop-blur">
-        <span className="block text-sm font-bold leading-none">
-          {display(unit.priceNightlyUsd, currency, content.fxRate)}<span className="font-medium">/night</span>
-        </span>
-        <span className="mt-1 block text-[10px] leading-none text-white/75">
-          {display(unit.priceUsd, currency, content.fxRate)}/mo
-        </span>
-      </span>
-      <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-        <h3 className="text-[24px] font-semibold leading-tight">{unit.name}</h3>
-        <p className="mt-1 text-[13px] text-white/80">{unit.tagline}</p>
-        <p className="mt-3 border-t border-white/20 pt-3 font-mono text-xs text-white/90">
-          {unit.spec.area} · {unit.spec.bath} · {unit.spec.sleeps}
-        </p>
+      {/* Photo — badge only, nothing else over it */}
+      <Link href={`/apartments/${unit.slug}`} className="relative block aspect-[4/3] bg-ink">
+        <Image
+          src={unit.image.url}
+          alt={unit.image.alt}
+          fill
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+          className="object-cover"
+        />
         <span
-          className={`mt-3 inline-block rounded-full border px-[11px] py-[5px] text-xs font-bold ${
-            ok
-              ? "border-pool/50 bg-pool/20 text-[#c9f0f5]"
-              : "border-white/30 bg-white/10 text-white"
+          className={`absolute left-3 top-3 rounded-full px-[10px] py-[5px] font-mono text-[10px] uppercase tracking-[0.1em] text-white ${
+            ok ? "bg-olive" : "bg-ink/70"
           }`}
         >
           {ok ? availLabel : `Free ${pretty(from)}`}
         </span>
+      </Link>
+
+      {/* Body */}
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="text-[19px] font-bold leading-tight tracking-[-0.015em]">
+          <Link href={`/apartments/${unit.slug}`} className="text-ink hover:text-lagoon">
+            {unit.name}
+          </Link>
+        </h3>
+        <p className="mt-1 font-mono text-xs text-copy">{unit.spec.area} · {unit.spec.bath} · {unit.spec.sleeps}</p>
+
+        <div className="my-3.5 h-px bg-hair-soft" />
+
+        <div className="flex items-baseline gap-1.5">
+          <b className="text-[26px] font-bold tracking-[-0.025em]">{display(unit.priceUsd, currency, content.fxRate)}</b>
+          <span className="text-[13px] text-copy">per month</span>
+        </div>
+        <p className="mt-[3px] text-xs font-semibold text-muted">
+          about {display(unit.priceNightlyUsd, currency, content.fxRate)} a night short-stay
+        </p>
+
+        <ul className="mt-3 flex list-none flex-col gap-1.5 p-0">
+          {unit.chips.slice(0, 3).map((c) => (
+            <li key={c} className="flex gap-2 text-[13px] text-copy">
+              <span className="font-extrabold text-olive">·</span>
+              {c}
+            </li>
+          ))}
+        </ul>
+
+        <div className="my-3.5 h-px bg-hair-soft" />
+
+        {/* CTA row — below the photo, no nested interactives */}
+        <div className="mt-auto flex gap-2">
+          <button
+            type="button"
+            onClick={onSelect}
+            aria-pressed={selected}
+            className={`flex-1 rounded-[9px] border px-3 py-[11px] text-[13px] font-bold transition-colors ${
+              selected ? "border-ink bg-ink text-white" : "border-hair-strong bg-surface text-ink hover:border-ink"
+            }`}
+          >
+            {selected ? "In the estimate ✓" : "Use in estimate"}
+          </button>
+          <a
+            href={whatsappHref(content, { unit })}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Ask about the ${unit.name} on WhatsApp`}
+            className="flex-none rounded-[9px] border border-hair-strong bg-page px-[14px] py-[11px] text-[13px] font-bold text-ink transition-colors hover:bg-sand"
+          >
+            Ask
+          </a>
+        </div>
       </div>
-      <span className="absolute bottom-5 right-[18px] translate-y-1.5 rounded-full bg-white px-[15px] py-[9px] text-[13px] font-bold text-ink opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
-        View →
-      </span>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          onSelect();
-        }}
-        aria-pressed={selected}
-        className={`absolute left-3.5 bottom-5 rounded-full px-[13px] py-[7px] text-xs font-bold transition-colors ${
-          selected ? "bg-olive text-white" : "bg-white/90 text-ink hover:bg-white"
-        }`}
-      >
-        {selected ? "Selected ✓" : "Use in cost estimate"}
-      </button>
-    </Link>
+    </div>
   );
 }
 
 export default function ApartmentCards() {
-  const { currency, setCurrency, start, kw, layout, maxRent, selectedSlug, setSelected } = useBooking();
+  const { currency, setCurrency, start, end, kw, layout, maxRent, selectedSlug, setSelected } = useBooking();
   const content = useContent();
   const list = content.units.filter((u) => matchesFilters(u, kw, layout, maxRent));
 
@@ -102,31 +125,37 @@ export default function ApartmentCards() {
               {content.units.length} ways to stay
             </h2>
           </div>
-          <div className="inline-flex gap-[3px] rounded-[9px] bg-sand p-[3px]" role="group" aria-label="Currency">
-            {(["USD", "DOP"] as Currency[]).map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCurrency(c)}
-                aria-pressed={currency === c}
-                className={`rounded-[7px] px-4 py-2 text-[13px] font-semibold transition-colors ${
-                  currency === c ? "bg-deep text-white" : "text-copy"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
+          <div className="text-right">
+            <div className="inline-flex gap-[3px] rounded-[10px] bg-sand p-[3px]" role="group" aria-label="Currency">
+              {(["USD", "DOP"] as Currency[]).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCurrency(c)}
+                  aria-pressed={currency === c}
+                  className={`rounded-[8px] px-4 py-2 text-[13px] font-bold transition-colors ${
+                    currency === c ? "bg-deep text-white" : "text-copy"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 font-mono text-[10px] text-copy">
+              {currency === "USD" ? "Rents quoted in US dollars" : `At RD$${content.fxRate} / US$1 · indicative rate`}
+            </p>
           </div>
         </div>
 
         {list.length ? (
-          <div className="grid gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {list.map((u) => (
               <Card
                 key={u.slug}
                 unit={u}
                 currency={currency}
                 start={start}
+                end={end}
                 selected={u.slug === selectedSlug}
                 onSelect={() => setSelected(u.slug)}
               />

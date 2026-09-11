@@ -10,7 +10,8 @@ import {
 } from "react";
 import type { Currency } from "@/lib/money";
 import type { SiteContent } from "@/lib/content";
-import { DAY, makeBlocked } from "@/lib/dates";
+import { DAY } from "@/lib/dates";
+import { blockedFor } from "@/lib/availability";
 
 interface BookingState {
   currency: Currency;
@@ -56,9 +57,12 @@ interface Range {
 
 export function BookingProvider({
   content,
+  initialSlug,
   children,
 }: {
   content: SiteContent;
+  /** Pin the initially-selected unit (the unit page passes its own slug). */
+  initialSlug?: string;
   children: ReactNode;
 }) {
   const [currency, setCurrency] = useState<Currency>("USD");
@@ -67,10 +71,31 @@ export function BookingProvider({
   const [kw, setKw] = useState("");
   const [layout, setLayout] = useState("");
   const [maxRent, setMaxRent] = useState("");
-  const [selectedSlug, setSelected] = useState(() => content.units[0]?.slug ?? "");
+  const [selectedSlug, setSelectedSlug] = useState(
+    () => initialSlug ?? content.units[0]?.slug ?? "",
+  );
 
-  const blocked = useMemo(() => makeBlocked(content), [content]);
+  // Availability is per selected unit — the calendar reflects whichever unit is active.
+  const blocked = useMemo(() => blockedFor(content, selectedSlug), [content, selectedSlug]);
   const setOffset = useCallback((fn: (o: number) => number) => setOffsetState(fn), []);
+
+  // Switching units clears a range that isn't free for the newly selected unit,
+  // so the calendar highlight never disagrees with what's actually bookable.
+  const setSelected = useCallback(
+    (slug: string) => {
+      setSelectedSlug(slug);
+      setRangeState((r) => {
+        if (r.start === null) return r;
+        const isBlocked = blockedFor(content, slug);
+        const last = r.end ?? r.start;
+        for (let t = r.start; t <= last; t += DAY) {
+          if (isBlocked(t)) return { start: null, end: null };
+        }
+        return r;
+      });
+    },
+    [content],
+  );
 
   const setRange = useCallback(
     (start: number | null, end: number | null) => setRangeState({ start, end }),
@@ -103,7 +128,7 @@ export function BookingProvider({
       selectedSlug, setSelected,
       kw, setKw, layout, setLayout, maxRent, setMaxRent,
     }),
-    [currency, range, pick, setRange, clearDates, offset, setOffset, blocked, selectedSlug, kw, layout, maxRent],
+    [currency, range, pick, setRange, clearDates, offset, setOffset, blocked, selectedSlug, setSelected, kw, layout, maxRent],
   );
 
   return (

@@ -13,24 +13,42 @@ export default function Tour({ nodes }: { nodes: TourNode[] }) {
   const viewerRef = useRef<PanoramaViewerHandle>(null);
   const [currentId, setCurrentId] = useState(nodes[0]?._id ?? "");
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const index = Math.max(0, nodes.findIndex((n) => n._id === currentId));
   const current = nodes[index] ?? nodes[0];
   const total = nodes.length;
 
-  const goTo = useCallback((id: string) => viewerRef.current?.goTo(id), []);
+  // When WebGL is unavailable the interactive viewer can't start; the rail then
+  // drives a flat equirectangular preview instead of an endless loader.
+  const goTo = useCallback((id: string) => {
+    setCurrentId(id);
+    viewerRef.current?.goTo(id);
+  }, []);
 
   return (
     <div>
       <div className="relative aspect-video overflow-hidden rounded-2xl border border-hair bg-ink">
-        <PanoramaViewer
-          ref={viewerRef}
-          nodes={nodes}
-          onNodeChange={setCurrentId}
-          onReady={() => setReady(true)}
-        />
+        {failed ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={current?.panorama} alt={current?.name} className="h-full w-full object-cover" />
+        ) : (
+          <PanoramaViewer
+            ref={viewerRef}
+            nodes={nodes}
+            onNodeChange={setCurrentId}
+            onReady={() => setReady(true)}
+            onError={() => setFailed(true)}
+          />
+        )}
 
-        {!ready && (
+        {failed && (
+          <div className="pointer-events-none absolute right-4 top-3.5 z-10 rounded-full bg-ink/60 px-3 py-1.75 font-mono text-[10px] uppercase tracking-[0.14em] text-white">
+            Flat view · 360° needs WebGL
+          </div>
+        )}
+
+        {!ready && !failed && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-ink">
             <div
               className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-pool"
@@ -40,12 +58,14 @@ export default function Tour({ nodes }: { nodes: TourNode[] }) {
           </div>
         )}
 
-        <div className="pointer-events-none absolute left-4 top-3.5 z-10 flex items-center gap-2 rounded-full bg-ink/60 px-3 py-1.75">
-          <span className="h-1.75 w-1.75 rounded-full bg-pool" />
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-white">
-            360° · drag to look around
-          </span>
-        </div>
+        {!failed && (
+          <div className="pointer-events-none absolute left-4 top-3.5 z-10 flex items-center gap-2 rounded-full bg-ink/60 px-3 py-1.75">
+            <span className="h-1.75 w-1.75 rounded-full bg-pool" />
+            <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-white">
+              360° · drag to look around
+            </span>
+          </div>
+        )}
 
         <div className="pointer-events-none absolute bottom-4 left-4 z-10">
           <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/70">

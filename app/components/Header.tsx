@@ -4,7 +4,8 @@ import Link from "next/link";
 import { type Unit } from "@/lib/content";
 import { whatsappHref } from "@/lib/money";
 import { pretty, today } from "@/lib/dates";
-import { availableFrom, availableForDates, matchesFilters } from "@/lib/filter";
+import { availableFrom, matchesFilters } from "@/lib/filter";
+import { availableForDates } from "@/lib/availability";
 import { useBooking, useContent } from "@/lib/booking";
 
 function scrollToCalendar() {
@@ -79,7 +80,7 @@ export default function Header({
   } else {
     const avail = content.units.filter(
       (u) =>
-        matchesFilters(u, kw, layout, maxRent) && availableForDates(u, start),
+        matchesFilters(u, kw, layout, maxRent) && availableForDates(content, u, start, end),
     ).length;
     count = `${avail} of ${content.units.length} apartments free`;
   }

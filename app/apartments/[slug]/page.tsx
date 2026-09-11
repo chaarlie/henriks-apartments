@@ -40,7 +40,7 @@ export default async function UnitPage({
   const facts = [unit.spec.area, unit.spec.bath, unit.spec.sleeps, "Split AC", "200 Mbps fibre", "Pool view"];
 
   return (
-    <BookingProvider content={content}>
+    <BookingProvider content={content} initialSlug={unit.slug}>
       <Header mode="unit" unit={unit} />
       <main>
         <div className="mx-auto max-w-[1200px] px-7">

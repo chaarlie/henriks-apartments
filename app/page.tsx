@@ -8,7 +8,9 @@ import Inside from "@/app/components/landing/Inside";
 import ApartmentCards from "@/app/components/landing/ApartmentCards";
 import CostEstimator from "@/app/components/landing/CostEstimator";
 import Amenities from "@/app/components/landing/Amenities";
+import Trust from "@/app/components/landing/Trust";
 import Calendar from "@/app/components/Calendar";
+import BookingForm from "@/app/components/landing/BookingForm";
 
 export default async function Home() {
   const content = await getSiteContent();
@@ -24,8 +26,10 @@ export default async function Home() {
         <Calendar
           heading="Check availability"
           eyebrow="Any range, any length"
-          sub="Tap a move-in date, then a move-out date. Your range filters the apartments above and carries through to each unit."
+          sub="Pick a unit above, then tap a move-in date and a move-out date. The calendar shows that apartment's real availability."
         />
+        <BookingForm />
+        <Trust content={content} />
         <CostEstimator />
       </main>
       <Footer content={content} />

@@ -4,9 +4,8 @@ import { fromIso } from "@/lib/dates";
 /** First available day for a unit, as a UTC timestamp. */
 export const availableFrom = (u: Unit) => fromIso(u.availableFrom);
 
-/** A unit is bookable for the chosen move-in if it's free by then (or no date yet). */
-export const availableForDates = (u: Unit, start: number | null) =>
-  start === null || start >= availableFrom(u);
+// availableForDates now lives in lib/availability.ts — it needs SiteContent to
+// check real per-unit bookings, not just the unit's opening date.
 
 /** Landing search: layout + max rent + keyword blob. */
 export function matchesFilters(

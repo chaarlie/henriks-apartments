@@ -37,12 +37,6 @@ export function nights(start: number | null, end: number | null): number {
   return start !== null && end !== null ? Math.round((end - start) / DAY) : 0;
 }
 
-/** Booked/past days come from the content's `bookedRanges` (ISO pairs). */
-export function makeBlocked(content: SiteContent): (t: number) => boolean {
-  const ranges = content.bookedRanges.map(([a, b]) => [fromIso(a), fromIso(b)] as const);
-  return (t: number) => t < today || ranges.some(([a, b]) => t >= a && t <= b);
-}
-
 export interface EstimateLine {
   key: string;
   label: string;

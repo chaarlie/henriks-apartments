@@ -168,8 +168,17 @@ export interface SiteContent {
     baseUsd: number;
   };
   discounts: Discount[];
-  /** property-wide booked/unavailable ranges, ISO pairs [start, end] inclusive */
-  bookedRanges: [string, string][];
+  /**
+   * Availability derived from Sanity `booking` docs (status held/confirmed).
+   * `closures` are whole-property blocks (a booking with no unit); `byUnit` maps
+   * a unit slug to that unit's own booked ranges. A day is unavailable for a unit
+   * when it falls in a closure or in that unit's ranges. ISO pairs, [start, end]
+   * inclusive.
+   */
+  availability: {
+    closures: [string, string][];
+    byUnit: Record<string, [string, string][]>;
+  };
   location: {
     heading: string;
     addressLine: string;
@@ -578,7 +587,10 @@ export const content: SiteContent = {
 
   discounts: [{ months: 6, pct: 0.05 }],
 
-  bookedRanges: [["2026-11-20", "2026-12-06"]], // PLACEHOLDER
+  availability: {
+    closures: [["2026-11-20", "2026-12-06"]], // PLACEHOLDER whole-property closure
+    byUnit: {},
+  },
 
   location: {
     heading: "Getting around",

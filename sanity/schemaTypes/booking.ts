@@ -81,9 +81,10 @@ export const booking = defineType({
       type: 'string',
       options: {
         layout: 'radio',
-        list: ['manual', 'airbnb', 'booking.com'],
+        list: ['manual', 'web', 'airbnb', 'booking.com'],
       },
       initialValue: 'manual',
+      description: '"web" = a hold requested by a guest from the public site.',
     }),
   ],
 

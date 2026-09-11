@@ -1,7 +1,7 @@
 "use client";
 
 import { DOW, MONTHS, today, utc } from "@/lib/dates";
-import { useBooking } from "@/lib/booking";
+import { useBooking, useContent } from "@/lib/booking";
 
 interface Cell {
   key: string;
@@ -42,7 +42,9 @@ export default function Calendar({
   heading?: string;
   sub?: string;
 }) {
-  const { start, end, pick, offset, setOffset, clearDates, blocked } = useBooking();
+  const { start, end, pick, offset, setOffset, clearDates, blocked, selectedSlug } = useBooking();
+  const content = useContent();
+  const activeUnit = content.units.find((u) => u.slug === selectedSlug);
 
   const base = new Date(today);
   const months = [0, 1].map((i) => {
@@ -61,6 +63,12 @@ export default function Calendar({
             <h2 className="mt-2 text-[clamp(26px,3.2vw,36px)] font-semibold tracking-[-0.01em]">
               {heading}
             </h2>
+            {activeUnit && (
+              <p className="mt-1.5 flex items-center gap-2 text-[13px] text-copy">
+                <span className="h-1.5 w-1.5 rounded-full bg-pool" />
+                Showing availability for <b className="font-semibold text-ink">{activeUnit.name}</b>
+              </p>
+            )}
             {sub && <p className="mt-1.5 text-[15px] text-copy">{sub}</p>}
           </div>
           <div className="flex gap-2">
@@ -145,7 +153,7 @@ export default function Calendar({
               Booked or past
             </span>
             <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
-              Dates kept by hand · booking sync to follow
+              Live availability · updates as bookings come in
             </span>
           </div>
         </div>

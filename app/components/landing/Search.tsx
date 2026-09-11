@@ -1,7 +1,8 @@
 "use client";
 
 import { fromIso, iso, today } from "@/lib/dates";
-import { availableForDates, matchesFilters } from "@/lib/filter";
+import { matchesFilters } from "@/lib/filter";
+import { availableForDates } from "@/lib/availability";
 import { useBooking, useContent } from "@/lib/booking";
 
 const minIso = iso(today);
@@ -14,7 +15,7 @@ export default function Search() {
   const content = useContent();
 
   const matches = content.units.filter(
-    (u) => matchesFilters(u, kw, layout, maxRent) && availableForDates(u, start),
+    (u) => matchesFilters(u, kw, layout, maxRent) && availableForDates(content, u, start, end),
   ).length;
 
   const onIn = (v: string) => {

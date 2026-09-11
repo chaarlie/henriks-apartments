@@ -98,6 +98,20 @@ interface RawSettings {
   propertyAmenities?: { icon: string; title: string; desc: string }[];
 }
 
+// Split the availability feed into whole-property closures + per-unit ranges.
+function buildAvailability(
+  bookings: { unit: string | null; start: string; end: string }[],
+): SiteContent["availability"] {
+  const closures: [string, string][] = [];
+  const byUnit: Record<string, [string, string][]> = {};
+  for (const b of bookings) {
+    if (!b.start || !b.end) continue;
+    if (b.unit) (byUnit[b.unit] ??= []).push([b.start, b.end]);
+    else closures.push([b.start, b.end]);
+  }
+  return { closures, byUnit };
+}
+
 function cardUnit(u: RawUnit): Unit {
   return {
     _id: `unit-${u.slug}`,
@@ -113,14 +127,14 @@ function cardUnit(u: RawUnit): Unit {
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
     image: img(u.coverImage, u.name),
-    // The landing carousel reads gallery + space; the rest stay empty here and
-    // are fetched per-unit by getUnit.
+    // The landing carousel reads gallery + space + the 360 tour; the rest stay
+    // empty here and are fetched per-unit by getUnit.
     about: [],
     space: u.space ?? [],
     amenities: { inside: [], building: [] },
     terms: [],
     gallery: (u.gallery ?? []).map((g) => img(g, u.name)),
-    tour: [],
+    tour: mapTour(u.tour),
   };
 }
 
@@ -170,9 +184,9 @@ export async function getSiteContent(): Promise<SiteContent> {
     amenities: s.propertyAmenities ?? [],
     power: { baseUsd: s.powerBaseUsd },
     discounts: s.discounts ?? [],
-    // Every booking (per-unit or whole-property) blocks the range on the shared
-    // calendar, matching the current property-wide availability model.
-    bookedRanges: bookings.map((b) => [b.start, b.end] as [string, string]),
+    // Per-unit availability: a booking with a unit blocks that unit; one without
+    // a unit is a whole-property closure that blocks every unit.
+    availability: buildAvailability(bookings),
     location: {
       heading: landing.location?.heading ?? "",
       addressLine: landing.location?.addressLine ?? "",

@@ -43,7 +43,7 @@ export const landingQuery = groq`{
   "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, fxRate, powerBaseUsd, discounts, propertyAmenities},
   "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
     "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, availableFrom, spec, chips, keywords,
-    coverImage, gallery, space
+    coverImage, gallery, space, tour
   }
 }`
 

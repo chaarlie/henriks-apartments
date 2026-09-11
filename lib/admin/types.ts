@@ -97,6 +97,36 @@ export interface AdminUnitInput {
   tour: TourStopRow[];
 }
 
+/** One "What's on site" tile on the homepage. `icon` is SVG path data. */
+export interface PropertyAmenityRow {
+  icon: string;
+  title: string;
+  desc: string;
+}
+
+export interface DiscountRow {
+  months: number;
+  /** percent off, e.g. 5 for 5% (stored in Sanity as 0.05) */
+  percent: number;
+}
+
+/** The siteSettings singleton: property details + the homepage amenity tiles. */
+export interface AdminSettings {
+  propertyName: string;
+  city: string;
+  region: string;
+  whatsappNumber: string;
+  fxRate: number;
+  /** yyyy-mm-dd the exchange rate last changed */
+  fxRateAsOf: string;
+  powerBaseUsd: number;
+  discounts: DiscountRow[];
+  amenities: PropertyAmenityRow[];
+}
+
+/** Payload the client sends back to saveProperty. */
+export type AdminPropertyInput = Omit<AdminSettings, "fxRateAsOf" | "amenities">;
+
 /** Payload the client sends back to saveBooking. */
 export interface AdminBookingInput {
   _id: string | null;

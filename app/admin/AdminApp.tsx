@@ -10,10 +10,15 @@ import {
   setUnitHidden,
   saveBooking,
   deleteBooking,
+  saveAmenities,
+  saveProperty,
 } from "@/lib/admin/actions";
 import type {
   AdminUnit,
   AdminBooking,
+  AdminSettings,
+  AdminPropertyInput,
+  PropertyAmenityRow,
   UnitOption,
   AmenityRow,
   SpaceRow,
@@ -35,20 +40,25 @@ async function uploadImage(file: File): Promise<MediaImage> {
   return json as MediaImage;
 }
 
-type View = "apartments" | "bookings" | "hero" | "amenities" | "property";
+type View = "apartments" | "bookings" | "amenities" | "property";
 
 const TABS = ["Overview", "Media", "Content", "Amenities", "Terms", "Share"] as const;
 type Tab = (typeof TABS)[number];
 
-// House-rule icons (SVG path data) — mirrors lib/content.ts ICON.
+// Icons for amenity tiles and house rules, by the name Henrik picks (SVG path
+// data) — mirrors ICON in lib/content.ts.
 const ICONS: Record<string, string> = {
-  calendar: "M16 2v4M8 2v4M3 10h18M3 4h18v18H3z",
-  money: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
-  house: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
-  "no-smoke": "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM4.9 4.9l14.2 14.2",
-  wifi: "M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01",
-  bolt: "M13 2 3 14h7l-1 8 10-12h-7z",
-  pool: "M4 20a8 8 0 0 1 16 0M4 14h16M8 14V6a2 2 0 0 1 4 0",
+  Pool: "M4 20a8 8 0 0 1 16 0M4 14h16M8 14V6a2 2 0 0 1 4 0",
+  "Wi-Fi": "M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01",
+  Power: "M13 2 3 14h7l-1 8 10-12h-7z",
+  "Gate / entrance": "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
+  House: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+  Location: "M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zM12 9h.01",
+  Tick: "M20 7 9 18l-5-5M3 21h18",
+  Water: "M12 3s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z",
+  Calendar: "M16 2v4M8 2v4M3 10h18M3 4h18v18H3z",
+  Money: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  "No smoking": "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM4.9 4.9l14.2 14.2",
 };
 
 function Svg({ children, className }: { children: ReactNode; className?: string }) {
@@ -71,7 +81,6 @@ function Svg({ children, className }: { children: ReactNode; className?: string 
 // Line icons in the site's style (replaces the emoji nav).
 const NAV_ICON = {
   apartments: <Svg><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></Svg>,
-  hero: <Svg><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="10.5" r="1.5" /><path d="m21 15-5-5L5 19" /></Svg>,
   amenities: <Svg><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" /></Svg>,
   bookings: <Svg><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Svg>,
   property: <Svg><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" /><circle cx="15" cy="6" r="2" /><circle cx="9" cy="12" r="2" /><circle cx="17" cy="18" r="2" /></Svg>,
@@ -94,14 +103,17 @@ export default function AdminApp({
   units: initUnits,
   bookings: initBookings,
   unitOptions,
+  settings: initSettings,
   adminName,
 }: {
   units: AdminUnit[];
   bookings: AdminBooking[];
   unitOptions: UnitOption[];
+  settings: AdminSettings;
   adminName: string;
 }) {
   const [units, setUnits] = useState(initUnits);
+  const [settings, setSettings] = useState(initSettings);
   const [bookings, setBookings] = useState(initBookings);
   const [view, setView] = useState<View>("apartments");
   const [selectedId, setSelectedId] = useState(initUnits[0]?._id ?? "");
@@ -133,8 +145,7 @@ export default function AdminApp({
 
         <div className="grp">Content</div>
         <NavItem icon={NAV_ICON.apartments} label="Apartments" count={units.length} active={view === "apartments"} onClick={() => setView("apartments")} />
-        <NavItem icon={NAV_ICON.hero} label="Homepage / Hero" active={view === "hero"} onClick={() => setView("hero")} />
-        <NavItem icon={NAV_ICON.amenities} label="Amenities" active={view === "amenities"} onClick={() => setView("amenities")} />
+        <NavItem icon={NAV_ICON.amenities} label="Amenities" count={settings.amenities.length} active={view === "amenities"} onClick={() => setView("amenities")} />
 
         <div className="grp">Booking</div>
         <NavItem icon={NAV_ICON.bookings} label="Bookings" count={bookings.length} active={view === "bookings"} onClick={() => setView("bookings")} />
@@ -241,8 +252,18 @@ export default function AdminApp({
           />
         )}
 
-        {(view === "hero" || view === "amenities" || view === "property") && (
-          <GenericView view={view} />
+        {view === "amenities" && (
+          <AmenitiesView
+            initial={settings.amenities}
+            onSaved={(amenities) => setSettings((s) => ({ ...s, amenities }))}
+          />
+        )}
+
+        {view === "property" && (
+          <PropertyView
+            initial={settings}
+            onSaved={(saved) => setSettings((s) => ({ ...s, ...saved }))}
+          />
         )}
       </main>
     </div>
@@ -589,23 +610,12 @@ function ApartmentEditor({
               hint="One block per rule: an icon, a title and a description."
               rows={d.terms}
               onChange={(rows) => set("terms", rows)}
-              blank={{ icon: ICONS.calendar, title: "", desc: "" }}
+              blank={{ icon: ICONS.Calendar, title: "", desc: "" }}
               render={(row, upd) => (
                 <>
                   <div className="grid3">
                     <Field label="Icon">
-                      <select
-                        className="ctrl"
-                        value={row.icon}
-                        onChange={(e) => upd({ ...row, icon: e.target.value })}
-                      >
-                        {!Object.values(ICONS).includes(row.icon) && row.icon && (
-                          <option value={row.icon}>(existing)</option>
-                        )}
-                        {Object.entries(ICONS).map(([name, path]) => (
-                          <option key={name} value={path}>{name}</option>
-                        ))}
-                      </select>
+                      <IconSelect label="Icon" value={row.icon} onChange={(icon) => upd({ ...row, icon })} />
                     </Field>
                     <div style={{ gridColumn: "span 2" }}>
                       <Field label="Title"><input className="ctrl" value={row.title} onChange={(e) => upd({ ...row, title: e.target.value })} /></Field>
@@ -1359,24 +1369,386 @@ function BookingModal({
   );
 }
 
-// ── Singletons (read-only this pass) ─────────────────────────────────────────
-function GenericView({ view }: { view: "hero" | "amenities" | "property" }) {
-  const meta = {
-    hero: { title: "Homepage / Hero", desc: "The landing hero — eyebrow, headline, sub-copy, walkthrough video, background image and stat cards." },
-    amenities: { title: "Amenities", desc: "The property-wide amenity tiles shown on the landing page." },
-    property: { title: "Property details", desc: "Global site & contact info — property name, city/region, WhatsApp number, exchange rate and pricing defaults." },
-  }[view];
+// ── Shared settings: Amenities + Property details ────────────────────────────
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
+function SaveBar({
+  title,
+  dirty,
+  saving,
+  onSave,
+  onDiscard,
+}: {
+  title: string;
+  dirty: boolean;
+  saving: boolean;
+  onSave: () => void;
+  onDiscard: () => void;
+}) {
   return (
-    <div className="ed-body">
-      <div className="placeholder-view">
-        <h2>{meta.title}</h2>
-        <p>{meta.desc}</p>
-        <div className="info-note">
-          These shared settings can’t be edited here yet — ask your site developer to change them for now.
-          Apartments and Bookings are fully editable.
-        </div>
+    <div className="ed-bar">
+      <span className="crumb"><b>{title}</b></span>
+      <span className="status">
+        <i className={dirty ? "is-dirty" : ""} aria-hidden />
+        <span>{dirty ? "Unsaved changes" : "All changes saved"}</span>
+      </span>
+      <div className="ed-actions">
+        {dirty && (
+          <button type="button" className="btn ghost" onClick={onDiscard} disabled={saving}>
+            Discard
+          </button>
+        )}
+        <button type="button" className="btn primary" onClick={onSave} disabled={saving || !dirty}>
+          {saving ? "Saving…" : "Save"}
+        </button>
       </div>
     </div>
+  );
+}
+
+function Notice({ msg }: { msg: string }) {
+  return (
+    <div className={`notice ${msg.startsWith("Error") ? "err" : "ok"}`} role="status">
+      {msg}
+    </div>
+  );
+}
+
+function IconSelect({
+  value,
+  label,
+  onChange,
+}: {
+  value: string;
+  label: string;
+  onChange: (path: string) => void;
+}) {
+  const known = Object.values(ICONS).includes(value);
+  return (
+    <div className="iconpick">
+      <span className="iconbox" aria-hidden>
+        {value && <Svg><path d={value} /></Svg>}
+      </span>
+      <select className="ctrl" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
+        {!known && <option value={value}>{value ? "Current icon" : "Pick an icon"}</option>}
+        {Object.entries(ICONS).map(([name, path]) => (
+          <option key={name} value={path}>{name}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function AmenitiesView({
+  initial,
+  onSaved,
+}: {
+  initial: PropertyAmenityRow[];
+  onSaved: (rows: PropertyAmenityRow[]) => void;
+}) {
+  const [rows, setRows] = useState(initial);
+  const [saved, setSaved] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const dirty = !same(rows, saved);
+
+  const upd = (i: number, next: PropertyAmenityRow) =>
+    setRows((prev) => prev.map((r, j) => (j === i ? next : r)));
+  const move = (i: number, by: -1 | 1) =>
+    setRows((prev) => {
+      const j = i + by;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    const res = await saveAmenities(rows);
+    setSaving(false);
+    if (res.ok) {
+      setSaved(rows);
+      onSaved(rows);
+      setMsg("Saved · live on site within a minute");
+    } else {
+      setMsg(`Error: ${res.error}`);
+    }
+  }
+
+  return (
+    <>
+      <SaveBar
+        title="Amenities"
+        dirty={dirty}
+        saving={saving}
+        onSave={save}
+        onDiscard={() => {
+          setRows(saved);
+          setMsg(null);
+        }}
+      />
+      <div className="ed-body">
+        <div className="view-head">
+          <h2>Amenities</h2>
+          <p className="sub">
+            The “What’s on site” tiles on the homepage. The power and internet tiles are shown large automatically;
+            the rest follow in the order below.
+          </p>
+        </div>
+        {msg && (!dirty || msg.startsWith("Error")) && <Notice msg={msg} />}
+
+        <div className="card">
+          <h3>Amenity tiles <span className="opt">({rows.length})</span></h3>
+          <p className="hint">Add, change, reorder or remove tiles. Nothing changes on the site until you save.</p>
+
+          {rows.map((row, i) => (
+            <div className="arr-item tile-item" key={i}>
+              <div className="tile-head">
+                <span className="num">Tile {i + 1}</span>
+                <button type="button" className="icon-btn" aria-label={`Move “${row.title || `tile ${i + 1}`}” up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                  ↑
+                </button>
+                <button type="button" className="icon-btn" aria-label={`Move “${row.title || `tile ${i + 1}`}” down`} disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
+                  ↓
+                </button>
+                <button type="button" className="del" onClick={() => setRows((prev) => prev.filter((_, j) => j !== i))}>
+                  Remove
+                </button>
+              </div>
+              <div className="grid-tile">
+                <Field label="Icon">
+                  <IconSelect label={`Icon for tile ${i + 1}`} value={row.icon} onChange={(icon) => upd(i, { ...row, icon })} />
+                </Field>
+                <Field label="Title" req>
+                  <input className="ctrl" aria-label={`Title for tile ${i + 1}`} placeholder="Shared pool & sun deck" value={row.title} onChange={(e) => upd(i, { ...row, title: e.target.value })} />
+                </Field>
+              </div>
+              <Field label="Description">
+                <textarea className="ctrl short" aria-label={`Description for tile ${i + 1}`} value={row.desc} onChange={(e) => upd(i, { ...row, desc: e.target.value })} />
+              </Field>
+            </div>
+          ))}
+
+          <button type="button" className="addrow" onClick={() => setRows((prev) => [...prev, { icon: ICONS.House, title: "", desc: "" }])}>
+            ＋ Add amenity
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+const propertyFields = (s: AdminSettings): AdminPropertyInput => ({
+  propertyName: s.propertyName,
+  city: s.city,
+  region: s.region,
+  whatsappNumber: s.whatsappNumber,
+  fxRate: s.fxRate,
+  powerBaseUsd: s.powerBaseUsd,
+  discounts: s.discounts,
+});
+
+function prettyDate(iso: string) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function PropertyView({
+  initial,
+  onSaved,
+}: {
+  initial: AdminSettings;
+  onSaved: (saved: AdminPropertyInput & { fxRateAsOf: string }) => void;
+}) {
+  const [d, setD] = useState(() => propertyFields(initial));
+  const [saved, setSaved] = useState(() => propertyFields(initial));
+  const [asOf, setAsOf] = useState(initial.fxRateAsOf);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const dirty = !same(d, saved);
+  const digits = d.whatsappNumber.replace(/\D/g, "");
+
+  const set = <K extends keyof AdminPropertyInput>(k: K, v: AdminPropertyInput[K]) =>
+    setD((p) => ({ ...p, [k]: v }));
+  const setDiscount = (i: number, patch: Partial<AdminPropertyInput["discounts"][number]>) =>
+    set("discounts", d.discounts.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    const res = await saveProperty(d);
+    setSaving(false);
+    if (!res.ok) {
+      setMsg(`Error: ${res.error}`);
+      return;
+    }
+    // Mirror what the server stored so the form reads as saved.
+    const stored: AdminPropertyInput = {
+      ...d,
+      propertyName: d.propertyName.trim(),
+      city: d.city.trim(),
+      region: d.region.trim(),
+      whatsappNumber: digits,
+      discounts: [...d.discounts].sort((a, b) => a.months - b.months),
+    };
+    setD(stored);
+    setSaved(stored);
+    setAsOf(res.fxRateAsOf);
+    onSaved({ ...stored, fxRateAsOf: res.fxRateAsOf });
+    setMsg("Saved · live on site within a minute");
+  }
+
+  return (
+    <>
+      <SaveBar
+        title="Property details"
+        dirty={dirty}
+        saving={saving}
+        onSave={save}
+        onDiscard={() => {
+          setD(saved);
+          setMsg(null);
+        }}
+      />
+      <div className="ed-body">
+        <div className="view-head">
+          <h2>Property details</h2>
+          <p className="sub">Contact details and the numbers behind every price and estimate on the site.</p>
+        </div>
+        {msg && (!dirty || msg.startsWith("Error")) && <Notice msg={msg} />}
+
+        <div className="card">
+          <h3>Property</h3>
+          <p className="hint">Shown in the header, the footer and the page titles on Google.</p>
+          <Field label="Property name" req>
+            <input className="ctrl" aria-label="Property name" value={d.propertyName} onChange={(e) => set("propertyName", e.target.value)} />
+          </Field>
+          <div className="grid2">
+            <Field label="City">
+              <input className="ctrl" aria-label="City" value={d.city} onChange={(e) => set("city", e.target.value)} />
+            </Field>
+            <Field label="Region">
+              <input className="ctrl" aria-label="Region" value={d.region} onChange={(e) => set("region", e.target.value)} />
+            </Field>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>WhatsApp</h3>
+          <p className="hint">Every WhatsApp button on the site opens a chat with this number.</p>
+          <Field label="WhatsApp number" req opt="(country code first)">
+            <input
+              className="ctrl"
+              id="prop-whatsapp"
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              aria-label="WhatsApp number"
+              placeholder="1 809 555 0142"
+              value={d.whatsappNumber}
+              onChange={(e) => set("whatsappNumber", e.target.value)}
+            />
+            <p className="field-note">
+              {digits.length >= 8 ? (
+                <a href={`https://wa.me/${digits}`} target="_blank" rel="noopener noreferrer">
+                  Test this number in WhatsApp ↗
+                </a>
+              ) : (
+                "Type the full number, including the country code (1 for the Dominican Republic)."
+              )}
+            </p>
+          </Field>
+        </div>
+
+        <div className="card">
+          <h3>Prices &amp; estimates</h3>
+          <p className="hint">Apartment prices are set in US dollars. The site converts them to pesos with this rate.</p>
+          <div className="grid2">
+            <Field label="Exchange rate" req>
+              <div className="prefix">
+                <span>RD$</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  aria-label="Pesos per US dollar"
+                  value={d.fxRate}
+                  onChange={(e) => set("fxRate", Number(e.target.value))}
+                />
+                <span className="after">per US$1</span>
+              </div>
+              <p className="field-note">
+                {asOf ? `Rate as of ${prettyDate(asOf)}.` : "No date yet."} The date updates when you change the rate.
+              </p>
+            </Field>
+            <Field label="Electricity estimate" opt="(per month)">
+              <div className="prefix">
+                <span>$</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  aria-label="Electricity estimate in US dollars per month"
+                  value={d.powerBaseUsd}
+                  onChange={(e) => set("powerBaseUsd", Number(e.target.value))}
+                />
+              </div>
+              <p className="field-note">Added per month to long-stay estimates as “Electricity, metered estimate”.</p>
+            </Field>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>Long-stay discounts</h3>
+          <p className="hint">Taken off the rent in monthly estimates. When a stay qualifies for more than one, the biggest discount applies.</p>
+          {d.discounts.map((x, i) => (
+            <div className="disc-row" key={i}>
+              <Field label="Stays of at least">
+                <div className="prefix">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    step="1"
+                    aria-label={`Discount ${i + 1}: minimum months`}
+                    value={x.months}
+                    onChange={(e) => setDiscount(i, { months: Number(e.target.value) })}
+                  />
+                  <span className="after">months</span>
+                </div>
+              </Field>
+              <Field label="Get">
+                <div className="prefix">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    max="50"
+                    step="0.5"
+                    aria-label={`Discount ${i + 1}: percent off`}
+                    value={x.percent}
+                    onChange={(e) => setDiscount(i, { percent: Number(e.target.value) })}
+                  />
+                  <span className="after">% off</span>
+                </div>
+              </Field>
+              <button type="button" className="btn ghost" onClick={() => set("discounts", d.discounts.filter((_, j) => j !== i))}>
+                Remove
+              </button>
+            </div>
+          ))}
+          {d.discounts.length === 0 && <p className="field-note" style={{ marginBottom: 12 }}>No discounts — long stays pay the full monthly rent.</p>}
+          <button
+            type="button"
+            className="addrow"
+            onClick={() => set("discounts", [...d.discounts, { months: 6, percent: 5 }])}
+          >
+            ＋ Add discount
+          </button>
+        </div>
+      </div>
+    </>
   );
 }

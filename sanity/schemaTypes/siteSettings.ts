@@ -21,6 +21,13 @@ export const siteSettings = defineType({
     defineField({name: 'whatsappNumber', title: 'WhatsApp number', type: 'string', group: 'general'}),
 
     defineField({name: 'fxRate', title: 'DOP per 1 USD', type: 'number', group: 'pricing'}),
+    defineField({
+      name: 'fxRateAsOf',
+      title: 'Rate checked on',
+      type: 'date',
+      group: 'pricing',
+      description: 'Shown next to peso prices. The /admin app sets it whenever the rate changes.',
+    }),
     defineField({name: 'powerBaseUsd', title: 'Metered power estimate (USD/mo)', type: 'number', group: 'pricing'}),
     defineField({
       name: 'discounts',

@@ -175,7 +175,34 @@ textarea.ctrl{resize:vertical;min-height:100px;line-height:1.55;}
 
 .placeholder-view{max-width:680px;margin:60px auto;text-align:center;color:var(--copy);}
 .placeholder-view h2{color:var(--ink);font-size:24px;font-weight:800;margin:0 0 8px;}
-.info-note{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:22px;color:var(--dense);font-size:15px;line-height:1.6;text-align:left;}
+
+/* ── Shared settings: Amenities + Property details ── */
+.view-head h2{margin:0;font-size:clamp(24px,3vw,30px);font-weight:800;letter-spacing:-.02em;}
+.view-head .sub{color:var(--copy);font-size:15px;margin:4px 0 0;max-width:62ch;}
+.status i.is-dirty{background:var(--sand2);box-shadow:inset 0 0 0 1.5px var(--ink);}
+.card > h3 .opt{color:var(--copy);font-weight:500;}
+.field-note{font-size:14px;color:var(--copy);margin:6px 0 0;}
+.field-note a{color:var(--lagoon);font-weight:700;}
+.prefix span.after{border-right:0;border-left:1px solid var(--hair-strong);font-family:var(--sans);font-size:14px;white-space:nowrap;}
+.iconpick{display:flex;gap:10px;align-items:center;}
+.iconbox{width:46px;height:46px;border-radius:10px;background:var(--sand);color:var(--ink);display:grid;place-items:center;flex:none;}
+.iconbox svg{width:22px;height:22px;}
+.tile-item{padding-top:10px;}
+.tile-head{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.tile-head .num{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--copy);margin-right:auto;}
+.arr-item .tile-head .del{position:static;}
+.icon-btn{width:38px;height:38px;border:1.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font-size:16px;font-weight:700;display:grid;place-items:center;}
+.icon-btn:hover:not(:disabled){border-color:var(--ink);}
+.icon-btn:disabled{opacity:.35;cursor:default;}
+.grid-tile{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:14px;}
+textarea.ctrl.short{min-height:76px;}
+.disc-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end;margin-bottom:12px;}
+.disc-row .field{margin-bottom:0;}
+@media (max-width:640px){
+  .grid-tile{grid-template-columns:minmax(0,1fr);}
+  .disc-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+  .disc-row .btn{grid-column:1 / -1;}
+}
 
 /* ── Bookings ── */
 .bk-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;}

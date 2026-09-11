@@ -46,3 +46,6 @@ sanity/extract.json
 
 # Sanity Studio runtime cache
 .sanity/
+
+# Sanity Studio production build output (`sanity build`)
+/dist

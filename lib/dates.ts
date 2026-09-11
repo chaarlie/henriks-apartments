@@ -128,10 +128,11 @@ export function computeEstimate(
   const months = n ? Math.max(1, Math.ceil(n / 30.4)) : 1;
   const rent = unit.priceUsd * months;
   const power = content.power.baseUsd * months;
-  const pct = content.discounts
+  // The biggest discount this many months qualifies for.
+  const tier = content.discounts
     .filter((dd) => months >= dd.months)
-    .reduce((best, dd) => Math.max(best, dd.pct), 0);
-  const discount = Math.round(rent * pct);
+    .reduce<SiteContent["discounts"][number] | null>((best, dd) => (!best || dd.pct > best.pct ? dd : best), null);
+  const discount = Math.round(rent * (tier?.pct ?? 0));
   const total = rent + power + unit.priceUsd - discount;
 
   const lines: EstimateLine[] = [
@@ -140,10 +141,10 @@ export function computeEstimate(
     { key: "utilities", label: "Water, garbage, 200 Mbps fibre", value: "Included", teal: true },
     { key: "deposit", label: "Deposit (refundable)", value: d(unit.priceUsd) },
   ];
-  if (discount > 0) {
+  if (tier && discount > 0) {
     lines.push({
       key: "discount",
-      label: `Long-stay discount, ${content.discounts[0].months} mo+`,
+      label: `Long-stay discount, ${tier.months} mo+`,
       value: `− ${d(discount)}`,
       teal: true,
     });

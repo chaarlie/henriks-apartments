@@ -31,6 +31,14 @@ export const adminBookingsQuery = groq`
   }
 `;
 
+export const adminSettingsQuery = groq`
+  *[_id == "siteSettings"][0]{
+    propertyName, city, region, whatsappNumber,
+    fxRate, "fxRateAsOf": coalesce(fxRateAsOf, _updatedAt),
+    powerBaseUsd, discounts, propertyAmenities
+  }
+`;
+
 export const adminUnitOptionsQuery = groq`
   *[_type == "unit"] | order(priceUsd asc){ _id, name }
 `;

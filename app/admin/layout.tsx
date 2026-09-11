@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import "./admin.css";
 
 export const metadata: Metadata = {
@@ -12,5 +11,5 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <ClerkProvider signInUrl="/admin/sign-in">{children}</ClerkProvider>;
+  return children;
 }

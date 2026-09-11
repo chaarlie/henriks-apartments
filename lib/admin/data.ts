@@ -5,10 +5,12 @@ import {
   adminUnitsQuery,
   adminBookingsQuery,
   adminUnitOptionsQuery,
+  adminSettingsQuery,
 } from "@/sanity/lib/adminQueries";
 import type {
   AdminUnit,
   AdminBooking,
+  AdminSettings,
   UnitOption,
   AmenityRow,
   SpaceRow,
@@ -134,6 +136,38 @@ export async function getAdminBookings(): Promise<AdminBooking[]> {
       email: b.guest?.email ?? "",
     },
   }));
+}
+
+export async function getAdminSettings(): Promise<AdminSettings> {
+  const s = await getClient().fetch<{
+    propertyName?: string;
+    city?: string;
+    region?: string;
+    whatsappNumber?: string;
+    fxRate?: number;
+    fxRateAsOf?: string;
+    powerBaseUsd?: number;
+    discounts?: { months?: number; pct?: number }[];
+    propertyAmenities?: { icon?: string; title?: string; desc?: string }[];
+  } | null>(adminSettingsQuery, {}, { cache: "no-store" });
+  return {
+    propertyName: s?.propertyName ?? "",
+    city: s?.city ?? "",
+    region: s?.region ?? "",
+    whatsappNumber: s?.whatsappNumber ?? "",
+    fxRate: s?.fxRate ?? 0,
+    fxRateAsOf: s?.fxRateAsOf?.slice(0, 10) ?? "",
+    powerBaseUsd: s?.powerBaseUsd ?? 0,
+    discounts: (s?.discounts ?? []).map((d) => ({
+      months: d.months ?? 0,
+      percent: Math.round((d.pct ?? 0) * 1000) / 10,
+    })),
+    amenities: (s?.propertyAmenities ?? []).map((a) => ({
+      icon: a.icon ?? "",
+      title: a.title ?? "",
+      desc: a.desc ?? "",
+    })),
+  };
 }
 
 export async function getUnitOptions(): Promise<UnitOption[]> {

@@ -9,10 +9,10 @@
     "lint": "eslint",
     "studio": "sanity dev --port 3333",
     "studio:deploy": "sanity deploy",
-    "typegen": "sanity schema extract --enforce-required-fields --path=./sanity/extract.json && sanity typegen generate"
+    "typegen": "sanity schema extract --enforce-required-fields --path=./sanity/extract.json && sanity typegen generate",
+    "admin:password": "node scripts/admin-password.mjs"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.39.6",
     "@photo-sphere-viewer/core": "^5.15.1",
     "@photo-sphere-viewer/markers-plugin": "^5.15.1",
     "@photo-sphere-viewer/virtual-tour-plugin": "^5.15.1",

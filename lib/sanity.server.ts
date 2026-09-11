@@ -93,7 +93,7 @@ interface RawSettings {
   region: string;
   whatsappNumber: string;
   fxRate: number;
-  /** when siteSettings (and so the rate) was last saved */
+  /** when the rate last changed (falls back to the document's last save) */
   fxRateUpdatedAt?: string;
   powerBaseUsd: number;
   discounts?: { months: number; pct: number }[];

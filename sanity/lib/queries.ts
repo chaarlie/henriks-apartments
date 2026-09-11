@@ -40,9 +40,10 @@ export const unitQuery = groq`
 export const landingQuery = groq`{
   "hero":     *[_type == "hero"][0],
   "location": *[_type == "location"][0]{heading, addressLine, distances},
-  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities},
+  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, checkIn, checkOut, stayNote, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities},
   "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
     "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, availableFrom, spec, chips, keywords,
+    forSale, salePriceUsd, saleNote,
     coverImage, gallery, space, tour
   }
 }`

@@ -28,6 +28,13 @@ import type {
 const DEFAULT_WHATSAPP_MESSAGE =
   "Hi Henrik — I'm interested in one of your Sosúa apartments. Is it available for my dates?";
 
+// Used until Henrik sets his own in /admin → Property details.
+const DEFAULT_STAY = {
+  checkIn: "3:00 PM",
+  checkOut: "12:00 PM",
+  note: "Henrik meets you at the gate with the keys. Flying out later in the day? Leave your bags with him and spend the last morning on the beach.",
+};
+
 // A Sanity image field: an asset reference plus our custom `alt`.
 type SanityImage = SanityImageSource & { alt?: string };
 
@@ -79,6 +86,9 @@ interface RawUnit {
   spec: { area: string; bath: string; sleeps: string };
   chips: string[];
   keywords: string;
+  forSale?: boolean;
+  salePriceUsd?: number;
+  saleNote?: string;
   coverImage?: SanityImage;
   gallery?: SanityImage[];
   tour?: RawTourStop[];
@@ -92,6 +102,9 @@ interface RawSettings {
   city: string;
   region: string;
   whatsappNumber: string;
+  checkIn?: string;
+  checkOut?: string;
+  stayNote?: string;
   fxRate: number;
   /** when the rate last changed (falls back to the document's last save) */
   fxRateUpdatedAt?: string;
@@ -128,6 +141,9 @@ function cardUnit(u: RawUnit): Unit {
     spec: u.spec,
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
+    forSale: u.forSale ?? false,
+    salePriceUsd: u.salePriceUsd ?? 0,
+    saleNote: u.saleNote ?? "",
     image: img(u.coverImage, u.name),
     // The landing carousel reads gallery + space + the 360 tour; the rest stay
     // empty here and are fetched per-unit by getUnit.
@@ -180,6 +196,11 @@ export async function getSiteContent(): Promise<SiteContent> {
       videoId: landing.hero.videoId,
       stats: landing.hero.stats ?? [],
       background: img(landing.hero.background, landing.hero.headline),
+    },
+    stay: {
+      checkIn: s.checkIn || DEFAULT_STAY.checkIn,
+      checkOut: s.checkOut || DEFAULT_STAY.checkOut,
+      note: s.stayNote || DEFAULT_STAY.note,
     },
     fxRate: s.fxRate,
     fxRateAsOf: s.fxRateUpdatedAt?.slice(0, 10) ?? "",

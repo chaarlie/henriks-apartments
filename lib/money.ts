@@ -13,11 +13,15 @@ export function display(usd: number, currency: Currency, fxRate: number): string
 /** wa.me deep link with a prefilled message. Optionally scoped to a unit + note. */
 export function whatsappHref(
   content: SiteContent,
-  opts?: { unit?: Unit; note?: string },
+  opts?: { unit?: Unit; note?: string; sale?: boolean },
 ): string {
   const { whatsappNumber, whatsappMessage } = content.property;
   let message = whatsappMessage;
-  if (opts?.unit) {
+  if (opts?.sale) {
+    message = `Hi Henrik — I'd like more information about buying${
+      opts.unit ? ` the ${opts.unit.name}` : ` an apartment at ${content.property.name}`
+    }. Could you send the price and the details?`;
+  } else if (opts?.unit) {
     message = `Hi Henrik — I'm interested in the ${opts.unit.name} (${opts.unit.code})${
       opts.note ? `, ${opts.note}` : ""
     }. Is it available?`;

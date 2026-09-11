@@ -51,6 +51,9 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
         spec: input.spec,
         chips: input.chips,
         keywords: input.keywords,
+        forSale: input.forSale,
+        salePriceUsd: input.salePriceUsd || undefined,
+        saleNote: input.saleNote || undefined,
         about: textToBlocks(input.about),
         space: input.space.map((s) => ({ _key: key(), ...s })),
         amenitiesOverride: {
@@ -213,6 +216,8 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
       return { ok: false, error: "Enter the exchange rate as pesos per US dollar — for example 61." };
     if (!(input.powerBaseUsd >= 0))
       return { ok: false, error: "The power estimate can’t be negative." };
+    if (!input.checkIn.trim() || !input.checkOut.trim())
+      return { ok: false, error: "Fill in both the check-in and check-out times." };
     const badDiscount = input.discounts.some(
       (d) => !Number.isInteger(d.months) || d.months < 1 || !(d.percent > 0 && d.percent <= 50),
     );
@@ -230,6 +235,9 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
         city: input.city.trim(),
         region: input.region.trim(),
         whatsappNumber: whatsapp,
+        checkIn: input.checkIn.trim(),
+        checkOut: input.checkOut.trim(),
+        stayNote: input.stayNote.trim(),
         fxRate: input.fxRate,
         fxRateAsOf,
         powerBaseUsd: input.powerBaseUsd,

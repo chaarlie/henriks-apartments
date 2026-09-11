@@ -20,6 +20,10 @@ export const siteSettings = defineType({
     defineField({name: 'region', title: 'Region', type: 'string', group: 'general'}),
     defineField({name: 'whatsappNumber', title: 'WhatsApp number', type: 'string', group: 'general'}),
 
+    defineField({name: 'checkIn', title: 'Check-in from', type: 'string', group: 'general', description: 'e.g. "3:00 PM"'}),
+    defineField({name: 'checkOut', title: 'Check-out by', type: 'string', group: 'general', description: 'e.g. "12:00 PM"'}),
+    defineField({name: 'stayNote', title: 'Arrival note', type: 'text', rows: 3, group: 'general', description: 'The friendly line under the times on every apartment page.'}),
+
     defineField({name: 'fxRate', title: 'DOP per 1 USD', type: 'number', group: 'pricing'}),
     defineField({
       name: 'fxRateAsOf',

@@ -38,6 +38,9 @@ interface RawAdminUnit {
   spec?: { area?: string; bath?: string; sleeps?: string };
   chips?: string[];
   keywords?: string;
+  forSale?: boolean;
+  salePriceUsd?: number;
+  saleNote?: string;
   about?: Block[];
   space?: SpaceRow[];
   coverImage?: { alt?: string; ref?: string };
@@ -76,6 +79,9 @@ export async function getAdminUnits(): Promise<AdminUnit[]> {
     },
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
+    forSale: u.forSale ?? false,
+    salePriceUsd: u.salePriceUsd ?? 0,
+    saleNote: u.saleNote ?? "",
     about: blocksToText(u.about),
     space: u.space ?? [],
     amenities: {
@@ -144,6 +150,9 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     city?: string;
     region?: string;
     whatsappNumber?: string;
+    checkIn?: string;
+    checkOut?: string;
+    stayNote?: string;
     fxRate?: number;
     fxRateAsOf?: string;
     powerBaseUsd?: number;
@@ -155,6 +164,9 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     city: s?.city ?? "",
     region: s?.region ?? "",
     whatsappNumber: s?.whatsappNumber ?? "",
+    checkIn: s?.checkIn ?? "",
+    checkOut: s?.checkOut ?? "",
+    stayNote: s?.stayNote ?? "",
     fxRate: s?.fxRate ?? 0,
     fxRateAsOf: s?.fxRateAsOf?.slice(0, 10) ?? "",
     powerBaseUsd: s?.powerBaseUsd ?? 0,

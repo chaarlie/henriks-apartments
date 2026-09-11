@@ -336,6 +336,9 @@ function ApartmentEditor({
       spec: d.spec,
       chips: d.chips,
       keywords: d.keywords,
+      forSale: d.forSale,
+      salePriceUsd: Number(d.salePriceUsd),
+      saleNote: d.saleNote,
       about: d.about,
       space: d.space,
       amenities: d.amenities,
@@ -533,6 +536,43 @@ function ApartmentEditor({
                 <Field label="Search words" opt="(helps guests find it with the search box)">
                   <textarea className="ctrl" aria-label="Search words" value={d.keywords} onChange={(e) => set("keywords", e.target.value)} />
                 </Field>
+              </div>
+
+              <div className="card">
+                <h3>Also for sale</h3>
+                <p className="hint">
+                  Turn this on to put a “For sale” badge on the apartment card and list it in the For sale section
+                  on the homepage. The section is always on the homepage — this decides what it lists.
+                </p>
+                <div className="switch-row">
+                  <span className="fl">This apartment is for sale</span>
+                  <Sw on={d.forSale} label="This apartment is for sale" onClick={() => set("forSale", !d.forSale)} />
+                </div>
+                {d.forSale && (
+                  <>
+                    <Field label="Asking price (USD)" opt="(leave 0 for “price on request”)">
+                      <div className="prefix">
+                        <span>$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          aria-label="Asking price in US dollars"
+                          value={d.salePriceUsd}
+                          onChange={(e) => set("salePriceUsd", Number(e.target.value))}
+                        />
+                      </div>
+                    </Field>
+                    <Field label="Sale note" opt="(one line, shown with the price)">
+                      <input
+                        className="ctrl"
+                        aria-label="Sale note"
+                        placeholder="Sold furnished · rental history available"
+                        value={d.saleNote}
+                        onChange={(e) => set("saleNote", e.target.value)}
+                      />
+                    </Field>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -1545,6 +1585,9 @@ const propertyFields = (s: AdminSettings): AdminPropertyInput => ({
   city: s.city,
   region: s.region,
   whatsappNumber: s.whatsappNumber,
+  checkIn: s.checkIn,
+  checkOut: s.checkOut,
+  stayNote: s.stayNote,
   fxRate: s.fxRate,
   powerBaseUsd: s.powerBaseUsd,
   discounts: s.discounts,
@@ -1658,6 +1701,22 @@ function PropertyView({
                 "Type the full number, including the country code (1 for the Dominican Republic)."
               )}
             </p>
+          </Field>
+        </div>
+
+        <div className="card">
+          <h3>Arrival &amp; departure</h3>
+          <p className="hint">Shown on every apartment page, under “Terms &amp; house rules”.</p>
+          <div className="grid2">
+            <Field label="Check-in from" req>
+              <input className="ctrl" aria-label="Check-in time" placeholder="3:00 PM" value={d.checkIn} onChange={(e) => set("checkIn", e.target.value)} />
+            </Field>
+            <Field label="Check-out by" req>
+              <input className="ctrl" aria-label="Check-out time" placeholder="12:00 PM" value={d.checkOut} onChange={(e) => set("checkOut", e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Note for guests" opt="(one or two lines)">
+            <textarea className="ctrl short" aria-label="Arrival note" value={d.stayNote} onChange={(e) => set("stayNote", e.target.value)} />
           </Field>
         </div>
 

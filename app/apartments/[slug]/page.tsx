@@ -96,7 +96,7 @@ export default async function UnitPage({
 
           {/* Details + booking */}
           <div className="grid grid-cols-1 items-start gap-9 pt-10 lg:grid-cols-[minmax(0,1.62fr)_minmax(0,1fr)]">
-            <UnitContent unit={unit} />
+            <UnitContent unit={unit} stay={content.stay} />
             <aside>
               <BookingCard unit={unit} />
             </aside>

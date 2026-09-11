@@ -52,6 +52,11 @@ export const unit = defineType({
         defineField({name: 'sleeps', title: 'Sleeps', type: 'string'}),
       ],
     }),
+    // Also on the market — drives the "For sale" badge and the landing section.
+    defineField({name: 'forSale', title: 'Also for sale', type: 'boolean', group: 'overview', initialValue: false}),
+    defineField({name: 'salePriceUsd', title: 'Asking price (USD)', type: 'number', group: 'overview', description: 'Leave empty for "price on request".', hidden: ({parent}) => !parent?.forSale}),
+    defineField({name: 'saleNote', title: 'Sale note', type: 'string', group: 'overview', description: 'One line shown with the For sale badge.', hidden: ({parent}) => !parent?.forSale}),
+
     defineField({name: 'chips', title: 'Card chips', type: 'array', group: 'overview', of: [defineArrayMember({type: 'string'})], options: {layout: 'tags'}}),
     defineField({name: 'keywords', title: 'Search keywords', type: 'text', group: 'overview', rows: 2}),
 

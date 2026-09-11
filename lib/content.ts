@@ -107,6 +107,14 @@ export interface Unit {
   /** card cover photo */
   image: ImageRef;
 
+  // ── Also for sale ──────────────────────────────────────────────────────────
+  /** on the market as well as on the calendar */
+  forSale?: boolean;
+  /** asking price in USD; 0 or missing means "price on request" */
+  salePriceUsd?: number;
+  /** one line about the sale, shown with the badge */
+  saleNote?: string;
+
   // ── Sanity content sections ────────────────────────────────────────────────
   /** "About this apartment" — paragraphs (portable text in Sanity) */
   about: string[];
@@ -158,6 +166,15 @@ export interface SiteContent {
     videoId: string;
     stats: Stat[];
     background: ImageRef;
+  };
+  /** arrival & departure, shown on every apartment page */
+  stay: {
+    /** e.g. "3:00 PM" */
+    checkIn: string;
+    /** e.g. "12:00 PM" */
+    checkOut: string;
+    /** the friendly line under the times */
+    note: string;
   };
   /** DOP per 1 USD — replace with a live/periodically-updated rate */
   fxRate: number;
@@ -371,6 +388,12 @@ export const content: SiteContent = {
       { value: "24/7", label: "Inverter + generator" },
     ],
     background: photo("cover.jpg", "Pool deck with sun loungers and palms at the property"),
+  },
+
+  stay: {
+    checkIn: "3:00 PM",
+    checkOut: "12:00 PM",
+    note: "Henrik meets you at the gate with the keys. Flying out later? Leave your bags with him and spend the last morning on the beach.",
   },
 
   fxRate: 61, // 1 USD = 61 DOP (PLACEHOLDER)

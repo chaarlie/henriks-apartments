@@ -13,6 +13,7 @@ export const adminUnitsQuery = groq`
     name, code, tagline, hidden,
     priceUsd, priceNightlyUsd, availableFrom,
     spec, chips, keywords,
+    forSale, salePriceUsd, saleNote,
     about, space,
     coverImage{alt, "ref": asset._ref},
     gallery[]{alt, "ref": asset._ref},
@@ -34,6 +35,7 @@ export const adminBookingsQuery = groq`
 export const adminSettingsQuery = groq`
   *[_id == "siteSettings"][0]{
     propertyName, city, region, whatsappNumber,
+    checkIn, checkOut, stayNote,
     fxRate, "fxRateAsOf": coalesce(fxRateAsOf, _updatedAt),
     powerBaseUsd, discounts, propertyAmenities
   }

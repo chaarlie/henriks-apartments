@@ -46,6 +46,11 @@ export interface AdminUnit {
   spec: { area: string; bath: string; sleeps: string };
   chips: string[];
   keywords: string;
+  /** also on the market — badge on the card + the homepage For sale section */
+  forSale: boolean;
+  /** asking price in USD; 0 means "price on request" */
+  salePriceUsd: number;
+  saleNote: string;
   /** Paragraphs joined with blank lines for the textarea editor. */
   about: string;
   space: SpaceRow[];
@@ -88,6 +93,9 @@ export interface AdminUnitInput {
   spec: { area: string; bath: string; sleeps: string };
   chips: string[];
   keywords: string;
+  forSale: boolean;
+  salePriceUsd: number;
+  saleNote: string;
   about: string;
   space: SpaceRow[];
   amenities: { inside: AmenityRow[]; building: AmenityRow[] };
@@ -116,6 +124,12 @@ export interface AdminSettings {
   city: string;
   region: string;
   whatsappNumber: string;
+  /** e.g. "3:00 PM" */
+  checkIn: string;
+  /** e.g. "12:00 PM" */
+  checkOut: string;
+  /** the friendly line under the times */
+  stayNote: string;
   fxRate: number;
   /** yyyy-mm-dd the exchange rate last changed */
   fxRateAsOf: string;

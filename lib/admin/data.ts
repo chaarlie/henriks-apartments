@@ -150,6 +150,10 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     city?: string;
     region?: string;
     whatsappNumber?: string;
+    languages?: string[];
+    ownerSince?: string;
+    replyTime?: string;
+    hostNote?: string;
     checkIn?: string;
     checkOut?: string;
     stayNote?: string;
@@ -164,6 +168,10 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     city: s?.city ?? "",
     region: s?.region ?? "",
     whatsappNumber: s?.whatsappNumber ?? "",
+    languages: s?.languages ?? [],
+    ownerSince: s?.ownerSince ?? "",
+    replyTime: s?.replyTime ?? "",
+    hostNote: s?.hostNote ?? "",
     checkIn: s?.checkIn ?? "",
     checkOut: s?.checkOut ?? "",
     stayNote: s?.stayNote ?? "",

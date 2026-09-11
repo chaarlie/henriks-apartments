@@ -167,6 +167,17 @@ export interface SiteContent {
     stats: Stat[];
     background: ImageRef;
   };
+  /** "Who you're renting from" — the landing trust section */
+  host: {
+    /** full names, e.g. ["English", "Finnish"] */
+    languages: string[];
+    /** year he took over the apartments, e.g. "2026" */
+    ownerSince: string;
+    /** typical WhatsApp reply, e.g. "< 1 h" */
+    replyTime: string;
+    /** the paragraph under the heading */
+    note: string;
+  };
   /** arrival & departure, shown on every apartment page */
   stay: {
     /** e.g. "3:00 PM" */
@@ -388,6 +399,13 @@ export const content: SiteContent = {
       { value: "24/7", label: "Inverter + generator" },
     ],
     background: photo("cover.jpg", "Pool deck with sun loungers and palms at the property"),
+  },
+
+  host: {
+    languages: ["English", "Finnish", "Norwegian", "Spanish", "German"],
+    ownerSince: "2026",
+    replyTime: "< 1 h",
+    note: "Henrik comes from the rental business and took over these apartments in 2026.",
   },
 
   stay: {

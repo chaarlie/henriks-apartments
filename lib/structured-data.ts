@@ -51,6 +51,7 @@ export function businessJsonLd(content: SiteContent) {
     image: content.hero.background.url || undefined,
     address: address(content),
     geo: GEO,
+    knowsLanguage: content.host.languages.length ? content.host.languages : undefined,
     checkinTime: time24(content.stay.checkIn),
     checkoutTime: time24(content.stay.checkOut),
     priceRange: prices.length ? `$${Math.min(...prices)}–$${Math.max(...prices)} per month` : undefined,

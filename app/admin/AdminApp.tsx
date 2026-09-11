@@ -1585,6 +1585,10 @@ const propertyFields = (s: AdminSettings): AdminPropertyInput => ({
   city: s.city,
   region: s.region,
   whatsappNumber: s.whatsappNumber,
+  languages: s.languages,
+  ownerSince: s.ownerSince,
+  replyTime: s.replyTime,
+  hostNote: s.hostNote,
   checkIn: s.checkIn,
   checkOut: s.checkOut,
   stayNote: s.stayNote,
@@ -1606,6 +1610,8 @@ function PropertyView({
 }) {
   const [d, setD] = useState(() => propertyFields(initial));
   const [saved, setSaved] = useState(() => propertyFields(initial));
+  // Languages are typed as one comma-separated line but stored as a list.
+  const [langText, setLangText] = useState(() => initial.languages.join(", "));
   const [asOf, setAsOf] = useState(initial.fxRateAsOf);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -1633,10 +1639,12 @@ function PropertyView({
       city: d.city.trim(),
       region: d.region.trim(),
       whatsappNumber: digits,
+      languages: d.languages.map((l) => l.trim()).filter(Boolean),
       discounts: [...d.discounts].sort((a, b) => a.months - b.months),
     };
     setD(stored);
     setSaved(stored);
+    setLangText(stored.languages.join(", "));
     setAsOf(res.fxRateAsOf);
     onSaved({ ...stored, fxRateAsOf: res.fxRateAsOf });
     setMsg("Saved · live on site within a minute");
@@ -1651,6 +1659,7 @@ function PropertyView({
         onSave={save}
         onDiscard={() => {
           setD(saved);
+          setLangText(saved.languages.join(", "));
           setMsg(null);
         }}
       />
@@ -1701,6 +1710,37 @@ function PropertyView({
                 "Type the full number, including the country code (1 for the Dominican Republic)."
               )}
             </p>
+          </Field>
+        </div>
+
+        <div className="card">
+          <h3>Who you&rsquo;re renting from</h3>
+          <p className="hint">The trust section on the homepage. No photo — just the facts guests ask about.</p>
+          <div className="grid2">
+            <Field label="Owner since" opt="(year)">
+              <input className="ctrl" aria-label="Owner since" placeholder="2026" value={d.ownerSince} onChange={(e) => set("ownerSince", e.target.value)} />
+            </Field>
+            <Field label="Typical WhatsApp reply">
+              <input className="ctrl" aria-label="Typical WhatsApp reply" placeholder="< 1 h" value={d.replyTime} onChange={(e) => set("replyTime", e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Languages Henrik speaks" opt="(separate with commas)">
+            <input
+              className="ctrl"
+              aria-label="Languages"
+              placeholder="English, Finnish, Norwegian, Spanish, German"
+              value={langText}
+              onChange={(e) => {
+                setLangText(e.target.value);
+                set("languages", e.target.value.split(",").map((l) => l.trim()).filter(Boolean));
+              }}
+            />
+            <p className="field-note">
+              {d.languages.length ? `Shown as ${d.languages.length} languages: ${d.languages.join(" · ")}` : "None yet — the languages tile is hidden."}
+            </p>
+          </Field>
+          <Field label="About Henrik" opt="(the paragraph guests read)">
+            <textarea className="ctrl" style={{ minHeight: 130 }} aria-label="About Henrik" value={d.hostNote} onChange={(e) => set("hostNote", e.target.value)} />
           </Field>
         </div>
 

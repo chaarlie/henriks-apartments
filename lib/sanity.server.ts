@@ -28,6 +28,9 @@ import type {
 const DEFAULT_WHATSAPP_MESSAGE =
   "Hi Henrik — I'm interested in one of your Sosúa apartments. Is it available for my dates?";
 
+const DEFAULT_HOST_NOTE =
+  "Henrik owns and runs these apartments himself. There is no front desk between you and the person responsible — if something breaks on a Sunday, you message him and he answers.";
+
 // Used until Henrik sets his own in /admin → Property details.
 const DEFAULT_STAY = {
   checkIn: "3:00 PM",
@@ -102,6 +105,10 @@ interface RawSettings {
   city: string;
   region: string;
   whatsappNumber: string;
+  languages?: string[];
+  ownerSince?: string;
+  replyTime?: string;
+  hostNote?: string;
   checkIn?: string;
   checkOut?: string;
   stayNote?: string;
@@ -196,6 +203,12 @@ export async function getSiteContent(): Promise<SiteContent> {
       videoId: landing.hero.videoId,
       stats: landing.hero.stats ?? [],
       background: img(landing.hero.background, landing.hero.headline),
+    },
+    host: {
+      languages: s.languages ?? [],
+      ownerSince: s.ownerSince ?? "",
+      replyTime: s.replyTime ?? "",
+      note: s.hostNote || DEFAULT_HOST_NOTE,
     },
     stay: {
       checkIn: s.checkIn || DEFAULT_STAY.checkIn,

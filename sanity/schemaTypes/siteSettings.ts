@@ -20,6 +20,12 @@ export const siteSettings = defineType({
     defineField({name: 'region', title: 'Region', type: 'string', group: 'general'}),
     defineField({name: 'whatsappNumber', title: 'WhatsApp number', type: 'string', group: 'general'}),
 
+    // "Who you're renting from" — the landing trust section.
+    defineField({name: 'languages', title: 'Languages Henrik speaks', type: 'array', group: 'general', of: [defineArrayMember({type: 'string'})], options: {layout: 'tags'}, description: 'Full names, e.g. "English", "Finnish".'}),
+    defineField({name: 'ownerSince', title: 'Owner since', type: 'string', group: 'general', description: 'Year he took over the apartments, e.g. "2026".'}),
+    defineField({name: 'replyTime', title: 'Typical WhatsApp reply', type: 'string', group: 'general', description: 'e.g. "< 1 h"'}),
+    defineField({name: 'hostNote', title: 'About Henrik', type: 'text', rows: 5, group: 'general', description: 'The paragraph in the "Who you’re renting from" section.'}),
+
     defineField({name: 'checkIn', title: 'Check-in from', type: 'string', group: 'general', description: 'e.g. "3:00 PM"'}),
     defineField({name: 'checkOut', title: 'Check-out by', type: 'string', group: 'general', description: 'e.g. "12:00 PM"'}),
     defineField({name: 'stayNote', title: 'Arrival note', type: 'text', rows: 3, group: 'general', description: 'The friendly line under the times on every apartment page.'}),

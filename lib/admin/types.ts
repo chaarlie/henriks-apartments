@@ -124,6 +124,14 @@ export interface AdminSettings {
   city: string;
   region: string;
   whatsappNumber: string;
+  /** languages Henrik speaks, full names */
+  languages: string[];
+  /** year he took over the apartments, e.g. "2026" */
+  ownerSince: string;
+  /** typical WhatsApp reply, e.g. "< 1 h" */
+  replyTime: string;
+  /** the paragraph in "Who you're renting from" */
+  hostNote: string;
   /** e.g. "3:00 PM" */
   checkIn: string;
   /** e.g. "12:00 PM" */

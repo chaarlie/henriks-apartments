@@ -3,97 +3,73 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useContent } from "@/lib/booking";
+import { numberWord } from "@/lib/dates";
 import VideoModal from "@/app/components/VideoModal";
 
+/** Full-bleed hero. Its bottom edge leaves room for the StayBar, which overlaps it. */
 export default function Hero() {
-  const { hero, location } = useContent();
+  const { hero, units } = useContent();
   const [playing, setPlaying] = useState(false);
 
   return (
-    <section className="relative flex min-h-[clamp(560px,80vh,760px)] items-center overflow-hidden bg-ink">
+    <section className="relative overflow-hidden bg-ink text-white">
       <Image
         src={hero.background.url}
         alt={hero.background.alt}
         fill
         priority
         sizes="100vw"
-        className="scale-[1.02] object-cover object-[center_58%]"
+        className="object-cover object-[center_58%]"
       />
       <div
-        className="absolute inset-0 bg-gradient-to-r from-ink/95 via-ink/70 to-ink/25"
+        className="absolute inset-0 bg-[linear-gradient(95deg,rgba(6,43,68,0.95)_0%,rgba(6,43,68,0.74)_48%,rgba(6,43,68,0.28)_100%)]"
         aria-hidden
       />
 
-      <div className="relative mx-auto w-full max-w-[1200px] px-7">
-        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#9cc6d6]">
-          {hero.eyebrow}
-        </p>
-        <h1 className="text-balance-pretty mt-4 max-w-[14em] text-[clamp(42px,6vw,72px)] font-bold leading-[1.04] tracking-[-0.03em] text-white">
+      <div className="relative mx-auto max-w-[1200px] px-4 pb-28 pt-[52px] sm:px-7 md:pb-[124px] md:pt-20">
+        <p className="font-mono text-xs uppercase tracking-[0.14em] text-sky">{hero.eyebrow}</p>
+        <h1 className="mt-3.5 max-w-[12.5em] text-balance text-[clamp(40px,6vw,70px)] font-bold leading-[1.04] tracking-[-0.03em]">
           {hero.headline}
         </h1>
-        <p className="mt-5 max-w-[32em] text-lg leading-[1.6] text-white/85">{hero.sub}</p>
+        <p className="mt-[18px] max-w-[33em] text-[clamp(17px,1.6vw,19px)] leading-[1.6] text-white/[0.88]">{hero.sub}</p>
 
-        <div className="mt-8 flex flex-wrap items-center gap-[18px]">
+        <div className="mt-7 flex flex-wrap items-center gap-[18px]">
           <button
             type="button"
             onClick={() => setPlaying(true)}
-            className="flex items-center gap-3 rounded-full bg-white py-2.5 pl-3 pr-5 text-[15px] font-bold text-ink shadow-[0_14px_34px_-14px_rgba(0,0,0,0.6)] transition-transform hover:-translate-y-px"
+            className="flex items-center gap-3 rounded-full bg-white py-[9px] pl-2.5 pr-[22px] text-base font-bold text-ink shadow-[0_14px_34px_-14px_rgba(0,0,0,0.6)] transition-colors hover:bg-sand"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-deep">
               <span className="ml-[3px] h-0 w-0 border-y-8 border-l-[13px] border-y-transparent border-l-white" />
             </span>
             <span className="text-left">
               Watch the walkthrough
-              <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted">
+              <span className="block font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-muted">
                 3-min film · YouTube
               </span>
             </span>
           </button>
           <a
             href="#units"
-            className="border-b border-white/40 pb-0.5 text-sm font-semibold text-white transition-colors hover:border-white"
+            className="border-b-[1.5px] border-white/50 pb-0.5 text-base font-semibold transition-colors hover:border-white"
           >
-            Browse apartments
+            Browse the {numberWord(units.length).toLowerCase()} apartments
           </a>
         </div>
 
-        <dl className="mt-9 grid max-w-[540px] grid-cols-1 gap-3 sm:grid-cols-3">
-          {hero.stats.map((s) => (
+        <dl className="mt-[42px] flex w-full flex-col overflow-hidden rounded-[14px] border border-white/[0.22] bg-ink/40 backdrop-blur-md md:w-fit md:flex-row">
+          {hero.stats.map((s, i) => (
             <div
               key={s.label}
-              className="rounded-xl border border-white/15 bg-white/10 p-[18px] backdrop-blur-sm"
+              className={`flex items-baseline gap-2.5 px-4 py-2.5 md:block md:px-6 md:py-3.5 ${
+                i ? "border-t border-white/[0.18] md:border-l md:border-t-0" : ""
+              }`}
             >
-              <dt className="text-2xl font-bold tracking-[-0.02em] text-white">
-                {s.value}
-              </dt>
-              <dd className="mt-1.5 text-xs leading-tight text-white/80">
-                {s.label}
-              </dd>
+              <dt className="whitespace-nowrap text-[17px] font-extrabold tracking-[-0.02em] md:text-[22px]">{s.value}</dt>
+              <dd className="text-sm text-white/[0.84]">{s.label}</dd>
             </div>
           ))}
         </dl>
-
-        {/* Getting around — animated panel over the background image */}
-        <div className="pointer-events-none mt-8 w-full max-w-[360px] lg:absolute lg:right-7 lg:top-1/2 lg:mt-0 lg:w-[322px] lg:max-w-none lg:-translate-y-1/2">
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-6 backdrop-blur-md [animation:heroFade_0.7s_ease-out_both]">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#9cc6d6]">
-              {location.heading}
-            </p>
-            <p className="mt-1 text-[15px] font-semibold text-white">{location.addressLine}</p>
-            <div className="mt-4">
-              {location.distances.map((d, i) => (
-                <div
-                  key={d.label}
-                  className="flex items-baseline justify-between gap-4 py-[7px] font-spec text-[12px] uppercase tracking-[0.06em] text-white [animation:heroFade_0.6s_ease-out_both]"
-                  style={{ animationDelay: `${140 + i * 70}ms` }}
-                >
-                  <span className="font-normal">{d.label}</span>
-                  <span className="shrink-0 whitespace-nowrap font-light text-white/70">{d.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {playing && <VideoModal videoId={hero.videoId} onClose={() => setPlaying(false)} />}

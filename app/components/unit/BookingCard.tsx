@@ -2,11 +2,11 @@
 
 import { type Unit } from "@/lib/content";
 import { display, whatsappHref, type Currency } from "@/lib/money";
-import { computeEstimate, pretty } from "@/lib/dates";
+import { computeEstimate, dayLabel, pretty } from "@/lib/dates";
 import { useBooking, useContent } from "@/lib/booking";
 
 export default function BookingCard({ unit }: { unit: Unit }) {
-  const { currency, setCurrency, start, end } = useBooking();
+  const { currency, setCurrency, start, end, openPicker } = useBooking();
   const content = useContent();
   const est = computeEstimate(unit, start, end, currency, content);
 
@@ -19,7 +19,7 @@ export default function BookingCard({ unit }: { unit: Unit }) {
       : `${est.nights} nights · billed as ${est.months} month${est.months > 1 ? "s" : ""}`;
 
   return (
-    <div className="sticky top-[116px] rounded-2xl border border-hair bg-surface p-[22px] shadow-[0_18px_44px_-28px_rgba(6,43,68,0.4)]">
+    <div id="book" className="sticky top-[116px] scroll-mt-[130px] rounded-2xl border border-hair bg-surface p-[22px] shadow-[0_18px_44px_-28px_rgba(6,43,68,0.4)]">
       <div className="flex items-center justify-between gap-3">
         <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-lagoon">{unit.code}</span>
         <span className="inline-flex gap-[3px] rounded-[7px] bg-page p-[3px]">
@@ -60,23 +60,24 @@ export default function BookingCard({ unit }: { unit: Unit }) {
       <div className="my-5 h-px bg-hair-soft" />
 
       <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-copy">Your dates</div>
-      <a
-        href="#availability"
-        className="mt-2 grid grid-cols-2 overflow-hidden rounded-[10px] border border-hair-strong"
+      <button
+        type="button"
+        onClick={openPicker}
+        className="mt-2 grid w-full grid-cols-2 overflow-hidden rounded-[10px] border border-hair-strong text-left transition-colors hover:bg-tint"
       >
         <div className="px-3.5 py-2.5">
-          <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">Move-in</div>
+          <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">Arrive</div>
           <div className={`mt-0.5 text-sm font-semibold ${start === null ? "font-medium text-muted" : "text-ink"}`}>
-            {start !== null ? pretty(start) : "Add date"}
+            {start !== null ? dayLabel(start, true) : "Add date"}
           </div>
         </div>
         <div className="border-l border-hair-strong px-3.5 py-2.5">
-          <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">Move-out</div>
+          <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">Leave</div>
           <div className={`mt-0.5 text-sm font-semibold ${end === null ? "font-medium text-muted" : "text-ink"}`}>
-            {end !== null ? pretty(end) : "Add date"}
+            {end !== null ? dayLabel(end, true) : "Add date"}
           </div>
         </div>
-      </a>
+      </button>
       <p className="mt-2 text-sm leading-[1.6] text-copy">{rangeSub}</p>
 
       <div className="my-5 h-px bg-hair-soft" />
@@ -106,9 +107,6 @@ export default function BookingCard({ unit }: { unit: Unit }) {
         className="mt-3 block rounded-[10px] bg-olive py-3.5 text-center text-[15px] font-bold text-white transition-opacity hover:opacity-90"
       >
         Ask Henrik about these dates
-      </a>
-      <a href="#availability" className="mt-2.5 block text-center text-[13px] text-copy">
-        Pick dates in the calendar ↓
       </a>
     </div>
   );

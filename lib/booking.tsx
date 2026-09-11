@@ -10,32 +10,32 @@ import {
 } from "react";
 import type { Currency } from "@/lib/money";
 import type { SiteContent } from "@/lib/content";
-import { DAY } from "@/lib/dates";
-import { blockedFor } from "@/lib/availability";
+import { blockedForScope, freeUnits } from "@/lib/availability";
 
 interface BookingState {
   currency: Currency;
   setCurrency: (c: Currency) => void;
   start: number | null;
   end: number | null;
-  /** select a day — first tap sets move-in, second sets move-out */
-  pick: (t: number) => void;
-  setRange: (start: number | null, end: number | null) => void;
+  /** set the arrival day (clears the leaving day) */
+  setArrival: (t: number) => void;
+  /** set the leaving day — ignored unless an apartment in scope is free for the whole stay */
+  setLeave: (t: number) => void;
   clearDates: () => void;
-  /** month-paging offset for the calendar */
-  offset: number;
-  setOffset: (fn: (o: number) => number) => void;
-  blocked: (t: number) => boolean;
-  /** slug of the unit shared across the landing carousel, cards, and cost estimator */
+  /** which apartments the date picker, stay bar and cards look at: a unit slug, or "any" */
+  scope: string;
+  setScope: (scope: string) => void;
+  /** true on a unit page, where the scope is pinned to that unit */
+  scopeFixed: boolean;
+  /** plain-language note shown when a scope change cleared the dates */
+  notice: string | null;
+  /** the StayPickerDialog, opened from the stay bar, header, cards and booking panels */
+  pickerOpen: boolean;
+  openPicker: () => void;
+  closePicker: () => void;
+  /** slug of the unit shown in the Inside band and held by the reserve form */
   selectedSlug: string;
   setSelected: (slug: string) => void;
-  /** landing search filters */
-  kw: string;
-  setKw: (s: string) => void;
-  layout: string;
-  setLayout: (s: string) => void;
-  maxRent: string;
-  setMaxRent: (s: string) => void;
 }
 
 const Ctx = createContext<BookingState | null>(null);
@@ -57,78 +57,81 @@ interface Range {
 
 export function BookingProvider({
   content,
-  initialSlug,
+  unitSlug,
   children,
 }: {
   content: SiteContent;
-  /** Pin the initially-selected unit (the unit page passes its own slug). */
-  initialSlug?: string;
+  /** Pin the page to one unit (the unit page): its selection and date scope. */
+  unitSlug?: string;
   children: ReactNode;
 }) {
   const [currency, setCurrency] = useState<Currency>("USD");
   const [range, setRangeState] = useState<Range>({ start: null, end: null });
-  const [offset, setOffsetState] = useState(0);
-  const [kw, setKw] = useState("");
-  const [layout, setLayout] = useState("");
-  const [maxRent, setMaxRent] = useState("");
+  const [scopeState, setScopeState] = useState("any");
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedSlug, setSelectedSlug] = useState(
-    () => initialSlug ?? content.units[0]?.slug ?? "",
+    () => unitSlug ?? content.units[0]?.slug ?? "",
   );
 
-  // Availability is per selected unit — the calendar reflects whichever unit is active.
-  const blocked = useMemo(() => blockedFor(content, selectedSlug), [content, selectedSlug]);
-  const setOffset = useCallback((fn: (o: number) => number) => setOffsetState(fn), []);
+  const scope = unitSlug ?? scopeState;
 
-  // Switching units clears a range that isn't free for the newly selected unit,
-  // so the calendar highlight never disagrees with what's actually bookable.
-  const setSelected = useCallback(
-    (slug: string) => {
-      setSelectedSlug(slug);
-      setRangeState((r) => {
-        if (r.start === null) return r;
-        const isBlocked = blockedFor(content, slug);
-        const last = r.end ?? r.start;
-        for (let t = r.start; t <= last; t += DAY) {
-          if (isBlocked(t)) return { start: null, end: null };
-        }
-        return r;
-      });
-    },
-    [content],
-  );
+  const setArrival = useCallback((t: number) => {
+    setRangeState({ start: t, end: null });
+    setNotice(null);
+  }, []);
 
-  const setRange = useCallback(
-    (start: number | null, end: number | null) => setRangeState({ start, end }),
-    [],
-  );
-  const clearDates = useCallback(() => setRangeState({ start: null, end: null }), []);
-
-  const pick = useCallback(
+  const setLeave = useCallback(
     (t: number) => {
-      setRangeState(({ start, end }) => {
-        // fresh selection: no start yet, a completed range, or a tap on/before start
-        if (start === null || end !== null || t <= start) {
-          return { start: t, end: null };
-        }
-        // reject a range that spans a blocked day → restart at t
-        for (let x = start; x <= t; x += DAY) {
-          if (blocked(x)) return { start: t, end: null };
-        }
-        return { start, end: t };
-      });
+      const { start } = range;
+      if (start === null || t <= start) return;
+      if (freeUnits(content, scope, start, t).length === 0) return;
+      setRangeState({ start, end: t });
     },
-    [blocked],
+    [content, scope, range],
   );
+
+  const clearDates = useCallback(() => {
+    setRangeState({ start: null, end: null });
+    setNotice(null);
+  }, []);
+
+  // Narrowing to one apartment can make the chosen dates impossible. Clear them
+  // and say so, rather than leaving a range the calendar can't show.
+  const setScope = useCallback(
+    (next: string) => {
+      if (unitSlug) return;
+      setScopeState(next);
+      if (next !== "any") setSelectedSlug(next);
+      const { start, end } = range;
+      const stillFree =
+        start === null ||
+        (end !== null
+          ? freeUnits(content, next, start, end).length > 0
+          : !blockedForScope(content, next)(start));
+      if (stillFree) {
+        setNotice(null);
+        return;
+      }
+      const name = content.units.find((u) => u.slug === next)?.name ?? "that apartment";
+      setRangeState({ start: null, end: null });
+      setNotice(`Your dates aren’t free in the ${name}, so they were cleared. Pick new dates.`);
+    },
+    [content, range, unitSlug],
+  );
+
+  const openPicker = useCallback(() => setPickerOpen(true), []);
+  const closePicker = useCallback(() => setPickerOpen(false), []);
 
   const value = useMemo<BookingState>(
     () => ({
       currency, setCurrency,
-      start: range.start, end: range.end, pick, setRange, clearDates,
-      offset, setOffset, blocked,
-      selectedSlug, setSelected,
-      kw, setKw, layout, setLayout, maxRent, setMaxRent,
+      start: range.start, end: range.end, setArrival, setLeave, clearDates,
+      scope, setScope, scopeFixed: Boolean(unitSlug), notice,
+      pickerOpen, openPicker, closePicker,
+      selectedSlug, setSelected: setSelectedSlug,
     }),
-    [currency, range, pick, setRange, clearDates, offset, setOffset, blocked, selectedSlug, setSelected, kw, layout, maxRent],
+    [currency, range, setArrival, setLeave, clearDates, scope, setScope, unitSlug, notice, pickerOpen, openPicker, closePicker, selectedSlug],
   );
 
   return (

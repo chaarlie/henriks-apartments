@@ -5,7 +5,8 @@ import { getSiteContent, getUnit, getUnitSlugs } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
-import Calendar from "@/app/components/Calendar";
+import AvailabilitySection from "@/app/components/picker/AvailabilitySection";
+import StayPickerDialog from "@/app/components/picker/StayPickerDialog";
 import MediaViewer from "@/app/components/unit/MediaViewer";
 import UnitContent from "@/app/components/unit/UnitContent";
 import BookingCard from "@/app/components/unit/BookingCard";
@@ -40,7 +41,7 @@ export default async function UnitPage({
   const facts = [unit.spec.area, unit.spec.bath, unit.spec.sleeps, "Split AC", "200 Mbps fibre", "Pool view"];
 
   return (
-    <BookingProvider content={content} initialSlug={unit.slug}>
+    <BookingProvider content={content} unitSlug={unit.slug}>
       <Header mode="unit" unit={unit} />
       <main>
         <div className="mx-auto max-w-[1200px] px-7">
@@ -79,9 +80,15 @@ export default async function UnitPage({
           </div>
         </div>
 
-        <Calendar heading="Availability" eyebrow="Any range, any length" sub="Tap a move-in date, then a move-out date." />
+        <AvailabilitySection
+          page="unit"
+          heading="Availability"
+          eyebrow="Any range, any length"
+          sub="Tap the day you arrive, then how long you’re staying."
+        />
       </main>
       <Footer content={content} />
+      <StayPickerDialog page="unit" />
     </BookingProvider>
   );
 }

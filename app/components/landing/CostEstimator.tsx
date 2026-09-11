@@ -7,7 +7,7 @@ import { useBooking, useContent } from "@/lib/booking";
 /**
  * Landing "What a stay costs" + "Getting around" footer band. The unit being
  * priced is chosen with the button row (shared via BookingProvider with the
- * Inside carousel and the cards); the term follows the calendar dates. Reuses
+ * Inside carousel and the hold form); the term follows the calendar dates. Reuses
  * computeEstimate so figures match the unit page. Styled as the deep-blue
  * two-column band from the redesign mockup.
  */
@@ -25,7 +25,7 @@ export default function CostEstimator() {
   const note = start !== null && end !== null ? `${pretty(start)} to ${pretty(end)}` : undefined;
 
   return (
-    <section id="estimate" className="scroll-mt-28 bg-deep text-page">
+    <section id="estimate" className="mt-16 scroll-mt-28 bg-deep text-page md:mt-[88px]">
       <div className="mx-auto grid max-w-[1440px] grid-cols-1 lg:grid-cols-2">
         {/* What a stay costs */}
         <div className="border-b border-hairblue px-7 py-14 lg:border-b-0 lg:border-r lg:px-12">

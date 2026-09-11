@@ -7,7 +7,10 @@ export const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-export const DOW = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+/** Weekday names in getUTCDay() order (Sunday first). */
+export const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+/** Calendar column headers — weeks start on Monday. */
+export const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export const utc = (y: number, m: number, d: number) => Date.UTC(y, m, d);
 
@@ -22,6 +25,36 @@ export function pretty(t: number): string {
   const d = new Date(t);
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()].slice(0, 3)} ${d.getUTCFullYear()}`;
 }
+
+/** "Mon 14 Sep", or "Mon 14 Sep 2026" — written out, so there's no dd/mm vs mm/dd to decode. */
+export function dayLabel(t: number, withYear = false): string {
+  const d = new Date(t);
+  const label = `${WEEKDAYS[d.getUTCDay()].slice(0, 3)} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()].slice(0, 3)}`;
+  return withYear ? `${label} ${d.getUTCFullYear()}` : label;
+}
+
+/** "Monday 14 September 2026" — the spoken label for a calendar day. */
+export function fullDay(t: number): string {
+  const d = new Date(t);
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+/** The same day k months later, clamped to that month's length (31 Jan + 1 → 28 Feb). */
+export function addMonths(t: number, k: number): number {
+  const d = new Date(t);
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth() + k;
+  const len = new Date(utc(y, m + 1, 0)).getUTCDate();
+  return utc(y, m, Math.min(d.getUTCDate(), len));
+}
+
+/** "1 night", "3 nights" */
+export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+const NUMBER_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+
+/** "Four" for 4 — spelled out up to ten, digits after that. */
+export const numberWord = (n: number) => NUMBER_WORDS[n] ?? String(n);
 
 /** ISO yyyy-mm-dd from a UTC timestamp. */
 export const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
@@ -55,6 +88,12 @@ export interface Estimate {
 
 /** Stays of this many nights or more are billed monthly; shorter ones nightly. */
 export const MONTHLY_FROM_NIGHTS = 28;
+
+/** "billed nightly" / "billed as 2 months" — the same split computeEstimate uses. */
+export function billingLabel(n: number): string {
+  if (n < MONTHLY_FROM_NIGHTS) return "billed nightly";
+  return `billed as ${plural(Math.max(1, Math.ceil(n / 30.4)), "month")}`;
+}
 
 /** Date-range cost estimate. Short stays bill by the night (utilities included);
  *  long stays bill by whole months + metered power + deposit, less the long-stay

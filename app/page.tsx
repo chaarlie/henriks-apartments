@@ -3,14 +3,15 @@ import { BookingProvider } from "@/lib/booking";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import Hero from "@/app/components/landing/Hero";
-import Search from "@/app/components/landing/Search";
-import Inside from "@/app/components/landing/Inside";
+import StayBar from "@/app/components/landing/StayBar";
 import ApartmentCards from "@/app/components/landing/ApartmentCards";
-import CostEstimator from "@/app/components/landing/CostEstimator";
+import Inside from "@/app/components/landing/Inside";
 import Amenities from "@/app/components/landing/Amenities";
-import Trust from "@/app/components/landing/Trust";
-import Calendar from "@/app/components/Calendar";
+import AvailabilitySection from "@/app/components/picker/AvailabilitySection";
+import StayPickerDialog from "@/app/components/picker/StayPickerDialog";
 import BookingForm from "@/app/components/landing/BookingForm";
+import Trust from "@/app/components/landing/Trust";
+import CostEstimator from "@/app/components/landing/CostEstimator";
 
 export default async function Home() {
   const content = await getSiteContent();
@@ -19,20 +20,22 @@ export default async function Home() {
       <Header mode="landing" />
       <main>
         <Hero />
-        <Search />
-        <Inside />
+        <StayBar />
         <ApartmentCards />
+        <Inside />
         <Amenities amenities={content.amenities} />
-        <Calendar
+        <AvailabilitySection
+          page="landing"
           heading="Check availability"
           eyebrow="Any range, any length"
-          sub="Pick a unit above, then tap a move-in date and a move-out date. The calendar shows that apartment's real availability."
+          sub="Leave it on “Any apartment” or choose one. Tap the day you arrive, then how long you’re staying."
         />
         <BookingForm />
         <Trust content={content} />
         <CostEstimator />
       </main>
       <Footer content={content} />
+      <StayPickerDialog page="landing" />
     </BookingProvider>
   );
 }

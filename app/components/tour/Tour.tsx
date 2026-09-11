@@ -7,9 +7,16 @@ import PanoramaViewer, { type PanoramaViewerHandle } from "./PanoramaViewer";
 /**
  * Embeddable 360° viewer: the photo-sphere-viewer stage (drag, 3D hotspots,
  * zoom/fullscreen) plus a stop rail. No section chrome — it drops into the
- * reusable MediaViewer panel.
+ * reusable MediaViewer panel and the landing Inside band.
  */
-export default function Tour({ nodes }: { nodes: TourNode[] }) {
+export default function Tour({
+  nodes,
+  tone = "light",
+}: {
+  nodes: TourNode[];
+  /** "dark" restyles the stop rail for an ink background (landing Inside band). */
+  tone?: "light" | "dark";
+}) {
   const viewerRef = useRef<PanoramaViewerHandle>(null);
   const [currentId, setCurrentId] = useState(nodes[0]?._id ?? "");
   const [ready, setReady] = useState(false);
@@ -18,6 +25,7 @@ export default function Tour({ nodes }: { nodes: TourNode[] }) {
   const index = Math.max(0, nodes.findIndex((n) => n._id === currentId));
   const current = nodes[index] ?? nodes[0];
   const total = nodes.length;
+  const dark = tone === "dark";
 
   // When WebGL is unavailable the interactive viewer can't start; the rail then
   // drives a flat equirectangular preview instead of an endless loader.
@@ -28,7 +36,7 @@ export default function Tour({ nodes }: { nodes: TourNode[] }) {
 
   return (
     <div>
-      <div className="relative aspect-video overflow-hidden rounded-2xl border border-hair bg-ink">
+      <div className={`relative aspect-video overflow-hidden rounded-2xl border bg-ink ${dark ? "border-white/[0.14]" : "border-hair"}`}>
         {failed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={current?.panorama} alt={current?.name} className="h-full w-full object-cover" />
@@ -80,17 +88,22 @@ export default function Tour({ nodes }: { nodes: TourNode[] }) {
       <div className="mt-3 flex flex-wrap gap-2">
         {nodes.map((n, i) => {
           const active = n._id === currentId;
+          const cls = dark
+            ? `min-h-11 rounded-[10px] border-[1.5px] px-4 text-[15px] ${
+                active
+                  ? "border-pool bg-pool font-extrabold text-ink"
+                  : "border-white/[0.22] bg-white/5 font-semibold text-white/90 hover:border-white"
+              }`
+            : `rounded-lg border px-3.75 py-2.5 text-sm font-semibold ${
+                active ? "border-deep bg-deep text-white" : "border-hair-strong bg-surface text-copy hover:border-ink"
+              }`;
           return (
             <button
               key={n._id}
               type="button"
               onClick={() => goTo(n._id)}
               aria-current={active ? "true" : undefined}
-              className={`cursor-pointer rounded-lg border px-3.75 py-2.5 text-sm font-semibold transition-colors ${
-                active
-                  ? "border-deep bg-deep text-white"
-                  : "border-hair-strong bg-surface text-copy hover:border-ink"
-              }`}
+              className={`cursor-pointer transition-colors ${cls}`}
             >
               {i + 1} · {n.name}
             </button>

@@ -9,26 +9,52 @@
 @theme {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", monospace;
-  --font-spec: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
 
   --color-page: #eaf1f8; /* section backgrounds */
   --color-surface: #ffffff; /* cards, header, footer */
-  --color-sand: #e6dccb; /* secondary chips, toggle track, active rail row */
+  --color-tint: #f4f8fb; /* hover / chosen fill on white controls */
+  --color-sand: #e6dccb; /* secondary chips, toggle track, active rail row, a chosen stay */
+  --color-sand-soft: #f1ebe1; /* stay preview while choosing dates, notices */
   --color-sand2: #d9c0a3; /* estimate total, values on the deep-blue panel */
   --color-ink: #062b44; /* primary text, viewer backdrop */
-  --color-deep: #04588c; /* logo, primary buttons, estimate panel */
+  --color-ink-hover: #0a3856; /* hover for ink buttons */
+  --color-deep: #04588c; /* logo, primary buttons, estimate panel, arrive/leave days */
   --color-lagoon: #0b6c79; /* eyebrows, links, list dots (text-safe teal) */
+  --color-sky: #9cc6d6; /* eyebrows on the ink hero and availability strip */
   --color-pool: #15aebf; /* hotspot hover, active progress bar (fills only) */
   --color-olive: #48590a; /* CTA background, active dot, selected border */
   --color-copy: #3d6280; /* body copy on light */
   --color-muted: #5e7e96; /* labels, captions */
   --color-dense: #2f5570; /* dense small copy on light surfaces */
+  --color-danger: #b3261e; /* form errors */
+  --color-booked-ink: #6f889b; /* numbers on booked days (3.7:1 on white) */
+  --color-booked-hatch: rgba(6, 43, 68, 0.09); /* stripes on booked days */
 
   --color-hair: rgba(6, 43, 68, 0.12); /* borders/dividers on light */
   --color-hair-soft: rgba(6, 43, 68, 0.1);
   --color-hair-strong: rgba(6, 43, 68, 0.18);
+  --color-line-card: rgba(6, 43, 68, 0.26); /* card + control borders that need to read clearly */
   --color-hairblue: rgba(247, 243, 235, 0.18); /* dividers on the deep panel */
   --color-hairblue-soft: rgba(247, 243, 235, 0.12);
+}
+
+/* Booked days (and anything unavailable because of them) are striped, so the
+   state reads without relying on colour alone. */
+@utility bg-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--color-booked-hatch) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+/* Apartment cards: a pool → deep → sand gradient border, drawn by layering a
+   surface fill (padding-box) over the gradient (border-box). */
+@utility border-gradient {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    linear-gradient(140deg, var(--color-pool) 0%, var(--color-deep) 48%, var(--color-sand2) 100%) border-box;
 }
 
 body {
@@ -37,6 +63,11 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Keep the page still behind an open modal (the date picker dialog). */
+html:has(dialog[open]) {
+  overflow: hidden;
 }
 
 /* Large display type uses tight negative tracking; helper for headlines. */

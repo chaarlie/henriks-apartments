@@ -1,6 +1,6 @@
-import { content } from "@/lib/content";
+import type { SiteContent } from "@/lib/content";
 
-export default function Footer() {
+export default function Footer({ content }: { content: SiteContent }) {
   const { property } = content;
   return (
     <footer className="border-t border-hair py-8">

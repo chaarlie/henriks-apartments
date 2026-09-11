@@ -8,13 +8,14 @@ import Tour from "@/app/components/tour/Tour";
 type Mode = "gallery" | "tour";
 
 /**
- * Reusable unit media panel: a toggle that switches the panel between the photo
- * gallery and the 360° tour. Shared by every unit — pass the unit's
- * `gallery` + `tour`.
+ * Reusable unit media panel: a toggle that switches the panel between the 360°
+ * tour and the photo gallery. The tour is the page's one unique asset, so it
+ * opens first whenever the unit has one.
  */
 export default function MediaViewer({ unit }: { unit: Unit }) {
-  const photos = unit.gallery;
-  const [mode, setMode] = useState<Mode>("gallery");
+  const photos = unit.gallery.length ? unit.gallery : [unit.image];
+  const hasTour = unit.tour.length > 0;
+  const [mode, setMode] = useState<Mode>(hasTour ? "tour" : "gallery");
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState<number | null>(null);
 
@@ -39,8 +40,8 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
       type="button"
       onClick={() => setMode(m)}
       aria-pressed={mode === m}
-      className={`rounded-[7px] px-4 py-2 text-[13px] font-semibold transition-colors ${
-        mode === m ? "bg-deep text-white" : "text-copy hover:text-ink"
+      className={`rounded-[9px] px-[18px] py-2 text-[15px] font-bold transition-colors ${
+        mode === m ? "bg-deep text-white" : "text-ink hover:text-deep"
       }`}
     >
       {label}
@@ -51,25 +52,30 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
     <section id="tour" className="scroll-mt-28">
       {/* Controls on top */}
       <div className="mb-3.5 flex flex-wrap items-center gap-3">
-        <div className="inline-flex gap-[3px] rounded-[9px] bg-sand p-[3px]" role="group" aria-label="View">
-          {seg("gallery", `Gallery · ${photos.length}`)}
-          {seg("tour", "360° tour")}
+        <div className="inline-flex gap-[3px] rounded-xl bg-sand p-1" role="group" aria-label="View">
+          {hasTour && seg("tour", "360° tour")}
+          {seg("gallery", `Photos · ${photos.length}`)}
         </div>
-        <span className="ml-auto hidden font-mono text-[11px] uppercase tracking-[0.14em] text-muted sm:inline">
-          {mode === "tour" ? "Drag to look around" : `${active + 1} / ${photos.length}`}
+        <span className="ml-auto hidden font-mono text-xs uppercase tracking-[0.12em] text-copy sm:inline">
+          {mode === "tour" ? "Drag to look around" : `Photo ${active + 1} of ${photos.length}`}
         </span>
       </div>
 
       {/* Panel */}
       {mode === "tour" ? (
-        <Tour nodes={unit.tour} />
+        <>
+          <Tour nodes={unit.tour} />
+          <p className="mt-2.5 font-mono text-xs leading-[1.5] text-copy">
+            360° capture: Apartment 101 — shown for every unit until the others are photographed.
+          </p>
+        </>
       ) : (
         <div>
           <button
             type="button"
             onClick={() => setLightbox(active)}
             aria-label="Open photo full screen"
-            className="group relative block aspect-video w-full overflow-hidden rounded-2xl border border-hair bg-ink"
+            className="relative block aspect-video w-full overflow-hidden rounded-2xl border-[1.5px] border-line-card bg-ink"
           >
             <Image
               key={photos[active].url}
@@ -80,8 +86,9 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
               sizes="(min-width:1200px) 1140px, 100vw"
               className="object-cover"
             />
-            <span className="absolute bottom-4 right-4 rounded-full bg-white/95 px-[15px] py-2.5 text-[13px] font-bold text-ink opacity-0 shadow-[0_10px_24px_-10px_rgba(6,43,68,0.6)] transition-opacity group-hover:opacity-100">
-              Expand ⤢
+            {/* Always visible — hover-only hints never show on touch screens */}
+            <span className="absolute bottom-4 right-4 rounded-full bg-white/95 px-4 py-2.5 text-sm font-bold text-ink shadow-[0_10px_24px_-10px_rgba(6,43,68,0.6)]">
+              Full screen ⤢
             </span>
           </button>
 
@@ -125,8 +132,8 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
             onClick={(e) => e.stopPropagation()}
             className="max-h-[76vh] max-w-[min(1100px,92vw)] rounded-lg shadow-2xl"
           />
-          <div className="mt-4 text-sm text-white">{photos[lightbox].alt}</div>
-          <div className="mt-1 font-mono text-xs tracking-[0.1em] text-white/55">
+          <div className="mt-4 text-base text-white">{photos[lightbox].alt}</div>
+          <div className="mt-1 font-mono text-xs tracking-[0.1em] text-white/60">
             {lightbox + 1} / {photos.length}
           </div>
         </div>

@@ -55,6 +55,9 @@ interface Props {
   nodes: TourNode[];
   onNodeChange?: (nodeId: string) => void;
   onReady?: () => void;
+  /** Fired when the viewer can't start (e.g. WebGL unavailable) so the caller
+   *  can show a flat fallback instead of an endless loader. */
+  onError?: () => void;
 }
 
 /**
@@ -65,7 +68,7 @@ interface Props {
  * the imperative `goTo` handle.
  */
 const PanoramaViewer = forwardRef<PanoramaViewerHandle, Props>(function PanoramaViewer(
-  { nodes, onNodeChange, onReady },
+  { nodes, onNodeChange, onReady, onError },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -83,43 +86,50 @@ const PanoramaViewer = forwardRef<PanoramaViewerHandle, Props>(function Panorama
     if (!containerRef.current || nodes.length === 0) return;
     let destroyed = false;
 
-    loadPsv().then(({ Viewer, VirtualTourPlugin }) => {
-      if (destroyed || !containerRef.current) return;
+    loadPsv()
+      .then(({ Viewer, VirtualTourPlugin }) => {
+        if (destroyed || !containerRef.current) return;
 
-      const psvNodes = toViewerNodes(nodes);
+        const psvNodes = toViewerNodes(nodes);
 
-      const viewer = new Viewer({
-        container: containerRef.current,
-        navbar: ["zoom", "fullscreen"],
-        defaultZoomLvl: 20,
-        touchmoveTwoFingers: true,
-        mousewheelCtrlKey: false,
-        loadingImg: undefined,
-        plugins: [
-          [
-            VirtualTourPlugin,
-            {
-              nodes: psvNodes,
-              startNodeId: psvNodes[0].id,
-              positionMode: "manual",
-              renderMode: "3d",
-              preload: true,
-              transitionOptions: { showLoader: false, speed: "12rpm" },
-            },
+        // Viewer construction throws on environments without WebGL2; catch it so
+        // it surfaces as a graceful fallback rather than an unhandled rejection.
+        const viewer = new Viewer({
+          container: containerRef.current,
+          navbar: ["zoom", "fullscreen"],
+          defaultZoomLvl: 20,
+          touchmoveTwoFingers: true,
+          mousewheelCtrlKey: false,
+          loadingImg: undefined,
+          plugins: [
+            [
+              VirtualTourPlugin,
+              {
+                nodes: psvNodes,
+                startNodeId: psvNodes[0].id,
+                positionMode: "manual",
+                renderMode: "3d",
+                preload: true,
+                transitionOptions: { showLoader: false, speed: "12rpm" },
+              },
+            ],
           ],
-        ],
-      });
+        });
 
-      viewerRef.current = viewer;
-      viewer.addEventListener("ready", () => onReady?.(), { once: true });
+        viewerRef.current = viewer;
+        viewer.addEventListener("ready", () => onReady?.(), { once: true });
 
-      const tour =
-        viewer.getPlugin<VirtualTourPluginType>(VirtualTourPlugin);
-      tour.addEventListener("node-changed", (e) => {
-        const id = (e as unknown as { node: { id: string } }).node?.id;
-        if (id) onNodeChange?.(id);
+        const tour = viewer.getPlugin<VirtualTourPluginType>(VirtualTourPlugin);
+        tour?.addEventListener("node-changed", (e) => {
+          const id = (e as unknown as { node: { id: string } }).node?.id;
+          if (id) onNodeChange?.(id);
+        });
+      })
+      .catch((err) => {
+        if (destroyed) return;
+        console.warn("360° viewer unavailable — falling back to flat view:", err);
+        onError?.();
       });
-    });
 
     return () => {
       destroyed = true;

@@ -33,7 +33,6 @@ export default async function Home() {
         <Inside />
         <Amenities amenities={content.amenities} />
         <AvailabilitySection
-          page="landing"
           heading="Check availability"
           eyebrow="Any range, any length"
           sub="Leave it on “Any apartment” or choose one. Tap the day you arrive, then how long you’re staying."
@@ -43,7 +42,7 @@ export default async function Home() {
         <CostEstimator />
       </main>
       <Footer content={content} />
-      <StayPickerDialog page="landing" />
+      <StayPickerDialog />
     </BookingProvider>
   );
 }

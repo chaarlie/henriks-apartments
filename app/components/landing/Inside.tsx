@@ -209,7 +209,9 @@ export default function Inside() {
                 <ul className="grid gap-3 rounded-2xl border border-white/[0.18] bg-white/[0.06] p-5">
                   {unit.space.map((s) => (
                     <li key={s.key}>
-                      <b className="block text-[15px]">{s.title}</b>
+                      {/* room name as the label, so values like "Full" never read as headings */}
+                      <span className="block font-mono text-xs uppercase tracking-[0.1em] text-white/60">{s.key}</span>
+                      <b className="mt-0.5 block text-[15px]">{s.title}</b>
                       <span className="text-sm leading-[1.5] text-white/75">{s.desc}</span>
                     </li>
                   ))}

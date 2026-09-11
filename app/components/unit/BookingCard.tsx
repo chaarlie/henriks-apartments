@@ -2,113 +2,142 @@
 
 import { type Unit } from "@/lib/content";
 import { display, whatsappHref, type Currency } from "@/lib/money";
-import { computeEstimate, dayLabel, fxRateNote, pretty } from "@/lib/dates";
+import { billingLabel, computeEstimate, dayLabel, fxRateNote, plural, pretty } from "@/lib/dates";
+import { availableForDates, freeAgainFrom } from "@/lib/availability";
+import { unitFacts } from "@/lib/unit";
 import { useBooking, useContent } from "@/lib/booking";
+import { CalendarIcon, ChatIcon, InfoIcon } from "@/app/components/icons";
 
+const PRIMARY =
+  "flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl text-base font-extrabold text-white transition-colors";
+const LINE_BTN =
+  "flex min-h-[48px] items-center justify-center gap-2 rounded-xl border-[1.5px] border-line-card bg-surface text-[15px] font-bold text-ink transition-colors hover:border-ink hover:bg-tint";
+
+/**
+ * Unit page booking card, in the v3 card language: monthly rent first in a sand
+ * panel, the chosen dates, the estimated total, and one clear next step — pick
+ * dates, or hold them in the form further down (#reserve).
+ */
 export default function BookingCard({ unit }: { unit: Unit }) {
   const { currency, setCurrency, start, end, openPicker } = useBooking();
   const content = useContent();
-  const est = computeEstimate(unit, start, end, currency, content);
+  const money = (usd: number) => display(usd, currency, content.fxRate);
 
-  const note =
-    start !== null && end !== null ? `${pretty(start)} to ${pretty(end)}` : undefined;
-  const rangeSub = !est.nights
-    ? "Pick your dates for an exact estimate."
-    : est.mode === "nightly"
-      ? `${est.nights} night${est.nights > 1 ? "s" : ""} · billed nightly`
-      : `${est.nights} nights · billed as ${est.months} month${est.months > 1 ? "s" : ""}`;
+  const est = computeEstimate(unit, start, end, currency, content);
+  const hasDates = start !== null && end !== null;
+  const free = availableForDates(content, unit, start, end);
+  const againFrom = start !== null && !free ? freeAgainFrom(content, unit, start, end ?? start) : null;
+  const note = hasDates ? `${pretty(start)} to ${pretty(end)}` : undefined;
 
   return (
-    <div id="book" className="sticky top-[116px] scroll-mt-[130px] rounded-2xl border border-hair bg-surface p-[22px] shadow-[0_18px_44px_-28px_rgba(6,43,68,0.4)]">
+    <div
+      id="book"
+      className="scroll-mt-[130px] rounded-[20px] border-[1.5px] border-line-card bg-surface p-5 shadow-[0_18px_44px_-28px_rgba(6,43,68,0.4)] lg:sticky lg:top-[120px]"
+    >
       <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-lagoon">{unit.code}</span>
-        <span className="inline-flex gap-[3px] rounded-[7px] bg-page p-[3px]">
+        <span className="font-mono text-xs uppercase tracking-[0.14em] text-lagoon">{unit.code}</span>
+        <div className="inline-flex gap-[3px] rounded-[10px] bg-sand p-[3px]" role="group" aria-label="Currency">
           {(["USD", "DOP"] as Currency[]).map((c) => (
             <button
               key={c}
               type="button"
               onClick={() => setCurrency(c)}
               aria-pressed={currency === c}
-              className={`rounded-[5px] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.08em] ${
-                currency === c ? "bg-ink text-white" : "text-copy"
+              className={`rounded-[8px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
+                currency === c ? "bg-deep text-white" : "text-ink"
               }`}
             >
               {c}
             </button>
           ))}
-        </span>
+        </div>
       </div>
-      <p className="mt-1.5 text-right font-mono text-[11px] text-copy">{fxRateNote(content)}</p>
+      <p className="mt-1.5 text-right font-mono text-xs text-copy">{fxRateNote(content)}</p>
 
-      <div className="mt-3.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="flex items-baseline gap-1.5">
-          <b className="font-mono text-[30px] font-medium tracking-[-0.03em]">
-            {display(unit.priceNightlyUsd, currency, content.fxRate)}
-          </b>
-          <span className="text-sm text-copy">/ night</span>
-        </span>
-        <span className="flex items-baseline gap-1.5 text-copy">
-          <b className="font-mono text-lg font-medium tracking-[-0.02em] text-ink">
-            {display(unit.priceUsd, currency, content.fxRate)}
-          </b>
-          <span className="text-sm">/ month</span>
-        </span>
+      {/* The facts that decide it */}
+      <div className="mt-3.5 rounded-xl bg-sand px-4 pb-[13px] pt-3.5">
+        <p className="flex items-baseline gap-1.5">
+          <b className="text-[31px] font-extrabold leading-[1.1] tracking-[-0.03em]">{money(unit.priceUsd)}</b>
+          <span className="text-[15px] font-semibold text-dense">per month</span>
+        </p>
+        <p className="mt-0.5 text-[15px] text-dense">
+          or <b className="text-ink">{money(unit.priceNightlyUsd)}</b> a night for short stays
+        </p>
+        <dl className="mt-3 grid grid-cols-3 border-t border-sand2 pt-[11px]">
+          {unitFacts(unit).map(([k, v], i) => (
+            <div key={k} className={i ? "border-l border-sand2 pl-3" : ""}>
+              <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-dense">{k}</dt>
+              <dd className="text-[17px] font-extrabold">{v}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
-      <p className="mt-1 text-sm leading-[1.6] text-copy">
-        Nightly stays include everything. Monthly: water, garbage &amp; 200 Mbps fibre included, power metered.
+      <p className="mt-3 text-[15px] leading-[1.55] text-copy">
+        Monthly: water, garbage and 200 Mbps fibre included, power metered. Nightly stays include everything.
       </p>
 
-      <div className="my-5 h-px bg-hair-soft" />
-
-      <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-copy">Your dates</div>
+      {/* Dates */}
+      <p className="mb-2 mt-5 font-mono text-xs uppercase tracking-[0.1em] text-muted">Your dates</p>
       <button
         type="button"
         onClick={openPicker}
-        className="mt-2 grid w-full grid-cols-2 overflow-hidden rounded-[10px] border border-hair-strong text-left transition-colors hover:bg-tint"
+        className="grid w-full grid-cols-2 overflow-hidden rounded-xl border-[1.5px] border-line-card text-left transition-colors hover:bg-tint"
       >
-        <div className="px-3.5 py-2.5">
-          <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">Arrive</div>
-          <div className={`mt-0.5 text-sm font-semibold ${start === null ? "font-medium text-muted" : "text-ink"}`}>
-            {start !== null ? dayLabel(start, true) : "Add date"}
-          </div>
-        </div>
-        <div className="border-l border-hair-strong px-3.5 py-2.5">
-          <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">Leave</div>
-          <div className={`mt-0.5 text-sm font-semibold ${end === null ? "font-medium text-muted" : "text-ink"}`}>
-            {end !== null ? dayLabel(end, true) : "Add date"}
-          </div>
-        </div>
+        <span className="flex flex-col gap-px px-4 py-2.5">
+          <span className="font-mono text-xs uppercase tracking-[0.1em] text-muted">Arrive</span>
+          <span className={`text-base ${start === null ? "font-semibold text-copy" : "font-bold text-ink"}`}>
+            {start === null ? "Choose a day" : dayLabel(start, true)}
+          </span>
+        </span>
+        <span className="flex flex-col gap-px border-l border-hair-strong px-4 py-2.5">
+          <span className="font-mono text-xs uppercase tracking-[0.1em] text-muted">Leave</span>
+          <span className={`text-base ${end === null ? "font-semibold text-copy" : "font-bold text-ink"}`}>
+            {end === null ? "Choose a day" : dayLabel(end, true)}
+          </span>
+        </span>
       </button>
-      <p className="mt-2 text-sm leading-[1.6] text-copy">{rangeSub}</p>
 
-      <div className="my-5 h-px bg-hair-soft" />
-
-      <div aria-live="polite">
-        <div>
-          {est.lines.map((r) => (
-            <div key={r.key} className="flex justify-between gap-4 py-[7px]">
-              <span className="text-sm text-copy">{r.label}</span>
-              <span className={r.teal ? "text-sm font-semibold text-olive" : "font-mono text-sm text-ink"}>
-                {r.value}
-              </span>
-            </div>
-          ))}
+      {againFrom !== null ? (
+        <p className="mt-3 flex items-start gap-2.5 rounded-[10px] bg-page bg-hatch px-3 py-2.5 text-[15px] leading-[1.45] shadow-[inset_0_0_0_1px_var(--color-hair)]">
+          <InfoIcon className="mt-0.5 h-4 w-4 text-dense" />
+          <span>
+            Booked during your dates. Free again from <b>{dayLabel(againFrom)}</b>.
+          </span>
+        </p>
+      ) : hasDates ? (
+        <div aria-live="polite" className="mt-3">
+          <div className="flex items-baseline justify-between gap-4 rounded-xl bg-deep px-4 py-3.5 text-white">
+            <span className="font-bold">Estimated total</span>
+            <span className="font-mono text-2xl font-medium tracking-[-0.02em]">{est.totalDisplay}</span>
+          </div>
+          <p className="mt-1.5 text-sm text-copy">
+            {plural(est.nights, "night")}, {billingLabel(est.nights)} ·{" "}
+            <a href="#reserve" className="font-bold text-lagoon underline underline-offset-[3px]">
+              See the breakdown
+            </a>
+          </p>
         </div>
+      ) : (
+        <p className="mt-2.5 text-[15px] text-copy">Pick your dates to see the exact total.</p>
+      )}
 
-        <div className="mt-3.5 flex items-baseline justify-between gap-4 rounded-[10px] bg-deep px-4 py-3.5 text-white">
-          <span className="text-sm font-bold">Estimated total</span>
-          <span className="font-mono text-[22px] font-medium tracking-[-0.02em]">{est.totalDisplay}</span>
-        </div>
+      <div className="mt-4 grid gap-2">
+        {hasDates && free ? (
+          <a href="#reserve" className={`${PRIMARY} bg-olive hover:opacity-90`}>
+            Hold these dates
+          </a>
+        ) : (
+          <button type="button" onClick={openPicker} className={`${PRIMARY} bg-ink hover:bg-ink-hover`}>
+            <CalendarIcon className="h-[18px] w-[18px]" />
+            {hasDates ? "Choose other dates" : "Check dates"}
+          </button>
+        )}
+        <a href={whatsappHref(content, { unit, note })} target="_blank" rel="noopener noreferrer" className={LINE_BTN}>
+          <ChatIcon className="h-4 w-4 text-deep" />
+          Ask Henrik on WhatsApp
+        </a>
       </div>
-
-      <a
-        href={whatsappHref(content, { unit, note })}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-3 block rounded-[10px] bg-olive py-3.5 text-center text-[15px] font-bold text-white transition-opacity hover:opacity-90"
-      >
-        Ask Henrik about these dates
-      </a>
+      <p className="mt-2.5 text-center text-sm text-copy">A hold is free and never charges you.</p>
     </div>
   );
 }

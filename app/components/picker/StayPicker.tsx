@@ -75,14 +75,7 @@ function Note({ children, status }: { children: ReactNode; status?: boolean }) {
   );
 }
 
-export default function StayPicker({
-  variant,
-  page,
-}: {
-  variant: "inline" | "dialog";
-  /** where "continue" leads: the landing cards/hold form, or the unit booking card */
-  page: "landing" | "unit";
-}) {
+export default function StayPicker({ variant }: { variant: "inline" | "dialog" }) {
   const {
     start, end, setArrival, setLeave, clearDates,
     scope, setScope, scopeFixed, notice, closePicker,
@@ -201,15 +194,14 @@ export default function StayPicker({
 
   const n = start !== null && end !== null ? nights(start, end) : 0;
   const free = start !== null && end !== null ? freeUnits(content, scope, start, end) : [];
-  const target = page === "unit" ? "book" : scope === "any" ? "units" : "reserve";
+  // "Any apartment" leads to the matching cards; one apartment leads to its hold form.
+  const target = scope === "any" ? "units" : "reserve";
   const ctaLabel =
     step < 3
       ? "Pick your dates"
-      : page === "unit"
-        ? "Use these dates"
-        : scope === "any"
-          ? `Show ${plural(free.length, "free apartment")}`
-          : "Hold these dates";
+      : scope === "any"
+        ? `Show ${plural(free.length, "free apartment")}`
+        : "Hold these dates";
 
   function confirm() {
     if (step !== 3) return;

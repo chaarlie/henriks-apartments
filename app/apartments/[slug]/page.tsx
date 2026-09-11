@@ -4,14 +4,17 @@ import { notFound } from "next/navigation";
 import { getSiteContent, getUnit, getUnitSlugs } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
 import { unitJsonLd } from "@/lib/structured-data";
+import { unitHighlights } from "@/lib/unit";
 import JsonLd from "@/app/components/JsonLd";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import AvailabilitySection from "@/app/components/picker/AvailabilitySection";
 import StayPickerDialog from "@/app/components/picker/StayPickerDialog";
+import BookingForm from "@/app/components/landing/BookingForm";
 import MediaViewer from "@/app/components/unit/MediaViewer";
 import UnitContent from "@/app/components/unit/UnitContent";
 import BookingCard from "@/app/components/unit/BookingCard";
+import UnitActionBar from "@/app/components/unit/UnitActionBar";
 
 export async function generateStaticParams() {
   return (await getUnitSlugs()).map((slug) => ({ slug }));
@@ -41,42 +44,45 @@ export default async function UnitPage({
   const [unit, content] = await Promise.all([getUnit(slug), getSiteContent()]);
   if (!unit) notFound();
 
-  const facts = [unit.spec.area, unit.spec.bath, unit.spec.sleeps, "Split AC", "200 Mbps fibre", "Pool view"];
+  // Facts come from this unit's own data — never a shared hardcoded list.
+  const facts = [unit.spec.area, unit.spec.bath, unit.spec.sleeps, ...unitHighlights(unit)];
 
   return (
     <BookingProvider content={content} unitSlug={unit.slug}>
       <JsonLd data={unitJsonLd(content, unit)} />
       <Header mode="unit" unit={unit} />
-      <main>
-        <div className="mx-auto max-w-[1200px] px-7">
+      <main className="pb-16 md:pb-[88px]">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
           {/* Title */}
-          <div className="pt-[22px] text-[13px] text-copy">
-            <Link href="/#units" className="text-copy hover:text-ink">
+          <nav aria-label="Breadcrumb" className="pt-6 text-[15px] text-copy">
+            <Link href="/#units" className="font-semibold text-lagoon underline underline-offset-[3px]">
               Apartments
             </Link>
-            &nbsp;/&nbsp;<span>{unit.name}</span>
-          </div>
-          <div className="mb-6 mt-2.5">
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-lagoon">{unit.code}</p>
-            <h1 className="mt-1.5 text-[clamp(34px,4.6vw,50px)] font-semibold leading-[1.04] tracking-[-0.01em]">
+            <span aria-hidden className="mx-2">/</span>
+            <span aria-current="page">{unit.name}</span>
+          </nav>
+          <div className="mb-6 mt-3">
+            <p className="font-mono text-xs uppercase tracking-[0.14em] text-lagoon">{unit.code}</p>
+            <h1 className="mt-2 text-[clamp(34px,4.6vw,50px)] font-bold leading-[1.04] tracking-[-0.025em]">
               {unit.name}
             </h1>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <p className="mt-2 text-[17px] text-dense">{unit.tagline}</p>
+            <ul className="mt-4 flex flex-wrap gap-2">
               {facts.map((f) => (
-                <span
+                <li
                   key={f}
-                  className="inline-flex items-center rounded-full border border-hair-strong bg-surface px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-[0.08em] text-ink"
+                  className="inline-flex items-center rounded-full border-[1.5px] border-line-card bg-surface px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-[0.06em] text-ink"
                 >
                   {f}
-                </span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
           <MediaViewer unit={unit} />
 
           {/* Details + booking */}
-          <div className="grid grid-cols-1 items-start gap-9 pt-9 lg:grid-cols-[1.62fr_1fr]">
+          <div className="grid grid-cols-1 items-start gap-9 pt-10 lg:grid-cols-[minmax(0,1.62fr)_minmax(0,1fr)]">
             <UnitContent unit={unit} />
             <aside>
               <BookingCard unit={unit} />
@@ -85,14 +91,17 @@ export default async function UnitPage({
         </div>
 
         <AvailabilitySection
-          page="unit"
           heading="Availability"
           eyebrow="Any range, any length"
           sub="Tap the day you arrive, then how long you’re staying."
         />
+        <BookingForm />
       </main>
       <Footer content={content} />
-      <StayPickerDialog page="unit" />
+      {/* room for the phone action bar so it never covers the footer */}
+      <div aria-hidden className="h-[88px] lg:hidden" />
+      <UnitActionBar unit={unit} />
+      <StayPickerDialog />
     </BookingProvider>
   );
 }

@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { type Unit } from "@/lib/content";
 import { whatsappHref } from "@/lib/money";
-import { dayLabel, plural, pretty, today } from "@/lib/dates";
-import { availableFrom } from "@/lib/filter";
-import { availableForDates, scopeUnits } from "@/lib/availability";
+import { dayLabel, plural, today } from "@/lib/dates";
+import { availableForDates, blockedFor, freeAgainFrom, scopeUnits } from "@/lib/availability";
 import { useBooking, useContent } from "@/lib/booking";
 import { CalendarIcon, ChatIcon } from "@/app/components/icons";
 
@@ -42,14 +41,16 @@ export default function Header({
 
   let count: string;
   if (mode === "unit" && unit) {
-    count =
-      start !== null
-        ? start >= availableFrom(unit)
-          ? "Available for your dates"
-          : `Free from ${pretty(availableFrom(unit))}`
-        : availableFrom(unit) <= today
-          ? "Free now"
-          : `Free ${pretty(availableFrom(unit))}`;
+    // Checks real bookings, not just the unit's opening date.
+    if (start === null) {
+      count = blockedFor(content, unit.slug)(today)
+        ? `Free from ${dayLabel(freeAgainFrom(content, unit, today, today))}`
+        : "Free now";
+    } else if (availableForDates(content, unit, start, end)) {
+      count = end === null ? `Free from ${dayLabel(start)}` : "Free for your dates";
+    } else {
+      count = `Booked for your dates · free again ${dayLabel(freeAgainFrom(content, unit, start, end ?? start))}`;
+    }
   } else {
     // Neutral inventory until dates are picked — "4 of 4 free" read as "nobody stays here".
     const free = scopeUnits(content, scope).filter((u) => availableForDates(content, u, start, end)).length;

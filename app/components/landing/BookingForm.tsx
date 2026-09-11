@@ -23,12 +23,13 @@ const INPUT =
   "w-full rounded-[11px] border-[1.5px] border-line-card bg-surface px-3.5 py-3 text-base text-ink outline-none transition-shadow focus:border-deep focus:shadow-[0_0_0_3px_rgba(4,88,140,0.15)]";
 
 /**
- * Landing "Reserve": the estimate and the hold request in one place, as three
- * steps — apartment, dates, details. Dates picked under "Any apartment" may not
+ * "Reserve": the estimate and the hold request in one place. On the landing it's
+ * three steps — apartment, dates, details. On a unit page (scope pinned to that
+ * unit) the apartment step is skipped. Dates picked under "Any apartment" may not
  * suit the apartment being held, so a clash is called out with the free ones.
  */
 export default function BookingForm() {
-  const { currency, start, end, selectedSlug, setSelected, setScope, openPicker } = useBooking();
+  const { currency, start, end, selectedSlug, setSelected, setScope, scopeFixed, openPicker } = useBooking();
   const content = useContent();
   const router = useRouter();
   const unit = content.units.find((u) => u.slug === selectedSlug) ?? content.units[0];
@@ -44,11 +45,12 @@ export default function BookingForm() {
   const money = (usd: number) => display(usd, currency, content.fxRate);
   const hasDates = start !== null && end !== null;
   const unitFree = availableForDates(content, unit, start, end);
-  const alternatives = hasDates && !unitFree ? freeUnits(content, "any", start, end) : [];
+  const alternatives = hasDates && !unitFree && !scopeFixed ? freeUnits(content, "any", start, end) : [];
   const est = computeEstimate(unit, start, end, currency, content);
   const discount = content.discounts[0];
   const dateLabel = hasDates ? `${dayLabel(start, true)} → ${dayLabel(end, true)}` : "Pick your dates";
   const waNote = hasDates ? `held ${pretty(start)} to ${pretty(end)}` : undefined;
+  const step = scopeFixed ? { dates: 1, details: 2 } : { dates: 2, details: 3 };
 
   function chooseDates() {
     setScope(unit.slug);
@@ -84,7 +86,7 @@ export default function BookingForm() {
       <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
         <p className="font-mono text-xs uppercase tracking-[0.14em] text-lagoon">Reserve</p>
         <h2 className="mt-2.5 text-[clamp(30px,4vw,44px)] font-bold leading-[1.1] tracking-[-0.025em]">
-          Hold your dates — free, nothing to pay
+          {scopeFixed ? `Hold the ${unit.name} — free, nothing to pay` : "Hold your dates — free, nothing to pay"}
         </h2>
         <p className="mt-3 max-w-[40em] text-[17px] text-copy">
           Henrik confirms the dates and the deposit with you directly. A hold never charges you.
@@ -93,31 +95,35 @@ export default function BookingForm() {
         <div className="mt-7 grid overflow-hidden rounded-[20px] border-[1.5px] border-line-card bg-surface lg:grid-cols-[1.05fr_1fr]">
           {/* Apartment, dates, estimate */}
           <div className="border-b border-hair p-5 md:p-[30px] lg:border-b-0 lg:border-r">
-            <Step n={1} className="mb-2.5">Apartment</Step>
-            <div role="group" aria-label="Apartment to hold" className="grid gap-2 sm:grid-cols-2">
-              {content.units.map((u) => {
-                const free = availableForDates(content, u, start, end);
-                const on = u.slug === unit.slug;
-                return (
-                  <button
-                    key={u.slug}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => setSelected(u.slug)}
-                    className={`flex flex-col items-start gap-px rounded-xl border-[1.5px] px-3.5 py-[11px] text-left transition-colors ${
-                      on ? "border-deep bg-tint shadow-[inset_0_0_0_1px_var(--color-deep)]" : "border-line-card bg-surface hover:border-ink"
-                    }`}
-                  >
-                    <span className="text-[15px] font-bold">{u.name}</span>
-                    <span className={`text-sm ${free ? "text-dense" : "text-booked-ink"}`}>
-                      {free ? `${money(u.priceUsd)} / month` : "Booked for your dates"}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {!scopeFixed && (
+              <>
+                <Step n={1} className="mb-2.5">Apartment</Step>
+                <div role="group" aria-label="Apartment to hold" className="mb-6 grid gap-2 sm:grid-cols-2">
+                  {content.units.map((u) => {
+                    const free = availableForDates(content, u, start, end);
+                    const on = u.slug === unit.slug;
+                    return (
+                      <button
+                        key={u.slug}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setSelected(u.slug)}
+                        className={`flex flex-col items-start gap-px rounded-xl border-[1.5px] px-3.5 py-[11px] text-left transition-colors ${
+                          on ? "border-deep bg-tint shadow-[inset_0_0_0_1px_var(--color-deep)]" : "border-line-card bg-surface hover:border-ink"
+                        }`}
+                      >
+                        <span className="text-[15px] font-bold">{u.name}</span>
+                        <span className={`text-sm ${free ? "text-dense" : "text-booked-ink"}`}>
+                          {free ? `${money(u.priceUsd)} / month` : "Booked for your dates"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
-            <Step n={2} className="mb-2.5 mt-6">Dates</Step>
+            <Step n={step.dates} className="mb-2.5">Dates</Step>
             <button
               type="button"
               onClick={chooseDates}
@@ -160,7 +166,7 @@ export default function BookingForm() {
                   </>
                 ) : (
                   <>
-                    {" "}No apartment is free for all of them.{" "}
+                    {" "}
                     <button type="button" onClick={openPicker} className="font-bold text-lagoon underline underline-offset-[3px]">
                       Choose other dates
                     </button>
@@ -216,7 +222,7 @@ export default function BookingForm() {
               </div>
             ) : (
               <form onSubmit={submit} className="flex flex-col gap-3.5" noValidate>
-                <Step n={3}>Your details</Step>
+                <Step n={step.details}>Your details</Step>
                 <div>
                   <label htmlFor="bName" className={LABEL}>Your name</label>
                   <input id="bName" className={INPUT} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
@@ -252,7 +258,9 @@ export default function BookingForm() {
                     : !hasDates
                       ? "Pick dates to hold"
                       : !unitFree
-                        ? "Choose a free apartment"
+                        ? scopeFixed
+                          ? "Choose other dates"
+                          : "Choose a free apartment"
                         : `Request to hold the ${unit.name}`}
                 </button>
                 <p className="text-sm leading-[1.5] text-copy">

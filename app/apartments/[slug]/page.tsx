@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSiteContent, getUnit, getUnitSlugs } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
+import { unitJsonLd } from "@/lib/structured-data";
+import JsonLd from "@/app/components/JsonLd";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import AvailabilitySection from "@/app/components/picker/AvailabilitySection";
@@ -26,6 +28,7 @@ export async function generateMetadata({
   return {
     title: `${unit.name} · ${content.property.name}`,
     description: unit.about[0],
+    alternates: { canonical: `/apartments/${unit.slug}` },
   };
 }
 
@@ -42,6 +45,7 @@ export default async function UnitPage({
 
   return (
     <BookingProvider content={content} unitSlug={unit.slug}>
+      <JsonLd data={unitJsonLd(content, unit)} />
       <Header mode="unit" unit={unit} />
       <main>
         <div className="mx-auto max-w-[1200px] px-7">
@@ -61,7 +65,7 @@ export default async function UnitPage({
               {facts.map((f) => (
                 <span
                   key={f}
-                  className="inline-flex items-center rounded-full border border-hair-strong bg-surface px-3.5 py-1.5 font-spec text-[12px] font-bold uppercase tracking-[0.08em] text-ink"
+                  className="inline-flex items-center rounded-full border border-hair-strong bg-surface px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-[0.08em] text-ink"
                 >
                   {f}
                 </span>

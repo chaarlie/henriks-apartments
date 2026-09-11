@@ -2,7 +2,7 @@
 
 import { type Unit } from "@/lib/content";
 import { display, whatsappHref, type Currency } from "@/lib/money";
-import { computeEstimate, dayLabel, pretty } from "@/lib/dates";
+import { computeEstimate, dayLabel, fxRateNote, pretty } from "@/lib/dates";
 import { useBooking, useContent } from "@/lib/booking";
 
 export default function BookingCard({ unit }: { unit: Unit }) {
@@ -38,6 +38,7 @@ export default function BookingCard({ unit }: { unit: Unit }) {
           ))}
         </span>
       </div>
+      <p className="mt-1.5 text-right font-mono text-[11px] text-copy">{fxRateNote(content)}</p>
 
       <div className="mt-3.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="flex items-baseline gap-1.5">

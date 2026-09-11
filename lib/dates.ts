@@ -56,6 +56,12 @@ const NUMBER_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Sev
 /** "Four" for 4 — spelled out up to ten, digits after that. */
 export const numberWord = (n: number) => NUMBER_WORDS[n] ?? String(n);
 
+/** "At RD$61 / US$1 · rate as of 1 Sep 2026" — printed beside every currency toggle. */
+export function fxRateNote(content: SiteContent): string {
+  const asOf = content.fxRateAsOf ? ` · rate as of ${pretty(fromIso(content.fxRateAsOf))}` : "";
+  return `At RD$${content.fxRate} / US$1${asOf}`;
+}
+
 /** ISO yyyy-mm-dd from a UTC timestamp. */
 export const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
 

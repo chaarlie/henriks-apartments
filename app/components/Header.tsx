@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type Unit } from "@/lib/content";
 import { whatsappHref } from "@/lib/money";
-import { dayLabel, pretty, today } from "@/lib/dates";
+import { dayLabel, plural, pretty, today } from "@/lib/dates";
 import { availableFrom } from "@/lib/filter";
 import { availableForDates, scopeUnits } from "@/lib/availability";
 import { useBooking, useContent } from "@/lib/booking";
@@ -51,8 +51,16 @@ export default function Header({
           ? "Free now"
           : `Free ${pretty(availableFrom(unit))}`;
   } else {
+    // Neutral inventory until dates are picked — "4 of 4 free" read as "nobody stays here".
     const free = scopeUnits(content, scope).filter((u) => availableForDates(content, u, start, end)).length;
-    count = `${free} of ${content.units.length} apartments free`;
+    count =
+      start === null
+        ? plural(content.units.length, "furnished apartment")
+        : end === null
+          ? `${plural(free, "apartment")} free from ${dayLabel(start)}`
+          : free
+            ? `${plural(free, "apartment")} free for these dates`
+            : "No apartments free for these dates";
   }
 
   return (

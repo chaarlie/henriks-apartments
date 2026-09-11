@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { getSiteContent } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
+import { businessJsonLd } from "@/lib/structured-data";
+import JsonLd from "@/app/components/JsonLd";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import Hero from "@/app/components/landing/Hero";
@@ -13,10 +16,15 @@ import BookingForm from "@/app/components/landing/BookingForm";
 import Trust from "@/app/components/landing/Trust";
 import CostEstimator from "@/app/components/landing/CostEstimator";
 
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
+
 export default async function Home() {
   const content = await getSiteContent();
   return (
     <BookingProvider content={content}>
+      <JsonLd data={businessJsonLd(content)} />
       <Header mode="landing" />
       <main>
         <Hero />

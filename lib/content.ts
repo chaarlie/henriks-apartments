@@ -161,6 +161,8 @@ export interface SiteContent {
   };
   /** DOP per 1 USD — replace with a live/periodically-updated rate */
   fxRate: number;
+  /** ISO yyyy-mm-dd the rate was last confirmed; "" when unknown */
+  fxRateAsOf: string;
   units: Unit[];
   amenities: PropertyAmenity[];
   power: {
@@ -372,6 +374,7 @@ export const content: SiteContent = {
   },
 
   fxRate: 61, // 1 USD = 61 DOP (PLACEHOLDER)
+  fxRateAsOf: "",
 
   units: [
     {

@@ -93,6 +93,8 @@ interface RawSettings {
   region: string;
   whatsappNumber: string;
   fxRate: number;
+  /** when siteSettings (and so the rate) was last saved */
+  fxRateUpdatedAt?: string;
   powerBaseUsd: number;
   discounts?: { months: number; pct: number }[];
   propertyAmenities?: { icon: string; title: string; desc: string }[];
@@ -180,6 +182,7 @@ export async function getSiteContent(): Promise<SiteContent> {
       background: img(landing.hero.background, landing.hero.headline),
     },
     fxRate: s.fxRate,
+    fxRateAsOf: s.fxRateUpdatedAt?.slice(0, 10) ?? "",
     units: landing.units.map(cardUnit),
     amenities: s.propertyAmenities ?? [],
     power: { baseUsd: s.powerBaseUsd },

@@ -5,11 +5,11 @@ import { computeEstimate, pretty } from "@/lib/dates";
 import { useBooking, useContent } from "@/lib/booking";
 
 /**
- * Landing "What a stay costs" + "Getting around" footer band. The unit being
- * priced is chosen with the button row (shared via BookingProvider with the
- * Inside carousel and the hold form); the term follows the calendar dates. Reuses
- * computeEstimate so figures match the unit page. Styled as the deep-blue
- * two-column band from the redesign mockup.
+ * Landing closing band, deep blue and two columns: "What a stay costs" and
+ * "Getting around". The columns are separate <section>s (#estimate, #location)
+ * so the nav "Location" link lands on the location itself. The unit being priced
+ * is chosen with the button row (shared via BookingProvider with the Inside band
+ * and the hold form); the term follows the calendar dates.
  */
 export default function CostEstimator() {
   const { currency, start, end, selectedSlug, setSelected } = useBooking();
@@ -25,14 +25,18 @@ export default function CostEstimator() {
   const note = start !== null && end !== null ? `${pretty(start)} to ${pretty(end)}` : undefined;
 
   return (
-    <section id="estimate" className="mt-16 scroll-mt-28 bg-deep text-page md:mt-[88px]">
+    <div className="mt-16 bg-deep text-page md:mt-[88px]">
       <div className="mx-auto grid max-w-[1440px] grid-cols-1 lg:grid-cols-2">
         {/* What a stay costs */}
-        <div className="border-b border-hairblue px-7 py-14 lg:border-b-0 lg:border-r lg:px-12">
+        <section
+          id="estimate"
+          aria-labelledby="estimate-title"
+          className="scroll-mt-28 border-b border-hairblue px-7 py-14 lg:border-b-0 lg:border-r lg:px-12"
+        >
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-page/60">What a stay costs</p>
-          <h3 className="mt-4 text-[clamp(26px,3.2vw,32px)] font-semibold leading-[1.15] tracking-[-0.02em]">
+          <h2 id="estimate-title" className="mt-4 text-[clamp(26px,3.2vw,32px)] font-semibold leading-[1.15] tracking-[-0.02em]">
             {unit.name} · {term}
-          </h3>
+          </h2>
 
           {/* Unit picker — the stay being priced */}
           <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Choose apartment to price">
@@ -75,14 +79,14 @@ export default function CostEstimator() {
               Power is metered and varies with AC use; the estimate is what tenants actually paid last year.
             </p>
           </div>
-        </div>
+        </section>
 
         {/* Getting around */}
-        <div id="location" className="scroll-mt-28 px-7 py-14 lg:px-12">
+        <section id="location" aria-labelledby="location-title" className="scroll-mt-28 px-7 py-14 lg:px-12">
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-page/60">{location.heading}</p>
-          <h3 className="mt-4 text-[clamp(26px,3.2vw,32px)] font-semibold tracking-[-0.02em]">
+          <h2 id="location-title" className="mt-4 text-[clamp(26px,3.2vw,32px)] font-semibold tracking-[-0.02em]">
             {location.addressLine}
-          </h3>
+          </h2>
           <div className="mt-6 h-[210px] overflow-hidden rounded-xl border border-hairblue">
             <iframe
               title="Map of El Batey, Sosúa"
@@ -121,8 +125,8 @@ export default function CostEstimator() {
               Ask about 6-month terms
             </a>
           </div>
-        </div>
+        </section>
       </div>
-    </section>
+    </div>
   );
 }

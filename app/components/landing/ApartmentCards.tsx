@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { type Unit } from "@/lib/content";
 import { display, whatsappHref, type Currency } from "@/lib/money";
-import { computeEstimate, dayLabel, numberWord, plural, today } from "@/lib/dates";
+import { computeEstimate, dayLabel, fxRateNote, numberWord, plural, today } from "@/lib/dates";
 import { availableFrom } from "@/lib/filter";
 import { availableForDates, freeAgainFrom, scopeUnits } from "@/lib/availability";
 import { unitFacts, unitHighlights } from "@/lib/unit";
@@ -212,7 +212,7 @@ export default function ApartmentCards() {
               ))}
             </div>
             <p className="mt-1.5 font-mono text-xs text-copy">
-              {currency === "USD" ? "Rents quoted in US dollars" : `At RD$${content.fxRate} / US$1 · indicative rate`}
+              {fxRateNote(content)}
             </p>
           </div>
         </div>

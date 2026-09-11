@@ -9,7 +9,6 @@
 @theme {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", monospace;
-  --font-spec: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
 
   --color-page: #eaf1f8; /* section backgrounds */
   --color-surface: #ffffff; /* cards, header, footer */

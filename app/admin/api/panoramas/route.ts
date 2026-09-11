@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdmin } from "@/lib/admin/session";
 import { SUPABASE_PROJECT_URL, PANO_BUCKET } from "@/lib/panorama";
 
 export const runtime = "nodejs";

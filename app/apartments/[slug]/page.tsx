@@ -28,10 +28,23 @@ export async function generateMetadata({
   const { slug } = await params;
   const [unit, content] = await Promise.all([getUnit(slug), getSiteContent()]);
   if (!unit) return {};
+  const title = `${unit.name} · ${content.property.name}`;
+  const description = unit.about[0] ?? unit.tagline;
+  const images = unit.image.url ? [{ url: unit.image.url, alt: unit.image.alt }] : undefined;
   return {
-    title: `${unit.name} · ${content.property.name}`,
-    description: unit.about[0],
+    title,
+    description,
     alternates: { canonical: `/apartments/${unit.slug}` },
+    // What WhatsApp, Facebook and the admin's share preview show for this page.
+    openGraph: {
+      type: "website",
+      url: `/apartments/${unit.slug}`,
+      siteName: content.property.name,
+      title,
+      description,
+      images,
+    },
+    twitter: { card: "summary_large_image", title, description, images: images?.map((i) => i.url) },
   };
 }
 

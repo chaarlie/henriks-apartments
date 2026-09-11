@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getWriteClient } from "@/sanity/lib/writeClient";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdmin } from "@/lib/admin/session";
 import type { AdminUnitInput, AdminBookingInput } from "@/lib/admin/types";
 
 const key = () => randomUUID().replace(/-/g, "").slice(0, 12);

@@ -17,19 +17,25 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { property } = await getSiteContent();
+  const { property, hero } = await getSiteContent();
+  const shareTitle = `${property.name} — Furnished monthly rentals in Sosúa`;
+  const shareDescription =
+    "Transparent monthly pricing in USD/DOP, a guided 360° tour, and WhatsApp booking. Four minutes from Playa Sosúa.";
+  const images = hero.background.url ? [{ url: hero.background.url, alt: hero.background.alt }] : undefined;
   return {
     metadataBase: new URL(SITE_URL),
     title: `${property.name} · Furnished monthly rentals in ${property.city}`,
     description:
       "Furnished apartments in El Batey, Sosúa — priced in the open. Rent, power, water and internet all listed, plus a 360° walkthrough of every room. Book any dates, four minutes from Playa Sosúa.",
+    // Defaults for pages without their own (unit pages set theirs).
     openGraph: {
-      title: `${property.name} — Furnished monthly rentals in Sosúa`,
-      description:
-        "Transparent monthly pricing in USD/DOP, a guided 360° tour, and WhatsApp booking. Four minutes from Playa Sosúa.",
+      title: shareTitle,
+      description: shareDescription,
       type: "website",
       siteName: property.name,
+      images,
     },
+    twitter: { card: "summary_large_image", title: shareTitle, description: shareDescription, images: images?.map((i) => i.url) },
   };
 }
 

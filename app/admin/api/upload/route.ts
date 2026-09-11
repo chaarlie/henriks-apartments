@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdmin } from "@/lib/admin/session";
 import { getWriteClient } from "@/sanity/lib/writeClient";
 import { urlFor } from "@/sanity/lib/image";
 

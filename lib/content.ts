@@ -97,6 +97,8 @@ export interface Unit {
   priceUsd: number;
   /** nightly rate in USD for short/vacation stays */
   priceNightlyUsd: number;
+  /** refundable deposit by length of stay; empty means no deposit */
+  deposits?: DepositTier[];
   /** first available day, ISO (yyyy-mm-dd) */
   availableFrom: string;
   spec: { area: string; bath: string; sleeps: string };
@@ -139,6 +141,16 @@ export interface Distance {
 export interface Discount {
   months: number;
   pct: number;
+}
+
+/**
+ * Refundable deposit for one apartment, by length of stay. The row with the
+ * highest `fromMonths` the stay reaches applies; `fromMonths: 0` covers short
+ * nightly stays. An amount of 0 means no deposit.
+ */
+export interface DepositTier {
+  fromMonths: number;
+  amountUsd: number;
 }
 
 /** Property-wide amenity tile for the landing "Amenities" section. */

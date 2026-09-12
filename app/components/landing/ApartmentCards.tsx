@@ -129,7 +129,7 @@ function Card({ unit }: { unit: Unit }) {
             <CheckIcon className="mt-0.5 h-4 w-4 text-olive" />
             <span>
               <b>{est.totalDisplay}</b> estimated for {plural(est.nights, "night")}
-              {est.mode === "monthly" ? ", incl. refundable deposit" : ""}
+              {est.lines.some((l) => l.key === "deposit") ? ", incl. refundable deposit" : ""}
             </span>
           </p>
         )}

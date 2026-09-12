@@ -19,6 +19,7 @@ import type {
   AdminSettings,
   AdminPropertyInput,
   PropertyAmenityRow,
+  DepositRow,
   UnitOption,
   AmenityRow,
   SpaceRow,
@@ -29,6 +30,16 @@ import type {
 } from "@/lib/admin/types";
 
 const BRAND = "Henrik Sosúa";
+
+/** The deposit a stay of this many whole months pays — mirrors depositFor in lib/dates. */
+function depositAt(rows: DepositRow[], months: number): number {
+  const tier = rows
+    .filter((t) => months >= t.fromMonths)
+    .reduce<DepositRow | null>((best, t) => (!best || t.fromMonths > best.fromMonths ? t : best), null);
+  return Math.max(0, tier?.amountUsd ?? 0);
+}
+
+const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** Uploads one file to /admin/api/upload → { ref, url, alt }. */
 async function uploadImage(file: File): Promise<MediaImage> {
@@ -332,6 +343,7 @@ function ApartmentEditor({
       hidden: d.hidden,
       priceUsd: Number(d.priceUsd),
       priceNightlyUsd: Number(d.priceNightlyUsd),
+      deposits: d.deposits,
       availableFrom: d.availableFrom,
       spec: d.spec,
       chips: d.chips,
@@ -492,6 +504,74 @@ function ApartmentEditor({
                     </div>
                   </Field>
                 </div>
+              </div>
+
+              <div className="card">
+                <h3>Deposit</h3>
+                <p className="hint">
+                  Refundable, added on top of the estimate for this apartment. The row with the highest months
+                  the stay reaches is the one that applies — use 0 months to cover short nightly stays, and $0
+                  wherever you don’t want a deposit.
+                </p>
+                {d.deposits.map((t, i) => (
+                  <div className="disc-row" key={i}>
+                    <Field label="Stays from">
+                      <div className="prefix">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          step="1"
+                          aria-label={`Deposit ${i + 1}: from months`}
+                          value={t.fromMonths}
+                          onChange={(e) =>
+                            set("deposits", d.deposits.map((x, j) => (j === i ? { ...x, fromMonths: Number(e.target.value) } : x)))
+                          }
+                        />
+                        <span className="after">months</span>
+                      </div>
+                    </Field>
+                    <Field label="Deposit">
+                      <div className="prefix">
+                        <span>$</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          aria-label={`Deposit ${i + 1}: amount in US dollars`}
+                          value={t.amountUsd}
+                          onChange={(e) =>
+                            set("deposits", d.deposits.map((x, j) => (j === i ? { ...x, amountUsd: Number(e.target.value) } : x)))
+                          }
+                        />
+                      </div>
+                    </Field>
+                    <button type="button" className="btn ghost" onClick={() => set("deposits", d.deposits.filter((_, j) => j !== i))}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {d.deposits.length === 0 && (
+                  <p className="field-note" style={{ marginBottom: 12 }}>
+                    No deposit — guests pay only the rent and the metered power.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="addrow"
+                  onClick={() => set("deposits", [...d.deposits, { fromMonths: 0, amountUsd: 0 }])}
+                >
+                  ＋ Add deposit step
+                </button>
+                <p className="field-note">
+                  {([
+                    ["A 2-week stay", 0],
+                    ["A 3-month stay", 3],
+                    ["A 12-month stay", 12],
+                  ] as [string, number][])
+                    .map(([label, m]) => `${label} pays ${usd(depositAt(d.deposits, m))}`)
+                    .join(" · ")}
+                </p>
               </div>
 
               <div className="card">

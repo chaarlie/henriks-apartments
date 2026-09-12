@@ -40,6 +40,27 @@ export const unit = defineType({
     defineField({name: 'tagline', title: 'Tagline', type: 'string', group: 'overview'}),
     defineField({name: 'priceUsd', title: 'Monthly rent (USD)', type: 'number', group: 'overview', validation: (r) => r.required().positive()}),
     defineField({name: 'priceNightlyUsd', title: 'Nightly rate (USD)', type: 'number', group: 'overview', validation: (r) => r.required().positive()}),
+    defineField({
+      name: 'deposits',
+      title: 'Deposit by length of stay',
+      type: 'array',
+      group: 'overview',
+      description:
+        'The row with the highest "from months" the stay reaches applies. Use 0 months to cover short nightly stays. $0 is allowed.',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          fields: [
+            defineField({name: 'fromMonths', title: 'From months', type: 'number'}),
+            defineField({name: 'amountUsd', title: 'Deposit (USD)', type: 'number'}),
+          ],
+          preview: {
+            select: {m: 'fromMonths', a: 'amountUsd'},
+            prepare: ({m, a}) => ({title: `${m ?? 0}+ months`, subtitle: `$${a ?? 0} deposit`}),
+          },
+        }),
+      ],
+    }),
     defineField({name: 'availableFrom', title: 'Available from', type: 'date', group: 'overview', options: {dateFormat: 'YYYY-MM-DD'}}),
     defineField({
       name: 'spec',

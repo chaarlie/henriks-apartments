@@ -34,6 +34,7 @@ interface RawAdminUnit {
   hidden?: boolean;
   priceUsd?: number;
   priceNightlyUsd?: number;
+  deposits?: { fromMonths?: number; amountUsd?: number }[];
   availableFrom?: string;
   spec?: { area?: string; bath?: string; sleeps?: string };
   chips?: string[];
@@ -71,6 +72,9 @@ export async function getAdminUnits(): Promise<AdminUnit[]> {
     hidden: u.hidden ?? false,
     priceUsd: u.priceUsd ?? 0,
     priceNightlyUsd: u.priceNightlyUsd ?? 0,
+    deposits: (u.deposits ?? [])
+      .map((t) => ({ fromMonths: t.fromMonths ?? 0, amountUsd: t.amountUsd ?? 0 }))
+      .sort((a, b) => a.fromMonths - b.fromMonths),
     availableFrom: u.availableFrom ?? "",
     spec: {
       area: u.spec?.area ?? "",

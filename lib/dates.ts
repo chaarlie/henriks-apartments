@@ -92,6 +92,21 @@ export interface Estimate {
   totalDisplay: string;
 }
 
+/**
+ * The refundable deposit for a stay of `months` whole months (0 for a short
+ * nightly stay): the row with the highest `fromMonths` the stay reaches.
+ * No matching row — or an amount of 0 — means no deposit.
+ */
+export function depositFor(unit: Unit, months: number): number {
+  const tier = (unit.deposits ?? [])
+    .filter((t) => months >= t.fromMonths)
+    .reduce<{ fromMonths: number; amountUsd: number } | null>(
+      (best, t) => (!best || t.fromMonths > best.fromMonths ? t : best),
+      null,
+    );
+  return Math.max(0, tier?.amountUsd ?? 0);
+}
+
 /** Stays of this many nights or more are billed monthly; shorter ones nightly. */
 export const MONTHLY_FROM_NIGHTS = 28;
 
@@ -117,11 +132,14 @@ export function computeEstimate(
   // ── Short / vacation stay → nightly ──
   if (n > 0 && n < MONTHLY_FROM_NIGHTS) {
     const rent = unit.priceNightlyUsd * n;
+    const deposit = depositFor(unit, 0);
     const lines: EstimateLine[] = [
       { key: "rent", label: `${n} night${n > 1 ? "s" : ""} × ${d(unit.priceNightlyUsd)}`, value: d(rent) },
       { key: "utilities", label: "Power, water & 200 Mbps fibre", value: "Included", teal: true },
     ];
-    return { nights: n, months: 0, mode: "nightly", total: rent, lines, totalDisplay: d(rent) };
+    if (deposit > 0) lines.push({ key: "deposit", label: "Deposit (refundable)", value: d(deposit) });
+    const total = rent + deposit;
+    return { nights: n, months: 0, mode: "nightly", total, lines, totalDisplay: d(total) };
   }
 
   // ── Long stay (or no dates yet) → monthly ──
@@ -133,14 +151,15 @@ export function computeEstimate(
     .filter((dd) => months >= dd.months)
     .reduce<SiteContent["discounts"][number] | null>((best, dd) => (!best || dd.pct > best.pct ? dd : best), null);
   const discount = Math.round(rent * (tier?.pct ?? 0));
-  const total = rent + power + unit.priceUsd - discount;
+  const deposit = depositFor(unit, months);
+  const total = rent + power + deposit - discount;
 
   const lines: EstimateLine[] = [
     { key: "rent", label: `Rent, ${months} × ${d(unit.priceUsd)}`, value: d(rent) },
     { key: "power", label: "Electricity, metered estimate", value: d(power) },
     { key: "utilities", label: "Water, garbage, 200 Mbps fibre", value: "Included", teal: true },
-    { key: "deposit", label: "Deposit (refundable)", value: d(unit.priceUsd) },
   ];
+  if (deposit > 0) lines.push({ key: "deposit", label: "Deposit (refundable)", value: d(deposit) });
   if (tier && discount > 0) {
     lines.push({
       key: "discount",

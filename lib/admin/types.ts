@@ -42,6 +42,8 @@ export interface AdminUnit {
   hidden: boolean;
   priceUsd: number;
   priceNightlyUsd: number;
+  /** refundable deposit by length of stay */
+  deposits: DepositRow[];
   availableFrom: string;
   spec: { area: string; bath: string; sleeps: string };
   chips: string[];
@@ -89,6 +91,7 @@ export interface AdminUnitInput {
   hidden: boolean;
   priceUsd: number;
   priceNightlyUsd: number;
+  deposits: DepositRow[];
   availableFrom: string;
   spec: { area: string; bath: string; sleeps: string };
   chips: string[];
@@ -110,6 +113,12 @@ export interface PropertyAmenityRow {
   icon: string;
   title: string;
   desc: string;
+}
+
+/** One deposit step: from this many months, the deposit is this many dollars. */
+export interface DepositRow {
+  fromMonths: number;
+  amountUsd: number;
 }
 
 export interface DiscountRow {

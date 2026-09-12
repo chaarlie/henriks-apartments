@@ -85,6 +85,7 @@ interface RawUnit {
   tagline: string;
   priceUsd: number;
   priceNightlyUsd: number;
+  deposits?: { fromMonths: number; amountUsd: number }[];
   availableFrom: string;
   spec: { area: string; bath: string; sleeps: string };
   chips: string[];
@@ -148,6 +149,7 @@ function cardUnit(u: RawUnit): Unit {
     spec: u.spec,
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
+    deposits: u.deposits ?? [],
     forSale: u.forSale ?? false,
     salePriceUsd: u.salePriceUsd ?? 0,
     saleNote: u.saleNote ?? "",
@@ -256,6 +258,7 @@ export async function getUnit(slug: string): Promise<Unit | null> {
     spec: u.spec,
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
+    deposits: u.deposits ?? [],
     image: img(u.coverImage, u.name),
     about: blocksToParagraphs(u.about),
     space: u.space ?? [],

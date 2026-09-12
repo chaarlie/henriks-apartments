@@ -11,7 +11,7 @@ export const adminUnitsQuery = groq`
     _id,
     "slug": slug.current,
     name, code, tagline, hidden,
-    priceUsd, priceNightlyUsd, availableFrom,
+    priceUsd, priceNightlyUsd, deposits, availableFrom,
     spec, chips, keywords,
     forSale, salePriceUsd, saleNote,
     about, space,

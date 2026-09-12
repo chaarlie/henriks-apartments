@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getWriteClient } from "@/sanity/lib/writeClient";
 import { requireAdmin } from "@/lib/admin/session";
+import { toSlug } from "@/lib/slug";
 import type {
   AdminUnitInput,
   AdminBookingInput,
@@ -37,6 +38,16 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
   try {
     await requireAdmin();
+    // A page address with a space or a capital breaks the apartment's URL.
+    const slug = toSlug(input.slug) || toSlug(input.name);
+    if (!slug)
+      return { ok: false, error: "Give the apartment a page address (letters and numbers)." };
+    const clash = await getWriteClient().fetch<string | null>(
+      `*[_type == "unit" && _id != $id && slug.current == $slug][0]._id`,
+      { id: input._id, slug },
+    );
+    if (clash) return { ok: false, error: `Another apartment already uses the page address “${slug}”.` };
+
     const badDeposit = input.deposits.some(
       (t) => !Number.isInteger(t.fromMonths) || t.fromMonths < 0 || !(t.amountUsd >= 0),
     );
@@ -54,7 +65,7 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
         name: input.name,
         code: input.code,
         tagline: input.tagline,
-        slug: { _type: "slug", current: input.slug },
+        slug: { _type: "slug", current: slug },
         hidden: input.hidden,
         priceUsd: input.priceUsd,
         priceNightlyUsd: input.priceNightlyUsd,

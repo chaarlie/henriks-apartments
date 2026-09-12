@@ -5,6 +5,7 @@ import { panoramaUrl } from "@/lib/panorama";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 import { urlFor } from "@/sanity/lib/image";
 import { signOut } from "@/lib/admin/login";
+import { toSlug } from "@/lib/slug";
 import {
   saveUnit,
   setUnitHidden,
@@ -460,11 +461,21 @@ function ApartmentEditor({
                   <input className="ctrl" value={d.tagline} onChange={(e) => set("tagline", e.target.value)} />
                 </Field>
                 <div className="grid2">
-                  <Field label="Page address" opt="(URL)">
+                  <Field label="Page address" opt="(the link guests open)">
                     <div className="prefix">
                       <span>/apartments/</span>
-                      <input value={d.slug} aria-label="Page address" onChange={(e) => set("slug", e.target.value)} />
+                      <input
+                        value={d.slug}
+                        aria-label="Page address"
+                        onChange={(e) => set("slug", e.target.value)}
+                        onBlur={() => set("slug", toSlug(d.slug) || toSlug(d.name))}
+                      />
                     </div>
+                    <p className="field-note">
+                      {toSlug(d.slug) || toSlug(d.name)
+                        ? `Saves as /apartments/${toSlug(d.slug) || toSlug(d.name)} — no spaces or capitals.`
+                        : "Needs letters or numbers."}
+                    </p>
                   </Field>
                   <Field label="Available from">
                     <input

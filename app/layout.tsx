@@ -3,6 +3,7 @@ import { Manrope, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { getSiteContent } from "@/lib/sanity.server";
 import { SITE_URL } from "@/lib/site";
+import { ogImage } from "@/lib/image-url";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -21,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const shareTitle = `${property.name} — Furnished monthly rentals in Sosúa`;
   const shareDescription =
     "Transparent monthly pricing in USD/DOP, a guided 360° tour, and WhatsApp booking. Four minutes from Playa Sosúa.";
-  const images = hero.background.url ? [{ url: hero.background.url, alt: hero.background.alt }] : undefined;
+  const images = hero.background.url ? [{ url: ogImage(hero.background.url), alt: hero.background.alt }] : undefined;
   return {
     metadataBase: new URL(SITE_URL),
     title: `${property.name} · Furnished monthly rentals in ${property.city}`,

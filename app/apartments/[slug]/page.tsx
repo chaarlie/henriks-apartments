@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getSiteContent, getUnit, getUnitSlugs } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
 import { unitJsonLd } from "@/lib/structured-data";
+import { ogImage } from "@/lib/image-url";
 import { unitHighlights } from "@/lib/unit";
 import JsonLd from "@/app/components/JsonLd";
 import Header from "@/app/components/Header";
@@ -30,7 +31,7 @@ export async function generateMetadata({
   if (!unit) return {};
   const title = `${unit.name} · ${content.property.name}`;
   const description = unit.about[0] ?? unit.tagline;
-  const images = unit.image.url ? [{ url: unit.image.url, alt: unit.image.alt }] : undefined;
+  const images = unit.image.url ? [{ url: ogImage(unit.image.url), alt: unit.image.alt }] : undefined;
   return {
     title,
     description,

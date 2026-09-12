@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    // Sanity's CDN does the resizing, from the original, once — see
+    // lib/sanity-image-loader.ts. Other hosts pass through untouched.
+    loader: "custom",
+    loaderFile: "./lib/sanity-image-loader.ts",
     // Flat photography currently ships from /public; these patterns let the
     // JSON content layer point image fields at the Supabase bucket later
     // (the same shape a Sanity asset URL would take) without a code change.

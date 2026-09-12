@@ -12,6 +12,18 @@ import { unitFacts } from "@/lib/unit";
 const GEO = { "@type": "GeoCoordinates", latitude: 19.753, longitude: -70.5085 };
 const BUSINESS_ID = absoluteUrl("/#business");
 
+/** "3:00 PM" → "15:00" for schema.org; undefined when it isn't a clock time. */
+function time24(s: string): string | undefined {
+  const m = s.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)?$/i);
+  if (!m) return undefined;
+  let hour = Number(m[1]);
+  const period = m[3]?.toLowerCase().replace(/\./g, "");
+  if (period === "pm" && hour < 12) hour += 12;
+  if (period === "am" && hour === 12) hour = 0;
+  if (hour > 23) return undefined;
+  return `${String(hour).padStart(2, "0")}:${m[2] ?? "00"}`;
+}
+
 const firstNumber = (s: string) => {
   const m = s.match(/\d+(?:\.\d+)?/);
   return m ? Number(m[0]) : undefined;
@@ -39,6 +51,9 @@ export function businessJsonLd(content: SiteContent) {
     image: content.hero.background.url || undefined,
     address: address(content),
     geo: GEO,
+    knowsLanguage: content.host.languages.length ? content.host.languages : undefined,
+    checkinTime: time24(content.stay.checkIn),
+    checkoutTime: time24(content.stay.checkOut),
     priceRange: prices.length ? `$${Math.min(...prices)}–$${Math.max(...prices)} per month` : undefined,
     currenciesAccepted: "USD, DOP",
     containsPlace: content.units.map((u) => ({

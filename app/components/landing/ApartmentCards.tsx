@@ -63,6 +63,12 @@ function Card({ unit }: { unit: Unit }) {
           className="object-cover"
         />
         {badge}
+        {/* decorative — the accessible version is the line under the tagline */}
+        {unit.forSale && (
+          <span className="absolute right-2.5 top-2.5 inline-flex items-center rounded-full bg-sand px-3 py-1.5 text-[13px] font-bold leading-tight text-ink">
+            For sale
+          </span>
+        )}
       </Link>
 
       <div className="flex flex-1 flex-col gap-3.5 px-2 pb-1.5 pt-4">
@@ -73,6 +79,12 @@ function Card({ unit }: { unit: Unit }) {
             </Link>
           </h3>
           <p className="mt-[3px] text-[15px] text-dense">{unit.tagline}</p>
+          {unit.forSale && (
+            <p className="mt-2 text-[15px] font-bold text-lagoon">
+              Also for sale ·{" "}
+              {unit.salePriceUsd ? money(unit.salePriceUsd) : "price on request"}
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl bg-sand px-4 pb-[13px] pt-3.5">
@@ -117,7 +129,7 @@ function Card({ unit }: { unit: Unit }) {
             <CheckIcon className="mt-0.5 h-4 w-4 text-olive" />
             <span>
               <b>{est.totalDisplay}</b> estimated for {plural(est.nights, "night")}
-              {est.mode === "monthly" ? ", incl. refundable deposit" : ""}
+              {est.lines.some((l) => l.key === "deposit") ? ", incl. refundable deposit" : ""}
             </span>
           </p>
         )}

@@ -37,6 +37,17 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
   try {
     await requireAdmin();
+    const badDeposit = input.deposits.some(
+      (t) => !Number.isInteger(t.fromMonths) || t.fromMonths < 0 || !(t.amountUsd >= 0),
+    );
+    if (badDeposit)
+      return {
+        ok: false,
+        error: "Each deposit needs whole months (0 or more) and an amount of $0 or more.",
+      };
+    const months = input.deposits.map((t) => t.fromMonths);
+    if (new Set(months).size !== months.length)
+      return { ok: false, error: "Two deposit rows start at the same number of months." };
     await getWriteClient()
       .patch(input._id)
       .set({
@@ -47,10 +58,16 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
         hidden: input.hidden,
         priceUsd: input.priceUsd,
         priceNightlyUsd: input.priceNightlyUsd,
+        deposits: [...input.deposits]
+          .sort((a, b) => a.fromMonths - b.fromMonths)
+          .map((t) => ({ _key: key(), fromMonths: t.fromMonths, amountUsd: t.amountUsd })),
         availableFrom: input.availableFrom || undefined,
         spec: input.spec,
         chips: input.chips,
         keywords: input.keywords,
+        forSale: input.forSale,
+        salePriceUsd: input.salePriceUsd || undefined,
+        saleNote: input.saleNote || undefined,
         about: textToBlocks(input.about),
         space: input.space.map((s) => ({ _key: key(), ...s })),
         amenitiesOverride: {
@@ -213,6 +230,8 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
       return { ok: false, error: "Enter the exchange rate as pesos per US dollar — for example 61." };
     if (!(input.powerBaseUsd >= 0))
       return { ok: false, error: "The power estimate can’t be negative." };
+    if (!input.checkIn.trim() || !input.checkOut.trim())
+      return { ok: false, error: "Fill in both the check-in and check-out times." };
     const badDiscount = input.discounts.some(
       (d) => !Number.isInteger(d.months) || d.months < 1 || !(d.percent > 0 && d.percent <= 50),
     );
@@ -230,6 +249,13 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
         city: input.city.trim(),
         region: input.region.trim(),
         whatsappNumber: whatsapp,
+        languages: input.languages.map((l) => l.trim()).filter(Boolean),
+        ownerSince: input.ownerSince.trim(),
+        replyTime: input.replyTime.trim(),
+        hostNote: input.hostNote.trim(),
+        checkIn: input.checkIn.trim(),
+        checkOut: input.checkOut.trim(),
+        stayNote: input.stayNote.trim(),
         fxRate: input.fxRate,
         fxRateAsOf,
         powerBaseUsd: input.powerBaseUsd,

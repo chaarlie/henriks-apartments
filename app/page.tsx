@@ -8,6 +8,7 @@ import Footer from "@/app/components/Footer";
 import Hero from "@/app/components/landing/Hero";
 import StayBar from "@/app/components/landing/StayBar";
 import ApartmentCards from "@/app/components/landing/ApartmentCards";
+import ForSale from "@/app/components/landing/ForSale";
 import Inside from "@/app/components/landing/Inside";
 import Amenities from "@/app/components/landing/Amenities";
 import AvailabilitySection from "@/app/components/picker/AvailabilitySection";
@@ -30,6 +31,7 @@ export default async function Home() {
         <Hero />
         <StayBar />
         <ApartmentCards />
+        <ForSale />
         <Inside />
         <Amenities amenities={content.amenities} />
         <AvailabilitySection

@@ -1,10 +1,10 @@
-import type { Unit } from "@/lib/content";
+import type { SiteContent, Unit } from "@/lib/content";
 import { CheckIcon, CloseIcon } from "@/app/components/icons";
 
 const Divider = () => <div className="my-10 h-px bg-hair" />;
 const H2 = "text-[clamp(24px,2.6vw,30px)] font-bold leading-[1.15] tracking-[-0.02em]";
 
-export default function UnitContent({ unit }: { unit: Unit }) {
+export default function UnitContent({ unit, stay }: { unit: Unit; stay: SiteContent["stay"] }) {
   return (
     <div>
       {/* About */}
@@ -79,7 +79,24 @@ export default function UnitContent({ unit }: { unit: Unit }) {
       {/* Terms & house rules */}
       <section id="details" className="scroll-mt-28">
         <h2 className={H2}>Terms &amp; house rules</h2>
-        <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
+
+        {/* Arrival & departure — the two times every guest asks about first */}
+        <div className="mt-4 rounded-[14px] border-[1.5px] border-line-card bg-sand-soft p-[18px]">
+          <dl className="flex flex-wrap gap-x-10 gap-y-3">
+            {[
+              ["Check-in from", stay.checkIn],
+              ["Check-out by", stay.checkOut],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="font-mono text-xs uppercase tracking-[0.12em] text-lagoon">{label}</dt>
+                <dd className="mt-1 text-[22px] font-extrabold leading-none">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          {stay.note && <p className="mt-3 max-w-[62ch] text-[15px] leading-[1.55] text-dense">{stay.note}</p>}
+        </div>
+
+        <div className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
           {unit.terms.map((t) => (
             <div key={t.title} className="flex items-start gap-3 rounded-[14px] border-[1.5px] border-line-card bg-surface p-4">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-[10px] bg-sand text-ink">

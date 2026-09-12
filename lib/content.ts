@@ -97,6 +97,8 @@ export interface Unit {
   priceUsd: number;
   /** nightly rate in USD for short/vacation stays */
   priceNightlyUsd: number;
+  /** refundable deposit by length of stay; empty means no deposit */
+  deposits?: DepositTier[];
   /** first available day, ISO (yyyy-mm-dd) */
   availableFrom: string;
   spec: { area: string; bath: string; sleeps: string };
@@ -106,6 +108,14 @@ export interface Unit {
   keywords: string;
   /** card cover photo */
   image: ImageRef;
+
+  // ── Also for sale ──────────────────────────────────────────────────────────
+  /** on the market as well as on the calendar */
+  forSale?: boolean;
+  /** asking price in USD; 0 or missing means "price on request" */
+  salePriceUsd?: number;
+  /** one line about the sale, shown with the badge */
+  saleNote?: string;
 
   // ── Sanity content sections ────────────────────────────────────────────────
   /** "About this apartment" — paragraphs (portable text in Sanity) */
@@ -133,6 +143,16 @@ export interface Discount {
   pct: number;
 }
 
+/**
+ * Refundable deposit for one apartment, by length of stay. The row with the
+ * highest `fromMonths` the stay reaches applies; `fromMonths: 0` covers short
+ * nightly stays. An amount of 0 means no deposit.
+ */
+export interface DepositTier {
+  fromMonths: number;
+  amountUsd: number;
+}
+
 /** Property-wide amenity tile for the landing "Amenities" section. */
 export interface PropertyAmenity {
   icon: string;
@@ -158,6 +178,26 @@ export interface SiteContent {
     videoId: string;
     stats: Stat[];
     background: ImageRef;
+  };
+  /** "Who you're renting from" — the landing trust section */
+  host: {
+    /** full names, e.g. ["English", "Finnish"] */
+    languages: string[];
+    /** year he took over the apartments, e.g. "2026" */
+    ownerSince: string;
+    /** typical WhatsApp reply, e.g. "< 1 h" */
+    replyTime: string;
+    /** the paragraph under the heading */
+    note: string;
+  };
+  /** arrival & departure, shown on every apartment page */
+  stay: {
+    /** e.g. "3:00 PM" */
+    checkIn: string;
+    /** e.g. "12:00 PM" */
+    checkOut: string;
+    /** the friendly line under the times */
+    note: string;
   };
   /** DOP per 1 USD — replace with a live/periodically-updated rate */
   fxRate: number;
@@ -371,6 +411,19 @@ export const content: SiteContent = {
       { value: "24/7", label: "Inverter + generator" },
     ],
     background: photo("cover.jpg", "Pool deck with sun loungers and palms at the property"),
+  },
+
+  host: {
+    languages: ["English", "Finnish", "Norwegian", "Spanish", "German"],
+    ownerSince: "2026",
+    replyTime: "< 1 h",
+    note: "Henrik comes from the rental business and took over these apartments in 2026.",
+  },
+
+  stay: {
+    checkIn: "3:00 PM",
+    checkOut: "12:00 PM",
+    note: "Henrik meets you at the gate with the keys. Flying out later? Leave your bags with him and spend the last morning on the beach.",
   },
 
   fxRate: 61, // 1 USD = 61 DOP (PLACEHOLDER)

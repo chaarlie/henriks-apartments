@@ -22,7 +22,7 @@ export const availabilityQuery = groq`
  */
 export const unitQuery = groq`
   *[_type == "unit" && slug.current == $slug && hidden != true][0]{
-    name, code, tagline, priceUsd, priceNightlyUsd, availableFrom, spec, chips, keywords,
+    name, code, tagline, priceUsd, priceNightlyUsd, deposits, availableFrom, spec, chips, keywords,
     "slug": slug.current,
     coverImage, gallery, tour, about, space,
 
@@ -40,9 +40,10 @@ export const unitQuery = groq`
 export const landingQuery = groq`{
   "hero":     *[_type == "hero"][0],
   "location": *[_type == "location"][0]{heading, addressLine, distances},
-  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities},
+  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, languages, ownerSince, replyTime, hostNote, checkIn, checkOut, stayNote, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities},
   "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
-    "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, availableFrom, spec, chips, keywords,
+    "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, deposits, availableFrom, spec, chips, keywords,
+    forSale, salePriceUsd, saleNote,
     coverImage, gallery, space, tour
   }
 }`

@@ -19,6 +19,7 @@ import type {
   AdminSettings,
   AdminPropertyInput,
   PropertyAmenityRow,
+  DepositRow,
   UnitOption,
   AmenityRow,
   SpaceRow,
@@ -29,6 +30,16 @@ import type {
 } from "@/lib/admin/types";
 
 const BRAND = "Henrik Sosúa";
+
+/** The deposit a stay of this many whole months pays — mirrors depositFor in lib/dates. */
+function depositAt(rows: DepositRow[], months: number): number {
+  const tier = rows
+    .filter((t) => months >= t.fromMonths)
+    .reduce<DepositRow | null>((best, t) => (!best || t.fromMonths > best.fromMonths ? t : best), null);
+  return Math.max(0, tier?.amountUsd ?? 0);
+}
+
+const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** Uploads one file to /admin/api/upload → { ref, url, alt }. */
 async function uploadImage(file: File): Promise<MediaImage> {
@@ -332,10 +343,14 @@ function ApartmentEditor({
       hidden: d.hidden,
       priceUsd: Number(d.priceUsd),
       priceNightlyUsd: Number(d.priceNightlyUsd),
+      deposits: d.deposits,
       availableFrom: d.availableFrom,
       spec: d.spec,
       chips: d.chips,
       keywords: d.keywords,
+      forSale: d.forSale,
+      salePriceUsd: Number(d.salePriceUsd),
+      saleNote: d.saleNote,
       about: d.about,
       space: d.space,
       amenities: d.amenities,
@@ -492,6 +507,74 @@ function ApartmentEditor({
               </div>
 
               <div className="card">
+                <h3>Deposit</h3>
+                <p className="hint">
+                  Refundable, added on top of the estimate for this apartment. The row with the highest months
+                  the stay reaches is the one that applies — use 0 months to cover short nightly stays, and $0
+                  wherever you don’t want a deposit.
+                </p>
+                {d.deposits.map((t, i) => (
+                  <div className="disc-row" key={i}>
+                    <Field label="Stays from">
+                      <div className="prefix">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          step="1"
+                          aria-label={`Deposit ${i + 1}: from months`}
+                          value={t.fromMonths}
+                          onChange={(e) =>
+                            set("deposits", d.deposits.map((x, j) => (j === i ? { ...x, fromMonths: Number(e.target.value) } : x)))
+                          }
+                        />
+                        <span className="after">months</span>
+                      </div>
+                    </Field>
+                    <Field label="Deposit">
+                      <div className="prefix">
+                        <span>$</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          aria-label={`Deposit ${i + 1}: amount in US dollars`}
+                          value={t.amountUsd}
+                          onChange={(e) =>
+                            set("deposits", d.deposits.map((x, j) => (j === i ? { ...x, amountUsd: Number(e.target.value) } : x)))
+                          }
+                        />
+                      </div>
+                    </Field>
+                    <button type="button" className="btn ghost" onClick={() => set("deposits", d.deposits.filter((_, j) => j !== i))}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {d.deposits.length === 0 && (
+                  <p className="field-note" style={{ marginBottom: 12 }}>
+                    No deposit — guests pay only the rent and the metered power.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="addrow"
+                  onClick={() => set("deposits", [...d.deposits, { fromMonths: 0, amountUsd: 0 }])}
+                >
+                  ＋ Add deposit step
+                </button>
+                <p className="field-note">
+                  {([
+                    ["A 2-week stay", 0],
+                    ["A 3-month stay", 3],
+                    ["A 12-month stay", 12],
+                  ] as [string, number][])
+                    .map(([label, m]) => `${label} pays ${usd(depositAt(d.deposits, m))}`)
+                    .join(" · ")}
+                </p>
+              </div>
+
+              <div className="card">
                 <h3>Specs &amp; highlights</h3>
                 <p className="hint">Size, baths and sleeps show on the card and the page. Highlights show on the apartment card and page.</p>
                 <div className="grid3">
@@ -533,6 +616,43 @@ function ApartmentEditor({
                 <Field label="Search words" opt="(helps guests find it with the search box)">
                   <textarea className="ctrl" aria-label="Search words" value={d.keywords} onChange={(e) => set("keywords", e.target.value)} />
                 </Field>
+              </div>
+
+              <div className="card">
+                <h3>Also for sale</h3>
+                <p className="hint">
+                  Turn this on to put a “For sale” badge on the apartment card and list it in the For sale section
+                  on the homepage. The section is always on the homepage — this decides what it lists.
+                </p>
+                <div className="switch-row">
+                  <span className="fl">This apartment is for sale</span>
+                  <Sw on={d.forSale} label="This apartment is for sale" onClick={() => set("forSale", !d.forSale)} />
+                </div>
+                {d.forSale && (
+                  <>
+                    <Field label="Asking price (USD)" opt="(leave 0 for “price on request”)">
+                      <div className="prefix">
+                        <span>$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          aria-label="Asking price in US dollars"
+                          value={d.salePriceUsd}
+                          onChange={(e) => set("salePriceUsd", Number(e.target.value))}
+                        />
+                      </div>
+                    </Field>
+                    <Field label="Sale note" opt="(one line, shown with the price)">
+                      <input
+                        className="ctrl"
+                        aria-label="Sale note"
+                        placeholder="Sold furnished · rental history available"
+                        value={d.saleNote}
+                        onChange={(e) => set("saleNote", e.target.value)}
+                      />
+                    </Field>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -1545,6 +1665,13 @@ const propertyFields = (s: AdminSettings): AdminPropertyInput => ({
   city: s.city,
   region: s.region,
   whatsappNumber: s.whatsappNumber,
+  languages: s.languages,
+  ownerSince: s.ownerSince,
+  replyTime: s.replyTime,
+  hostNote: s.hostNote,
+  checkIn: s.checkIn,
+  checkOut: s.checkOut,
+  stayNote: s.stayNote,
   fxRate: s.fxRate,
   powerBaseUsd: s.powerBaseUsd,
   discounts: s.discounts,
@@ -1563,6 +1690,8 @@ function PropertyView({
 }) {
   const [d, setD] = useState(() => propertyFields(initial));
   const [saved, setSaved] = useState(() => propertyFields(initial));
+  // Languages are typed as one comma-separated line but stored as a list.
+  const [langText, setLangText] = useState(() => initial.languages.join(", "));
   const [asOf, setAsOf] = useState(initial.fxRateAsOf);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -1590,10 +1719,12 @@ function PropertyView({
       city: d.city.trim(),
       region: d.region.trim(),
       whatsappNumber: digits,
+      languages: d.languages.map((l) => l.trim()).filter(Boolean),
       discounts: [...d.discounts].sort((a, b) => a.months - b.months),
     };
     setD(stored);
     setSaved(stored);
+    setLangText(stored.languages.join(", "));
     setAsOf(res.fxRateAsOf);
     onSaved({ ...stored, fxRateAsOf: res.fxRateAsOf });
     setMsg("Saved · live on site within a minute");
@@ -1608,6 +1739,7 @@ function PropertyView({
         onSave={save}
         onDiscard={() => {
           setD(saved);
+          setLangText(saved.languages.join(", "));
           setMsg(null);
         }}
       />
@@ -1658,6 +1790,53 @@ function PropertyView({
                 "Type the full number, including the country code (1 for the Dominican Republic)."
               )}
             </p>
+          </Field>
+        </div>
+
+        <div className="card">
+          <h3>Who you&rsquo;re renting from</h3>
+          <p className="hint">The trust section on the homepage. No photo — just the facts guests ask about.</p>
+          <div className="grid2">
+            <Field label="Owner since" opt="(year)">
+              <input className="ctrl" aria-label="Owner since" placeholder="2026" value={d.ownerSince} onChange={(e) => set("ownerSince", e.target.value)} />
+            </Field>
+            <Field label="Typical WhatsApp reply">
+              <input className="ctrl" aria-label="Typical WhatsApp reply" placeholder="< 1 h" value={d.replyTime} onChange={(e) => set("replyTime", e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Languages Henrik speaks" opt="(separate with commas)">
+            <input
+              className="ctrl"
+              aria-label="Languages"
+              placeholder="English, Finnish, Norwegian, Spanish, German"
+              value={langText}
+              onChange={(e) => {
+                setLangText(e.target.value);
+                set("languages", e.target.value.split(",").map((l) => l.trim()).filter(Boolean));
+              }}
+            />
+            <p className="field-note">
+              {d.languages.length ? `Shown as ${d.languages.length} languages: ${d.languages.join(" · ")}` : "None yet — the languages tile is hidden."}
+            </p>
+          </Field>
+          <Field label="About Henrik" opt="(the paragraph guests read)">
+            <textarea className="ctrl" style={{ minHeight: 130 }} aria-label="About Henrik" value={d.hostNote} onChange={(e) => set("hostNote", e.target.value)} />
+          </Field>
+        </div>
+
+        <div className="card">
+          <h3>Arrival &amp; departure</h3>
+          <p className="hint">Shown on every apartment page, under “Terms &amp; house rules”.</p>
+          <div className="grid2">
+            <Field label="Check-in from" req>
+              <input className="ctrl" aria-label="Check-in time" placeholder="3:00 PM" value={d.checkIn} onChange={(e) => set("checkIn", e.target.value)} />
+            </Field>
+            <Field label="Check-out by" req>
+              <input className="ctrl" aria-label="Check-out time" placeholder="12:00 PM" value={d.checkOut} onChange={(e) => set("checkOut", e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Note for guests" opt="(one or two lines)">
+            <textarea className="ctrl short" aria-label="Arrival note" value={d.stayNote} onChange={(e) => set("stayNote", e.target.value)} />
           </Field>
         </div>
 

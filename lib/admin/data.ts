@@ -34,10 +34,14 @@ interface RawAdminUnit {
   hidden?: boolean;
   priceUsd?: number;
   priceNightlyUsd?: number;
+  deposits?: { fromMonths?: number; amountUsd?: number }[];
   availableFrom?: string;
   spec?: { area?: string; bath?: string; sleeps?: string };
   chips?: string[];
   keywords?: string;
+  forSale?: boolean;
+  salePriceUsd?: number;
+  saleNote?: string;
   about?: Block[];
   space?: SpaceRow[];
   coverImage?: { alt?: string; ref?: string };
@@ -68,6 +72,9 @@ export async function getAdminUnits(): Promise<AdminUnit[]> {
     hidden: u.hidden ?? false,
     priceUsd: u.priceUsd ?? 0,
     priceNightlyUsd: u.priceNightlyUsd ?? 0,
+    deposits: (u.deposits ?? [])
+      .map((t) => ({ fromMonths: t.fromMonths ?? 0, amountUsd: t.amountUsd ?? 0 }))
+      .sort((a, b) => a.fromMonths - b.fromMonths),
     availableFrom: u.availableFrom ?? "",
     spec: {
       area: u.spec?.area ?? "",
@@ -76,6 +83,9 @@ export async function getAdminUnits(): Promise<AdminUnit[]> {
     },
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
+    forSale: u.forSale ?? false,
+    salePriceUsd: u.salePriceUsd ?? 0,
+    saleNote: u.saleNote ?? "",
     about: blocksToText(u.about),
     space: u.space ?? [],
     amenities: {
@@ -144,6 +154,13 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     city?: string;
     region?: string;
     whatsappNumber?: string;
+    languages?: string[];
+    ownerSince?: string;
+    replyTime?: string;
+    hostNote?: string;
+    checkIn?: string;
+    checkOut?: string;
+    stayNote?: string;
     fxRate?: number;
     fxRateAsOf?: string;
     powerBaseUsd?: number;
@@ -155,6 +172,13 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     city: s?.city ?? "",
     region: s?.region ?? "",
     whatsappNumber: s?.whatsappNumber ?? "",
+    languages: s?.languages ?? [],
+    ownerSince: s?.ownerSince ?? "",
+    replyTime: s?.replyTime ?? "",
+    hostNote: s?.hostNote ?? "",
+    checkIn: s?.checkIn ?? "",
+    checkOut: s?.checkOut ?? "",
+    stayNote: s?.stayNote ?? "",
     fxRate: s?.fxRate ?? 0,
     fxRateAsOf: s?.fxRateAsOf?.slice(0, 10) ?? "",
     powerBaseUsd: s?.powerBaseUsd ?? 0,

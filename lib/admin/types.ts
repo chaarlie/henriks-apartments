@@ -42,10 +42,17 @@ export interface AdminUnit {
   hidden: boolean;
   priceUsd: number;
   priceNightlyUsd: number;
+  /** refundable deposit by length of stay */
+  deposits: DepositRow[];
   availableFrom: string;
   spec: { area: string; bath: string; sleeps: string };
   chips: string[];
   keywords: string;
+  /** also on the market — badge on the card + the homepage For sale section */
+  forSale: boolean;
+  /** asking price in USD; 0 means "price on request" */
+  salePriceUsd: number;
+  saleNote: string;
   /** Paragraphs joined with blank lines for the textarea editor. */
   about: string;
   space: SpaceRow[];
@@ -84,10 +91,14 @@ export interface AdminUnitInput {
   hidden: boolean;
   priceUsd: number;
   priceNightlyUsd: number;
+  deposits: DepositRow[];
   availableFrom: string;
   spec: { area: string; bath: string; sleeps: string };
   chips: string[];
   keywords: string;
+  forSale: boolean;
+  salePriceUsd: number;
+  saleNote: string;
   about: string;
   space: SpaceRow[];
   amenities: { inside: AmenityRow[]; building: AmenityRow[] };
@@ -104,6 +115,12 @@ export interface PropertyAmenityRow {
   desc: string;
 }
 
+/** One deposit step: from this many months, the deposit is this many dollars. */
+export interface DepositRow {
+  fromMonths: number;
+  amountUsd: number;
+}
+
 export interface DiscountRow {
   months: number;
   /** percent off, e.g. 5 for 5% (stored in Sanity as 0.05) */
@@ -116,6 +133,20 @@ export interface AdminSettings {
   city: string;
   region: string;
   whatsappNumber: string;
+  /** languages Henrik speaks, full names */
+  languages: string[];
+  /** year he took over the apartments, e.g. "2026" */
+  ownerSince: string;
+  /** typical WhatsApp reply, e.g. "< 1 h" */
+  replyTime: string;
+  /** the paragraph in "Who you're renting from" */
+  hostNote: string;
+  /** e.g. "3:00 PM" */
+  checkIn: string;
+  /** e.g. "12:00 PM" */
+  checkOut: string;
+  /** the friendly line under the times */
+  stayNote: string;
   fxRate: number;
   /** yyyy-mm-dd the exchange rate last changed */
   fxRateAsOf: string;

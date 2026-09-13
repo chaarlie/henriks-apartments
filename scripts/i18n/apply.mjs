@@ -1,0 +1,108 @@
+/*
+  Turn filled-in pending files into translation rows on a Sanity DRAFT.
+
+  Usage:
+    npm run i18n:apply es               every pending Spanish apartment
+    npm run i18n:apply es apartment-1
+
+  A draft, not a published document, and that is the point: the translation is a
+  first pass. Open the apartment in the Studio (npm run studio), read the
+  Spanish, fix what reads stiff, publish. Machine-assisted copy going live unread
+  on pages quoting prices is the failure this whole flow exists to prevent.
+
+  Both of the app's Sanity clients pin perspective "published", so nothing here
+  can reach the public site or the /admin list until someone hits Publish.
+*/
+import fs from "node:fs";
+import path from "node:path";
+import { rebuildUnit, draftId } from "./lib.mjs";
+import { sanity, die } from "./sanity.mjs";
+import { LOCALES, DEFAULT_LOCALE, isLocale } from "../../lib/locales.ts";
+
+const [localeArg, slugArg] = process.argv.slice(2);
+if (!localeArg || !isLocale(localeArg) || localeArg === DEFAULT_LOCALE) {
+  die(
+    `usage: npm run i18n:apply <locale> [slug]`,
+    `Target languages: ${LOCALES.filter((l) => l !== DEFAULT_LOCALE).join(", ") || "(none configured)"}`,
+  );
+}
+
+const dir = path.join(import.meta.dirname, "pending", localeArg);
+if (!fs.existsSync(dir)) die(`Nothing pending for "${localeArg}".`, "Run: npm run i18n:extract");
+
+const files = fs
+  .readdirSync(dir)
+  .filter((f) => f.endsWith(".json"))
+  .filter((f) => !slugArg || f === `${slugArg}.json`);
+if (!files.length) die(`Nothing pending for "${localeArg}"${slugArg ? ` / ${slugArg}` : ""}.`);
+
+const client = sanity({ write: true });
+let applied = 0;
+
+for (const file of files) {
+  const { _id, _rev, strings, slug } = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
+
+  /*
+    Refuse rather than half-translate. A page where two paragraphs are still
+    English reads as broken, and it is much harder to notice in the Studio than
+    an error here.
+  */
+  const empty = Object.entries(strings).filter(([, v]) => !v || !String(v).trim());
+  if (empty.length) {
+    console.log(`  ✗ ${slug} — ${empty.length} string(s) still empty (${empty.slice(0, 3).map(([k]) => k).join(", ")}…)`);
+    continue;
+  }
+
+  /*
+    Fetch the English fresh rather than trusting the pending file: it may be
+    hours old, and rebuildUnit() copies structure straight off this document.
+
+    The WHOLE document, not a projection. It is also the seed for the draft
+    below, and a draft created from a partial document would drop price,
+    deposits, spec and tour — then overwrite the real apartment with those gaps
+    the moment someone hit Publish.
+  */
+  const source = await client.getDocument(_id);
+  if (!source) {
+    console.log(`  ✗ ${slug} — apartment ${_id} not found`);
+    continue;
+  }
+  if (source._rev !== _rev) {
+    console.log(`  ! ${slug} — English changed since extract (${_rev} → ${source._rev}); applying anyway, re-extract to pick up the new text`);
+  }
+
+  const row = rebuildUnit(source, strings, localeArg, source._rev);
+  const draft = draftId(_id);
+
+  /*
+    createIfNotExists then patch, rather than createOrReplace: a draft may
+    already hold edits made in the Studio, and replacing it wholesale would
+    throw those away. This adds one language's row and leaves everything else
+    alone.
+  */
+  const existing = await client.getDocument(draft);
+  const base = existing ?? source;
+  const i18n = [...(base.i18n ?? []).filter((r) => r?.locale !== localeArg), row];
+
+  // Strip the system fields — a stale _rev on a create is a conflict waiting
+  // to happen, and the timestamps belong to the published document.
+  const seed = { ...source };
+  delete seed._rev;
+  delete seed._createdAt;
+  delete seed._updatedAt;
+
+  await client
+    .transaction()
+    .createIfNotExists({ ...seed, _id: draft })
+    .patch(draft, (p) => p.set({ i18n }))
+    .commit();
+
+  applied++;
+  console.log(`  ✓ ${slug} — ${localeArg} row written to ${draft} (from rev ${source._rev})`);
+}
+
+if (applied) {
+  console.log(`\n${applied} draft(s) updated. Review and publish:`);
+  console.log(`  npm run studio   →  http://localhost:3333`);
+  console.log(`\nThe public site shows nothing until you publish (both clients pin perspective "published").`);
+}

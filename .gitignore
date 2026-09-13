@@ -43,6 +43,10 @@ yarn-error.log*
 next-env.d.ts
 
 /mockups
+
+# Translation working files — drafts in transit to Sanity, not a source of truth.
+# Regenerate any time with `npm run i18n:extract`.
+/scripts/i18n/pending
 # Sanity typegen artifact (regenerate with npm run typegen)
 sanity/extract.json
 

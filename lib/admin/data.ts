@@ -50,6 +50,7 @@ interface RawAdminUnit {
     stopId?: string;
     name?: string;
     panorama?: string;
+    sphereCorrection?: { pan?: string; tilt?: string; roll?: string };
     links?: { to?: string; yaw?: string }[];
   }[];
   amenities?: { inside?: AmenityRow[]; building?: AmenityRow[] };
@@ -112,6 +113,11 @@ export async function getAdminUnits(): Promise<AdminUnit[]> {
       stopId: s.stopId ?? "",
       name: s.name ?? "",
       panorama: s.panorama ?? "",
+      sphereCorrection: {
+        pan: s.sphereCorrection?.pan ?? "",
+        tilt: s.sphereCorrection?.tilt ?? "",
+        roll: s.sphereCorrection?.roll ?? "",
+      },
       links: (s.links ?? []).map((l) => ({ to: l.to ?? "", yaw: l.yaw ?? "" })),
     })),
   }));

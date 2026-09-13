@@ -14,6 +14,27 @@ import type {
 
 const key = () => randomUUID().replace(/-/g, "").slice(0, 12);
 
+/**
+ * Normalises an orientation angle for photo-sphere-viewer.
+ *
+ * Two traps, both from its `parseAngle`: a bare number means RADIANS (never what
+ * someone typing into /admin means), and an unrecognised unit *throws*, which
+ * takes the whole 360° tour down to the flat fallback. So stamp "deg" onto a
+ * plain number, accept the spellings people actually type (°, spaces, "degrees"),
+ * and return undefined for anything still unparseable so the caller can reject
+ * it rather than store a value that breaks the viewer.
+ */
+function degrees(input: string | undefined): string | undefined {
+  // Whitespace is tolerated only between the number and its unit — stripping it
+  // everywhere would silently weld "20 30" into a perfectly valid "2030deg".
+  const v = (input ?? "").trim().toLowerCase().replace(/[°˚]/g, "deg");
+  if (!v) return undefined;
+  const m = v.match(/^(-?\d+(?:\.\d+)?)\s*(deg|degs|degree|degrees|rad|rads|radian|radians)?$/);
+  if (!m) return undefined;
+  const unit = m[2]?.startsWith("rad") ? "rad" : "deg";
+  return `${m[1]}${unit}`;
+}
+
 function textToBlocks(text: string) {
   return text
     .split(/\n{2,}/)
@@ -59,6 +80,19 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
     const months = input.deposits.map((t) => t.fromMonths);
     if (new Set(months).size !== months.length)
       return { ok: false, error: "Two deposit rows start at the same number of months." };
+
+    // An angle the viewer can't parse throws on load and drops the tour to the
+    // flat fallback, so catch it here where it can still be explained.
+    for (const s of input.tour) {
+      for (const axis of ["pan", "tilt", "roll"] as const) {
+        const raw = s.sphereCorrection?.[axis];
+        if (raw?.trim() && !degrees(raw))
+          return {
+            ok: false,
+            error: `“${raw}” isn’t a valid ${axis} angle on tour stop “${s.name || s.stopId}”. Use degrees, e.g. 20 or 20deg.`,
+          };
+      }
+    }
     await getWriteClient()
       .patch(input._id)
       .set({
@@ -112,6 +146,11 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
           stopId: s.stopId,
           name: s.name,
           panorama: s.panorama,
+          sphereCorrection: {
+            pan: degrees(s.sphereCorrection?.pan),
+            tilt: degrees(s.sphereCorrection?.tilt),
+            roll: degrees(s.sphereCorrection?.roll),
+          },
           links: s.links.map((l) => ({ _key: key(), to: l.to, yaw: l.yaw })),
         })),
       })

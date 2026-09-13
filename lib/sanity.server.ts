@@ -9,6 +9,7 @@ import type {
   Unit,
   ImageRef,
   TourNode,
+  SphereCorrection,
   Amenity,
   Term,
   SpaceItem,
@@ -81,6 +82,20 @@ function blocksToParagraphs(blocks: Block[] | undefined): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Only pass a correction along when an axis is actually set — an object of
+ * empty strings is not the same as "leave this panorama alone".
+ */
+function mapSphereCorrection(
+  c: RawTourStop["sphereCorrection"],
+): SphereCorrection | undefined {
+  const out: SphereCorrection = {};
+  if (c?.pan) out.pan = c.pan;
+  if (c?.tilt) out.tilt = c.tilt;
+  if (c?.roll) out.roll = c.roll;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function mapTour(tour: RawTourStop[] | undefined): TourNode[] {
   return (tour ?? []).map((stop) => ({
     _id: stop.stopId,
@@ -88,6 +103,7 @@ function mapTour(tour: RawTourStop[] | undefined): TourNode[] {
     name: stop.name,
     caption: "",
     panorama: panoramaUrl(stop.panorama ?? ""),
+    sphereCorrection: mapSphereCorrection(stop.sphereCorrection),
     links: (stop.links ?? []).map((l) => ({ to: l.to, yaw: l.yaw })),
   }));
 }
@@ -97,6 +113,7 @@ interface RawTourStop {
   stopId: string;
   name: string;
   panorama?: string;
+  sphereCorrection?: { pan?: string; tilt?: string; roll?: string };
   links?: { to: string; yaw: string }[];
 }
 interface RawUnit {

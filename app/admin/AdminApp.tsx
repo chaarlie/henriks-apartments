@@ -1263,6 +1263,32 @@ function TourCard({
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={panoramaUrl(stop.panorama)} alt="" className="pano-thumb" />
             )}
+            <span className="fl" style={{ marginTop: 14 }}>Orientation</span>
+            <p className="hint">
+              Straightens a crooked or mis-aimed panorama. Pan turns it left/right,
+              tilt aims up/down, roll levels the horizon. Leave blank for no
+              correction — a plain number is read as degrees.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {(["pan", "tilt", "roll"] as const).map((axis) => (
+                <Field key={axis} label={axis[0].toUpperCase() + axis.slice(1)} opt='(e.g. "30deg")'>
+                  <input
+                    className="ctrl"
+                    value={stop.sphereCorrection?.[axis] ?? ""}
+                    placeholder="0deg"
+                    onChange={(e) =>
+                      upd(i, {
+                        ...stop,
+                        sphereCorrection: {
+                          ...(stop.sphereCorrection ?? { pan: "", tilt: "", roll: "" }),
+                          [axis]: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </Field>
+              ))}
+            </div>
             <span className="fl" style={{ marginTop: 14 }}>Hotspots</span>
             {stop.links.map((l, li) => (
               <div className="grid2" key={li} style={{ alignItems: "end" }}>
@@ -1286,7 +1312,18 @@ function TourCard({
       <button
         type="button"
         className="addrow"
-        onClick={() => onChange([...tour, { stopId: "", name: "", panorama: "", links: [] }])}
+        onClick={() =>
+          onChange([
+            ...tour,
+            {
+              stopId: "",
+              name: "",
+              panorama: "",
+              sphereCorrection: { pan: "", tilt: "", roll: "" },
+              links: [],
+            },
+          ])
+        }
       >
         ＋ Add tour stop
       </button>

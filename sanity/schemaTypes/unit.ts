@@ -109,6 +109,19 @@ export const unit = defineType({
                 'Object path in the henriks-apartments bucket, e.g. "101/101-living-room.JPG". Served downscaled via the render endpoint.',
             }),
             defineField({
+              name: 'sphereCorrection',
+              title: 'Orientation correction',
+              type: 'object',
+              description:
+                'Straightens a crooked or mis-aimed panorama. Degrees, e.g. "30deg" — pan turns it left/right, tilt aims up/down, roll levels the horizon. Leave blank for no correction.',
+              options: {columns: 3},
+              fields: [
+                defineField({name: 'pan', title: 'Pan', type: 'string'}),
+                defineField({name: 'tilt', title: 'Tilt', type: 'string'}),
+                defineField({name: 'roll', title: 'Roll', type: 'string'}),
+              ],
+            }),
+            defineField({
               name: 'links',
               title: 'Hotspots',
               type: 'array',

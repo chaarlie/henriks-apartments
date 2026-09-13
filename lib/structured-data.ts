@@ -1,5 +1,6 @@
 import type { SiteContent, Unit } from "@/lib/content";
 import { absoluteUrl } from "@/lib/site";
+import { sized } from "@/lib/image-url";
 import { unitFacts } from "@/lib/unit";
 
 /**
@@ -48,7 +49,7 @@ export function businessJsonLd(content: SiteContent) {
     name: content.property.name,
     description: content.hero.sub,
     url: absoluteUrl("/"),
-    image: content.hero.background.url || undefined,
+    image: content.hero.background.url ? sized(content.hero.background.url, { width: 1600 }) : undefined,
     address: address(content),
     geo: GEO,
     knowsLanguage: content.host.languages.length ? content.host.languages : undefined,
@@ -71,7 +72,11 @@ export function unitJsonLd(content: SiteContent, unit: Unit) {
   const bathCount = firstNumber(baths);
   const occupancy = firstNumber(sleeps);
   const amenities = [...unit.amenities.inside, ...unit.amenities.building].filter((a) => a.included);
-  const images = [unit.image, ...unit.gallery].map((i) => i.url).filter(Boolean).slice(0, 8);
+  const images = [unit.image, ...unit.gallery]
+    .map((i) => i.url)
+    .filter(Boolean)
+    .slice(0, 8)
+    .map((url) => sized(url, { width: 1600 }));
 
   return {
     "@context": "https://schema.org",

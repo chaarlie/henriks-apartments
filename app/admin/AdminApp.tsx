@@ -6,6 +6,7 @@ import { SITE_URL, absoluteUrl } from "@/lib/site";
 import { urlFor } from "@/sanity/lib/image";
 import { signOut } from "@/lib/admin/login";
 import { toSlug } from "@/lib/slug";
+import { shrinkImage } from "@/lib/image-shrink";
 import {
   saveUnit,
   setUnitHidden,
@@ -42,14 +43,80 @@ function depositAt(rows: DepositRow[], months: number): number {
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
-/** Uploads one file to /admin/api/upload → { ref, url, alt }. */
+/** The host refused the request body outright — only a smaller file will go. */
+class TooLargeError extends Error {}
+
+/**
+ * Uploads one file to /admin/api/upload → { ref, url, alt }.
+ * Errors can arrive as plain text (a 413 from the platform is literally
+ * "Request Entity Too Large"), so never assume the body is JSON.
+ */
 async function uploadImage(file: File): Promise<MediaImage> {
   const body = new FormData();
   body.append("file", file);
   const res = await fetch("/admin/api/upload", { method: "POST", body });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? "Upload failed");
-  return json as MediaImage;
+  const text = await res.text();
+
+  let payload: MediaImage | { error?: string } | null = null;
+  try {
+    payload = JSON.parse(text) as MediaImage | { error?: string };
+  } catch {
+    payload = null;
+  }
+
+  if (!res.ok) {
+    if (res.status === 413) throw new TooLargeError("Too large to send whole");
+    if (res.status === 401) throw new Error("Signed out — sign in again and retry.");
+    const named = payload && "error" in payload ? payload.error : undefined;
+    throw new Error(named ?? `Upload failed (${res.status})`);
+  }
+  if (!payload || !("ref" in payload)) throw new Error("The server didn’t return the photo details.");
+  return payload;
+}
+
+/**
+ * Full quality first. Only a photo the host refuses outright gets resized, and
+ * then only as far as it must — so originals survive wherever they're allowed.
+ */
+async function uploadOne(file: File): Promise<{ image: MediaImage; resized: boolean }> {
+  try {
+    return { image: await uploadImage(file), resized: false };
+  } catch (e) {
+    if (!(e instanceof TooLargeError)) throw e;
+    const smaller = await shrinkImage(file);
+    if (smaller === file) throw new Error("Too large to upload, and the browser couldn’t resize it.");
+    return { image: await uploadImage(smaller), resized: true };
+  }
+}
+
+/** Upload three at a time, keeping whatever succeeds. */
+async function uploadMany(
+  files: File[],
+  onProgress: (done: number) => void,
+): Promise<{ uploaded: MediaImage[]; failed: { file: File; reason: string }[]; resized: number }> {
+  const uploaded: MediaImage[] = [];
+  const failed: { file: File; reason: string }[] = [];
+  let resized = 0;
+  let next = 0;
+  let done = 0;
+
+  async function worker() {
+    while (next < files.length) {
+      const file = files[next++];
+      try {
+        const result = await uploadOne(file);
+        uploaded.push(result.image);
+        if (result.resized) resized++;
+      } catch (e) {
+        failed.push({ file, reason: e instanceof Error ? e.message : "Upload failed" });
+      } finally {
+        onProgress(++done);
+      }
+    }
+  }
+
+  await Promise.all([worker(), worker(), worker()]);
+  return { uploaded, failed, resized };
 }
 
 type View = "apartments" | "bookings" | "amenities" | "property";
@@ -983,13 +1050,16 @@ function MediaCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [failed, setFailed] = useState<{ file: File; reason: string }[]>([]);
+  const [resized, setResized] = useState(0);
 
   async function handleCover(file: File | undefined) {
     if (!file) return;
     setBusy(true);
     setErr(null);
     try {
-      onCover(await uploadImage(file));
+      onCover((await uploadOne(file)).image);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -997,28 +1067,65 @@ function MediaCard({
     }
   }
 
-  async function handleGallery(files: FileList | null) {
-    if (!files?.length) return;
+  // Whatever uploads is kept, even when some photos fail.
+  async function addPhotos(files: File[]) {
+    if (!files.length) return;
     setBusy(true);
     setErr(null);
-    try {
-      const uploaded = await Promise.all(Array.from(files).map(uploadImage));
-      onGallery([...gallery, ...uploaded]);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setBusy(false);
-    }
+    setFailed([]);
+    setResized(0);
+    setProgress({ done: 0, total: files.length });
+    const { uploaded, failed: fails, resized: shrunk } = await uploadMany(files, (done) =>
+      setProgress({ done, total: files.length }),
+    );
+    if (uploaded.length) onGallery([...gallery, ...uploaded]);
+    setFailed(fails);
+    setResized(shrunk);
+    setProgress(null);
+    setBusy(false);
   }
 
   return (
     <div className="card">
       <h3>Photos</h3>
       <p className="hint">
-        The cover photo leads the apartment card and the shared link; the gallery fills the apartment page.{" "}
-        {busy && <b>Uploading…</b>}
+        The cover photo leads the apartment card and the shared link; the gallery fills the apartment page.
+        Photos keep their original size and quality — only one the server refuses outright is resized to fit.
       </p>
+      {resized > 0 && (
+        <p className="field-note" style={{ marginBottom: 12 }}>
+          {resized} photo{resized === 1 ? " was" : "s were"} too large to send whole, so {resized === 1 ? "it was" : "they were"}{" "}
+          uploaded slightly smaller. Everything else kept its original quality.
+        </p>
+      )}
+      {progress && (
+        <p className="upload-progress" role="status">
+          Uploading {progress.done} of {progress.total}…
+        </p>
+      )}
       {err && <p className="err" role="alert">{err}</p>}
+      {failed.length > 0 && (
+        <div className="upload-failed" role="alert">
+          <b>
+            {failed.length} photo{failed.length === 1 ? "" : "s"} didn’t upload
+          </b>
+          <ul>
+            {failed.map(({ file, reason }, i) => (
+              <li key={`${file.name}-${i}`}>
+                {file.name} — {reason}
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="btn ghost"
+            disabled={busy}
+            onClick={() => addPhotos(failed.map((f) => f.file))}
+          >
+            Try these again
+          </button>
+        </div>
+      )}
 
       <div className="field">
         <span className="fl">Cover photo <span className="req">*</span></span>
@@ -1062,7 +1169,17 @@ function MediaCard({
           ))}
           <label className="add">
             ＋<span>Add photos</span>
-            <input type="file" accept="image/*" multiple hidden onChange={(e) => handleGallery(e.target.files)} />
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              disabled={busy}
+              onChange={(e) => {
+                addPhotos(Array.from(e.target.files ?? []));
+                e.target.value = ""; // let the same files be picked again after a failure
+              }}
+            />
           </label>
         </div>
       </div>
@@ -1146,6 +1263,32 @@ function TourCard({
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={panoramaUrl(stop.panorama)} alt="" className="pano-thumb" />
             )}
+            <span className="fl" style={{ marginTop: 14 }}>Orientation</span>
+            <p className="hint">
+              Straightens a crooked or mis-aimed panorama. Pan turns it left/right,
+              tilt aims up/down, roll levels the horizon. Leave blank for no
+              correction — a plain number is read as degrees.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {(["pan", "tilt", "roll"] as const).map((axis) => (
+                <Field key={axis} label={axis[0].toUpperCase() + axis.slice(1)} opt='(e.g. "30deg")'>
+                  <input
+                    className="ctrl"
+                    value={stop.sphereCorrection?.[axis] ?? ""}
+                    placeholder="0deg"
+                    onChange={(e) =>
+                      upd(i, {
+                        ...stop,
+                        sphereCorrection: {
+                          ...(stop.sphereCorrection ?? { pan: "", tilt: "", roll: "" }),
+                          [axis]: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </Field>
+              ))}
+            </div>
             <span className="fl" style={{ marginTop: 14 }}>Hotspots</span>
             {stop.links.map((l, li) => (
               <div className="grid2" key={li} style={{ alignItems: "end" }}>
@@ -1169,7 +1312,18 @@ function TourCard({
       <button
         type="button"
         className="addrow"
-        onClick={() => onChange([...tour, { stopId: "", name: "", panorama: "", links: [] }])}
+        onClick={() =>
+          onChange([
+            ...tour,
+            {
+              stopId: "",
+              name: "",
+              panorama: "",
+              sphereCorrection: { pan: "", tilt: "", roll: "" },
+              links: [],
+            },
+          ])
+        }
       >
         ＋ Add tour stop
       </button>

@@ -75,12 +75,29 @@ export interface TourLink {
   yaw: string;
 }
 
+/**
+ * Fixes a panorama's orientation — a camera rig is rarely perfectly level or
+ * aimed where you want the stop to open. Angles are photo-sphere-viewer strings
+ * ("30deg"); a bare number would be read as RADIANS, so the admin always stores
+ * the "deg" suffix. Omitted axes mean "no correction on that axis".
+ */
+export interface SphereCorrection {
+  /** turn left/right */
+  pan?: string;
+  /** aim up/down */
+  tilt?: string;
+  /** level the horizon */
+  roll?: string;
+}
+
 export interface TourNode {
   _id: string;
   _type: "tourNode";
   name: string;
   caption: string;
   panorama: string;
+  /** per-stop orientation fix; undefined falls back to the viewer default */
+  sphereCorrection?: SphereCorrection;
   links: TourLink[];
 }
 

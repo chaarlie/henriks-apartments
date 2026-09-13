@@ -25,11 +25,19 @@ export interface TourLinkRow {
   to: string;
   yaw: string;
 }
+/** Orientation fix for one panorama. Empty strings mean "no correction". */
+export interface SphereCorrectionRow {
+  pan: string;
+  tilt: string;
+  roll: string;
+}
+
 export interface TourStopRow {
   stopId: string;
   name: string;
   /** Supabase bucket object path, e.g. "101/101-living-room.JPG". */
   panorama: string;
+  sphereCorrection: SphereCorrectionRow;
   links: TourLinkRow[];
 }
 

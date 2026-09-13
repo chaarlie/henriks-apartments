@@ -9,6 +9,7 @@ import type {
   Unit,
   ImageRef,
   TourNode,
+  SphereCorrection,
   Amenity,
   Term,
   SpaceItem,
@@ -41,13 +42,34 @@ const DEFAULT_STAY = {
 // A Sanity image field: an asset reference plus our custom `alt`.
 type SanityImage = SanityImageSource & { alt?: string };
 
+/**
+ * Sanity encodes the real pixel size in the asset id —
+ * "image-<hash>-3000x2000-jpg" — so the intrinsic dimensions come free.
+ * They were hardcoded to 1600×1067, which was wrong for anything not 3:2.
+ */
+function assetSize(source: SanityImage): { width: number; height: number } | null {
+  const ref =
+    typeof source === "string"
+      ? source
+      : ((source as { asset?: { _ref?: string } }).asset?._ref ?? null);
+  const match = ref?.match(/-(\d+)x(\d+)-[a-z]+$/);
+  return match ? { width: Number(match[1]), height: Number(match[2]) } : null;
+}
+
+/**
+ * The untransformed asset URL. next/image asks the CDN for the exact width it
+ * needs via the loader in lib/sanity-image-loader.ts, so baking a size in here
+ * would just cost quality twice. Anything outside next/image sizes it with the
+ * helpers in lib/image-url.ts.
+ */
 function img(source: SanityImage | undefined, fallbackAlt = ""): ImageRef {
   if (!source) return { url: "", alt: fallbackAlt, width: 1600, height: 1067 };
+  const size = assetSize(source) ?? { width: 1600, height: 1067 };
   return {
-    url: urlFor(source).width(1600).quality(80).auto("format").url(),
+    url: urlFor(source).url(),
     alt: source.alt ?? fallbackAlt,
-    width: 1600,
-    height: 1067,
+    width: size.width,
+    height: size.height,
   };
 }
 
@@ -60,6 +82,20 @@ function blocksToParagraphs(blocks: Block[] | undefined): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Only pass a correction along when an axis is actually set — an object of
+ * empty strings is not the same as "leave this panorama alone".
+ */
+function mapSphereCorrection(
+  c: RawTourStop["sphereCorrection"],
+): SphereCorrection | undefined {
+  const out: SphereCorrection = {};
+  if (c?.pan) out.pan = c.pan;
+  if (c?.tilt) out.tilt = c.tilt;
+  if (c?.roll) out.roll = c.roll;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function mapTour(tour: RawTourStop[] | undefined): TourNode[] {
   return (tour ?? []).map((stop) => ({
     _id: stop.stopId,
@@ -67,6 +103,7 @@ function mapTour(tour: RawTourStop[] | undefined): TourNode[] {
     name: stop.name,
     caption: "",
     panorama: panoramaUrl(stop.panorama ?? ""),
+    sphereCorrection: mapSphereCorrection(stop.sphereCorrection),
     links: (stop.links ?? []).map((l) => ({ to: l.to, yaw: l.yaw })),
   }));
 }
@@ -76,6 +113,7 @@ interface RawTourStop {
   stopId: string;
   name: string;
   panorama?: string;
+  sphereCorrection?: { pan?: string; tilt?: string; roll?: string };
   links?: { to: string; yaw: string }[];
 }
 interface RawUnit {

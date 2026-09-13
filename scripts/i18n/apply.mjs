@@ -19,7 +19,9 @@ import { rebuildUnit, draftId } from "./lib.mjs";
 import { sanity, die } from "./sanity.mjs";
 import { LOCALES, DEFAULT_LOCALE, isLocale } from "../../lib/locales.ts";
 
-const [localeArg, slugArg] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const force = args.includes("--force");
+const [localeArg, slugArg] = args.filter((a) => a !== "--force");
 if (!localeArg || !isLocale(localeArg) || localeArg === DEFAULT_LOCALE) {
   die(
     `usage: npm run i18n:apply <locale> [slug]`,
@@ -40,7 +42,28 @@ const client = sanity({ write: true });
 let applied = 0;
 
 for (const file of files) {
-  const { _id, _rev, strings, slug } = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
+  const { _id, _rev, strings, slug, translated } = JSON.parse(
+    fs.readFileSync(path.join(dir, file), "utf8"),
+  );
+
+  /*
+    Refuse a file that has not been through translate.mjs.
+
+    The empty-string check below cannot tell English from Spanish — the strings
+    are non-empty either way — so applying a freshly extracted file would write
+    the English straight into the Spanish row, and i18n:status would then report
+    it as a finished translation. Only translate.mjs sets this flag.
+
+    Files extracted before this flag existed have no `translated` key and are
+    refused for the same reason: re-extract them.
+  */
+  if (translated !== true && !force) {
+    console.log(
+      `  ✗ ${slug} — not translated yet\n` +
+        `      run:  npm run i18n:translate ${localeArg} ${slug}`,
+    );
+    continue;
+  }
 
   /*
     Refuse rather than half-translate. A page where two paragraphs are still
@@ -67,11 +90,31 @@ for (const file of files) {
     console.log(`  ✗ ${slug} — apartment ${_id} not found`);
     continue;
   }
-  if (source._rev !== _rev) {
-    console.log(`  ! ${slug} — English changed since extract (${_rev} → ${source._rev}); applying anyway, re-extract to pick up the new text`);
+  /*
+    Refuse when the English moved under us, rather than warn and continue.
+
+    rebuildUnit() matches translations onto the CURRENT document by _key, so a
+    paragraph added or split since extract keeps its English and rides into the
+    Spanish row unnoticed — the same half-translated page the checks in
+    translate.mjs exist to prevent, arriving by a different door.
+
+    --force is the escape for a change you know was cosmetic.
+  */
+  if (source._rev !== _rev && !force) {
+    console.log(
+      `  ✗ ${slug} — English changed since extract (${_rev} → ${source._rev})\n` +
+        `      re-run:  npm run i18n:extract ${localeArg} ${slug}   (or apply with --force)`,
+    );
+    continue;
   }
 
-  const row = rebuildUnit(source, strings, localeArg, source._rev);
+  /*
+    The revision the Spanish was actually translated FROM — never the freshly
+    fetched one. Recording the new rev would stamp a stale translation as
+    current, which is precisely the failure sourceRev exists to catch. Under
+    --force this is what keeps i18n:status honest about the row being behind.
+  */
+  const row = rebuildUnit(source, strings, localeArg, _rev);
   const draft = draftId(_id);
 
   /*

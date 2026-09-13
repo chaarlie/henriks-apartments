@@ -75,9 +75,21 @@ for (const locale of locales) {
 
     const dir = path.join(OUT, locale);
     fs.mkdirSync(dir, { recursive: true });
+    /*
+      `translated: false` until translate.mjs says otherwise.
+
+      apply.mjs refuses a file that still says false, because nothing else can
+      tell English from Spanish: the strings are non-empty either way, so
+      applying a freshly extracted file would write the English into the Spanish
+      row and i18n:status would report it as a finished translation.
+    */
     fs.writeFileSync(
       path.join(dir, `${unit.slug}.json`),
-      JSON.stringify({ _id: unit._id, _rev: unit._rev, locale, slug: unit.slug, strings }, null, 2) + "\n",
+      JSON.stringify(
+        { _id: unit._id, _rev: unit._rev, locale, slug: unit.slug, translated: false, strings },
+        null,
+        2,
+      ) + "\n",
     );
     written++;
     console.log(

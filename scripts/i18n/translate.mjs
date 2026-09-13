@@ -207,6 +207,9 @@ for (const locale of locales) {
       }
 
       doc.strings = restoreWhitespace(src, out);
+      // The one place this flag is set. apply.mjs refuses anything still false,
+      // which is what stops un-translated English being written as a translation.
+      doc.translated = true;
       fs.writeFileSync(full, JSON.stringify(doc, null, 2) + "\n");
       done++;
       console.log("✓");

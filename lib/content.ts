@@ -220,6 +220,15 @@ export interface SiteContent {
   fxRate: number;
   /** ISO yyyy-mm-dd the rate was last confirmed; "" when unknown */
   fxRateAsOf: string;
+  /**
+   * The meta title and description Google and WhatsApp read.
+   *
+   * Translated like any other copy — which is the point. These were hardcoded
+   * English strings in the layout, so the Spanish page described itself in
+   * English to every search engine and every shared link, however well the page
+   * itself was translated. Empty means "fall back to the built-in wording".
+   */
+  seo: { title: string; description: string };
   units: Unit[];
   amenities: PropertyAmenity[];
   power: {
@@ -445,6 +454,7 @@ export const content: SiteContent = {
 
   fxRate: 61, // 1 USD = 61 DOP (PLACEHOLDER)
   fxRateAsOf: "",
+  seo: { title: "", description: "" },
 
   units: [
     {

@@ -249,6 +249,7 @@ interface RawSettings {
   powerBaseUsd: number;
   discounts?: { months: number; pct: number }[];
   propertyAmenities?: { icon: string; title: string; desc: string }[];
+  seo?: { title?: string; description?: string };
   tr?: {
     hostNote?: string;
     stayNote?: string;
@@ -405,6 +406,12 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
     // Per-unit availability: a booking with a unit blocks that unit; one without
     // a unit is a whole-property closure that blocks every unit.
     availability: buildAvailability(bookings),
+    // Translated pair first, English second, "" to mean "use the built-in
+    // wording" — the same field-by-field fallback as every other string here.
+    seo: {
+      title: setTr?.seo?.title || s.seo?.title || "",
+      description: setTr?.seo?.description || s.seo?.description || "",
+    },
     location: {
       heading: locTr?.heading ?? landing.location?.heading ?? "",
       addressLine: locTr?.addressLine ?? landing.location?.addressLine ?? "",

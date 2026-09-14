@@ -38,9 +38,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const locale = isLocale(lang) ? lang : DEFAULT_LOCALE;
-  const { property, hero } = await getSiteContent(locale);
+  const { property, hero, seo } = await getSiteContent(locale);
+  /*
+    The description comes from Sanity so it can be translated. It was a
+    hardcoded English string, which meant the Spanish page described itself in
+    English to Google and to anyone pasting the link into WhatsApp — the page
+    was translated, the thing people actually saw first was not.
+
+    The titles below are still built from English fragments. seo.title holds
+    only the property name today, so preferring it would lose the descriptive
+    half rather than translate it.
+  */
   const shareTitle = `${property.name} — Furnished monthly rentals in Sosúa`;
   const shareDescription =
+    seo.description ||
     "Transparent monthly pricing in USD/DOP, a guided 360° tour, and WhatsApp booking. Four minutes from Playa Sosúa.";
   const images = hero.background.url
     ? [{ url: ogImage(hero.background.url), alt: hero.background.alt }]
@@ -49,6 +60,7 @@ export async function generateMetadata({
     metadataBase: new URL(SITE_URL),
     title: `${property.name} · Furnished monthly rentals in ${property.city}`,
     description:
+      seo.description ||
       "Furnished apartments in El Batey, Sosúa — priced in the open. Rent, power, water and internet all listed, plus a 360° walkthrough of every room. Book any dates, four minutes from Playa Sosúa.",
     // No `alternates` here on purpose: a canonical set on the root layout is
     // inherited by every page beneath it, which would point the whole site at

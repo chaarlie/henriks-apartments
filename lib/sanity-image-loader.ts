@@ -12,7 +12,15 @@
  * WebP where the browser supports it. Anything not on the Sanity CDN (Supabase
  * panoramas, files in /public) is returned untouched.
  */
-const DEFAULT_QUALITY = 90;
+/*
+  75, not 90.
+
+  At the sizes this site actually renders, the two are hard to tell apart on a
+  photograph — but q90 costs roughly 40% more bytes for every image, on every
+  page view, and image bandwidth is the largest thing this project spends. Raise
+  it if a specific photo visibly suffers; do not raise it on principle.
+*/
+const DEFAULT_QUALITY = 75;
 
 export default function sanityImageLoader({
   src,

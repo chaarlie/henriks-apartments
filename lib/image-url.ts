@@ -8,10 +8,15 @@
  */
 const CDN = "https://cdn.sanity.io/";
 
-/** Same asset, resized. Non-Sanity URLs are returned untouched. */
+/**
+ * Same asset, resized. Non-Sanity URLs are returned untouched.
+ *
+ * The default quality matches DEFAULT_QUALITY in sanity-image-loader.ts — see
+ * the note there for why it is 75 rather than 90.
+ */
 export function sized(
   url: string,
-  { width, height, quality = 90, crop = false }: { width: number; height?: number; quality?: number; crop?: boolean },
+  { width, height, quality = 75, crop = false }: { width: number; height?: number; quality?: number; crop?: boolean },
 ): string {
   if (!url.startsWith(CDN)) return url;
   const out = new URL(url);

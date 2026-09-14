@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "studio": "sanity dev --port 3333",
+    "studio": "sanity dev",
     "studio:deploy": "sanity deploy",
     "typegen": "sanity schema extract --enforce-required-fields --path=./sanity/extract.json && sanity typegen generate",
     "admin:password": "node scripts/admin-password.mjs",

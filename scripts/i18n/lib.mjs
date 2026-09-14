@@ -1,6 +1,6 @@
 /*
-  The two halves of translation: pulling the strings out of a unit, and putting
-  translated ones back.
+  The two halves of translation: pulling the strings out of a document, and
+  putting translated ones back.
 
   The rule this file exists to enforce is that nothing outside it ever sees the
   shape of a Sanity document. `about` is Portable Text — a tree of blocks
@@ -11,47 +11,79 @@
   into it. Structure is never authored twice, which makes breaking it impossible
   rather than unlikely.
 
+  Five document types now need this, and five hand-written extract/rebuild pairs
+  would be the same twenty lines copied with different field names — so each
+  type declares WHAT is translatable in TYPES below and one engine does the
+  walking. Adding a sixth type is a table entry.
+
   Keys are the path back to the value: "space.<_key>.title", "about.<blockKey>.2",
   "chips.3". Object arrays key on _key rather than on position, because
-  reordering the gallery in the Studio would otherwise silently reassign every
-  alt text to the wrong photo.
+  reordering a gallery would otherwise silently reassign every alt text to the
+  wrong photo.
 
-  What is deliberately NOT translated: name, code, slug, prices, deposits,
-  dates, spec, panoramas and image assets. Those are the same fact in every
-  language, and the moment a second copy exists one of them starts being wrong.
+  What is deliberately NOT translated: names, codes, slugs, prices, deposits,
+  dates, spec, panoramas, icons and image assets. Those are the same fact in
+  every language, and the moment a second copy exists one of them starts being
+  wrong.
 */
 
 import { createHash } from "node:crypto";
 
-/** Whole-string fields outside any array. */
-export const SCALAR_FIELDS = ["tagline", "keywords", "saleNote"];
-
 /**
- * A fingerprint of the English a translation was made from.
+ * What is translatable, per document type.
  *
- * This replaces comparing the document's _rev, which cannot work when
- * translations live ON the unit: writing the Spanish rewrites the document and
- * bumps its _rev, so a rev captured at extract time never matches again and
- * every translated apartment reports stale the moment it is published.
- *
- * Hashing only the extracted English strings is immune to that — the hash moves
- * when the English moves, and not when anything else about the document does.
- * (The sibling project this pipeline came from gets away with _rev because its
- * posts translate into a SEPARATE document; its in-place case does no staleness
- * check at all.)
- *
- * Keys are sorted so the hash does not depend on projection order.
+ *   scalars      plain string/text fields
+ *   stringArrays arrays of bare strings
+ *   blocks       Portable Text fields
+ *   rows         [arrayField, [translatable keys]] — objects carrying a _key
+ *   nested       [objectField, arrayField, [keys]] — rows one level down
+ *   objects      [objectField, [keys]] — a plain object of strings
+ *   imageAlt     { <storedAs>: <sourceField> } for a single image's alt text
+ *   galleryAlt   an image ARRAY whose alts translate, matched by _key
  */
-export function sourceHash(strings) {
-  const canonical = JSON.stringify(
-    Object.keys(strings)
-      .sort()
-      .map((k) => [k, strings[k]]),
-  );
-  return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
-}
+export const TYPES = {
+  unit: {
+    scalars: ["tagline", "keywords", "saleNote"],
+    stringArrays: ["chips"],
+    blocks: ["about"],
+    rows: [
+      ["space", ["title", "desc"]],
+      ["termsOverride", ["title", "desc"]],
+    ],
+    nested: [
+      ["amenitiesOverride", "inside", ["label"]],
+      ["amenitiesOverride", "building", ["label"]],
+    ],
+    imageAlt: { coverAlt: "coverImage" },
+    galleryAlt: "gallery",
+  },
+  hero: {
+    scalars: ["eyebrow", "headline", "sub"],
+    // Values translate too: "Any length" is copy, and "4 min" survives the
+    // instruction to leave numbers alone.
+    rows: [["stats", ["value", "label"]]],
+    imageAlt: { backgroundAlt: "background" },
+  },
+  location: {
+    scalars: ["heading", "addressLine"],
+    rows: [["distances", ["label", "value"]]],
+  },
+  siteSettings: {
+    scalars: ["hostNote", "stayNote"],
+    rows: [["propertyAmenities", ["title", "desc"]]],
+    objects: [["seo", ["title", "description"]]],
+  },
+  stayDefaults: {
+    rows: [["houseRules", ["title", "desc"]]],
+    nested: [
+      ["amenities", "inside", ["label"]],
+      ["amenities", "building", ["label"]],
+    ],
+  },
+};
 
 const isText = (v) => typeof v === "string" && v.trim().length > 0;
+const spec = (type) => TYPES[type] ?? {};
 
 /* ── Portable Text ───────────────────────────────────────────────────────── */
 
@@ -107,75 +139,124 @@ function rebuildRows(prefix, rows, fields, t) {
   });
 }
 
-/* ── Units ───────────────────────────────────────────────────────────────── */
+/* ── The engine ──────────────────────────────────────────────────────────── */
 
-/** A unit's translatable strings, keyed so rebuildUnit() can find its way home. */
-export function extractUnit(unit) {
+/** A document's translatable strings, keyed so rebuildDoc() can find its way home. */
+export function extractDoc(type, doc) {
+  const s = spec(type);
   const out = {};
 
-  for (const field of SCALAR_FIELDS) {
-    if (isText(unit[field])) out[field] = unit[field];
+  for (const f of s.scalars ?? []) if (isText(doc[f])) out[f] = doc[f];
+
+  for (const f of s.stringArrays ?? []) {
+    (doc[f] ?? []).forEach((v, i) => {
+      if (isText(v)) out[`${f}.${i}`] = v;
+    });
   }
 
-  (unit.chips ?? []).forEach((chip, i) => {
-    if (isText(chip)) out[`chips.${i}`] = chip;
-  });
+  for (const f of s.blocks ?? []) extractBlocks(out, f, doc[f]);
 
-  if (isText(unit.coverImage?.alt)) out["coverImage.alt"] = unit.coverImage.alt;
-  extractRows(out, "gallery", unit.gallery, ["alt"]);
+  for (const [field, keys] of s.rows ?? []) extractRows(out, field, doc[field], keys);
 
-  extractBlocks(out, "about", unit.about);
-  extractRows(out, "space", unit.space, ["title", "desc"]);
-  extractRows(out, "terms", unit.termsOverride, ["title", "desc"]);
-  extractRows(out, "amen.inside", unit.amenitiesOverride?.inside, ["label"]);
-  extractRows(out, "amen.building", unit.amenitiesOverride?.building, ["label"]);
+  for (const [obj, field, keys] of s.nested ?? []) {
+    extractRows(out, `${obj}.${field}`, doc[obj]?.[field], keys);
+  }
+
+  for (const [obj, keys] of s.objects ?? []) {
+    for (const k of keys) if (isText(doc[obj]?.[k])) out[`${obj}.${k}`] = doc[obj][k];
+  }
+
+  for (const [stored, source] of Object.entries(s.imageAlt ?? {})) {
+    if (isText(doc[source]?.alt)) out[stored] = doc[source].alt;
+  }
+
+  if (s.galleryAlt) extractRows(out, s.galleryAlt, doc[s.galleryAlt], ["alt"]);
 
   return out;
 }
 
 /**
- * The row to store in `unit.i18n[]` for one locale.
+ * The row to store in `<doc>.i18n[]` for one locale.
  *
  * Only fields that actually have content are set. An empty array here would be
  * worse than a missing one: the site reads translations with
  * `coalesce(t.about, about)`, and `coalesce` treats `[]` as a value, so an empty
  * translated array would shadow the English instead of falling back to it.
  */
-export function rebuildUnit(unit, t, locale, { sourceHash, sourceRev }) {
-  const row = { _type: "unitTranslation", _key: locale, locale, sourceHash, sourceRev };
+export function rebuildDoc(type, doc, t, locale, { sourceHash, sourceRev }) {
+  const s = spec(type);
+  const row = { _type: `${type}Translation`, _key: locale, locale, sourceHash, sourceRev };
 
-  for (const field of SCALAR_FIELDS) {
-    if (t[field] !== undefined) row[field] = t[field];
+  for (const f of s.scalars ?? []) if (t[f] !== undefined) row[f] = t[f];
+
+  for (const f of s.stringArrays ?? []) {
+    const arr = (doc[f] ?? []).map((v, i) => t[`${f}.${i}`] ?? v);
+    if (arr.length) row[f] = arr;
   }
 
-  const chips = (unit.chips ?? []).map((chip, i) => t[`chips.${i}`] ?? chip);
-  if (chips.length) row.chips = chips;
+  for (const f of s.blocks ?? []) {
+    if (doc[f]?.length) row[f] = rebuildBlocks(f, doc[f], t);
+  }
 
-  if (t["coverImage.alt"] !== undefined) row.coverAlt = t["coverImage.alt"];
+  for (const [field, keys] of s.rows ?? []) {
+    if (doc[field]?.length) row[field] = rebuildRows(field, doc[field], keys, t);
+  }
+
+  for (const [obj, field, keys] of s.nested ?? []) {
+    const built = rebuildRows(`${obj}.${field}`, doc[obj]?.[field], keys, t);
+    if (built.length) row[obj] = { ...(row[obj] ?? {}), [field]: built };
+  }
+
+  for (const [obj, keys] of s.objects ?? []) {
+    const built = {};
+    for (const k of keys) if (t[`${obj}.${k}`] !== undefined) built[k] = t[`${obj}.${k}`];
+    if (Object.keys(built).length) row[obj] = built;
+  }
+
+  for (const stored of Object.keys(s.imageAlt ?? {})) {
+    if (t[stored] !== undefined) row[stored] = t[stored];
+  }
 
   /*
     Alt text only — never a second copy of the image asset. The photo is the
     same photo in every language; duplicating the reference would just be one
     more thing that can drift out of step with the gallery.
   */
-  const galleryAlts = (unit.gallery ?? [])
-    .filter((img) => img?._key && t[`gallery.${img._key}.alt`] !== undefined)
-    .map((img) => ({ _key: img._key, alt: t[`gallery.${img._key}.alt`] }));
-  if (galleryAlts.length) row.galleryAlts = galleryAlts;
-
-  if (unit.about?.length) row.about = rebuildBlocks("about", unit.about, t);
-  if (unit.space?.length) row.space = rebuildRows("space", unit.space, ["title", "desc"], t);
-  if (unit.termsOverride?.length) {
-    row.termsOverride = rebuildRows("terms", unit.termsOverride, ["title", "desc"], t);
-  }
-
-  const inside = rebuildRows("amen.inside", unit.amenitiesOverride?.inside, ["label"], t);
-  const building = rebuildRows("amen.building", unit.amenitiesOverride?.building, ["label"], t);
-  if (inside.length || building.length) {
-    row.amenitiesOverride = { inside, building };
+  if (s.galleryAlt) {
+    const alts = (doc[s.galleryAlt] ?? [])
+      .filter((img) => img?._key && t[`${s.galleryAlt}.${img._key}.alt`] !== undefined)
+      .map((img) => ({ _key: img._key, alt: t[`${s.galleryAlt}.${img._key}.alt`] }));
+    if (alts.length) row.galleryAlts = alts;
   }
 
   return row;
+}
+
+/** Units, via the generic engine. Kept as named helpers for the scripts. */
+export const extractUnit = (unit) => extractDoc("unit", unit);
+export const rebuildUnit = (unit, t, locale, provenance) =>
+  rebuildDoc("unit", unit, t, locale, provenance);
+
+/**
+ * A fingerprint of the English a translation was made from.
+ *
+ * This replaces comparing the document's _rev, which cannot work when
+ * translations live ON the document: writing the Spanish rewrites it and bumps
+ * its _rev, so a rev captured at extract time never matches again and every
+ * translated document reports stale the moment it is published.
+ *
+ * Hashing only the extracted English strings is immune to that — the hash moves
+ * when the English moves, and not when anything else about the document does.
+ *
+ * Keys are sorted so the hash does not depend on projection order.
+ */
+export function sourceHash(strings) {
+  const canonical = JSON.stringify(
+    Object.keys(strings)
+      .sort()
+      .map((k) => [k, strings[k]]),
+  );
+  return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
 }
 
 /** Sanity treats an id under `drafts.` as a draft — that is the whole mechanism. */

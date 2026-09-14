@@ -172,6 +172,14 @@ interface RawUnit {
   terms?: Term[];
   /** This language's row, or null. See `translated()`. */
   tr?: RawTranslation | null;
+  /** Did this unit override the shared Stay defaults, or inherit them? */
+  hasOwnAmenities?: boolean;
+  hasOwnTerms?: boolean;
+  /** The shared Stay defaults in this language, for the inheriting case. */
+  sharedTr?: {
+    amenities?: { inside?: Amenity[]; building?: Amenity[] };
+    houseRules?: Term[];
+  } | null;
 }
 
 /**
@@ -190,8 +198,13 @@ interface RawUnit {
  * _key so reordering the gallery cannot move alt text onto the wrong picture.
  */
 function translated(u: RawUnit): RawUnit {
-  const t = u.tr;
-  if (!t) return u;
+  /*
+    No early return when the unit has no translation row of its own: the shared
+    Stay defaults may still have one, and an apartment that inherits them should
+    show the Spanish house rules rather than English ones just because nobody has
+    translated that apartment's own copy yet.
+  */
+  const t: Partial<RawTranslation> = u.tr ?? {};
   const alts = new Map((t.galleryAlts ?? []).map((g) => [g._key, g.alt]));
   return {
     ...u,
@@ -207,10 +220,15 @@ function translated(u: RawUnit): RawUnit {
       const alt = g._key ? alts.get(g._key) : undefined;
       return alt ? { ...g, alt } : g;
     }),
-    // The unit's own translated override wins; then its English override; then
-    // the shared Stay defaults the query already coalesced in.
-    amenities: t.amenitiesOverride ?? u.amenities,
-    terms: t.termsOverride ?? u.terms,
+    /*
+      Four levels, in order: this unit's translated override, its English
+      override, the translated shared defaults, the English shared defaults.
+      The middle two are already collapsed into u.amenities / u.terms by the
+      query's coalesce, so hasOwn* is what says which of them it holds.
+    */
+    amenities:
+      t.amenitiesOverride ?? (u.hasOwnAmenities ? u.amenities : u.sharedTr?.amenities ?? u.amenities),
+    terms: t.termsOverride ?? (u.hasOwnTerms ? u.terms : u.sharedTr?.houseRules ?? u.terms),
   };
 }
 interface RawSettings {
@@ -231,6 +249,28 @@ interface RawSettings {
   powerBaseUsd: number;
   discounts?: { months: number; pct: number }[];
   propertyAmenities?: { icon: string; title: string; desc: string }[];
+  tr?: {
+    hostNote?: string;
+    stayNote?: string;
+    propertyAmenities?: { title?: string; desc?: string }[];
+    seo?: { title?: string; description?: string };
+  } | null;
+}
+
+/**
+ * Translated rows on the shared singletons.
+ *
+ * Merged positionally for the tile arrays rather than by _key: the translation
+ * is rebuilt from the English array in order, so index i is the same tile. A
+ * missing entry leaves the English one untouched.
+ */
+function mergeRows<T extends object>(
+  english: T[] | undefined,
+  translated: Partial<T>[] | undefined,
+): T[] {
+  const rows = english ?? [];
+  if (!translated?.length) return rows;
+  return rows.map((row, i) => ({ ...row, ...(translated[i] ?? {}) }));
 }
 
 // Split the availability feed into whole-property closures + per-unit ranges.
@@ -286,10 +326,26 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
         headline: string;
         sub: string;
         videoId: string;
-        background?: SanityImage;
+        background?: SanityImageObject;
         stats?: { value: string; label: string }[];
+        tr?: {
+          eyebrow?: string;
+          headline?: string;
+          sub?: string;
+          backgroundAlt?: string;
+          stats?: { value?: string; label?: string }[];
+        } | null;
       };
-      location: { heading: string; addressLine: string; distances?: { label: string; value: string }[] };
+      location: {
+        heading: string;
+        addressLine: string;
+        distances?: { label: string; value: string }[];
+        tr?: {
+          heading?: string;
+          addressLine?: string;
+          distances?: { label?: string; value?: string }[];
+        } | null;
+      };
       settings: RawSettings;
       units: RawUnit[];
     }>({ query: landingQuery, params: { locale } }),
@@ -299,6 +355,12 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
   ]);
 
   const s = landing.settings;
+  // English is the fallback for every one of these, field by field — a
+  // half-finished singleton should show the Spanish it has rather than reverting
+  // the whole page.
+  const heroTr = landing.hero?.tr;
+  const locTr = landing.location?.tr;
+  const setTr = s?.tr;
 
   return {
     property: {
@@ -311,37 +373,42 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
       email: "",
     },
     hero: {
-      eyebrow: landing.hero.eyebrow,
-      headline: landing.hero.headline,
-      sub: landing.hero.sub,
+      eyebrow: heroTr?.eyebrow ?? landing.hero.eyebrow,
+      headline: heroTr?.headline ?? landing.hero.headline,
+      sub: heroTr?.sub ?? landing.hero.sub,
       videoId: landing.hero.videoId,
-      stats: landing.hero.stats ?? [],
-      background: img(landing.hero.background, landing.hero.headline),
+      stats: mergeRows(landing.hero.stats, heroTr?.stats),
+      background: img(
+        heroTr?.backgroundAlt && landing.hero.background
+          ? { ...landing.hero.background, alt: heroTr.backgroundAlt }
+          : landing.hero.background,
+        heroTr?.headline ?? landing.hero.headline,
+      ),
     },
     host: {
       languages: s.languages ?? [],
       ownerSince: s.ownerSince ?? "",
       replyTime: s.replyTime ?? "",
-      note: s.hostNote || DEFAULT_HOST_NOTE,
+      note: setTr?.hostNote || s.hostNote || DEFAULT_HOST_NOTE,
     },
     stay: {
       checkIn: s.checkIn || DEFAULT_STAY.checkIn,
       checkOut: s.checkOut || DEFAULT_STAY.checkOut,
-      note: s.stayNote || DEFAULT_STAY.note,
+      note: setTr?.stayNote || s.stayNote || DEFAULT_STAY.note,
     },
     fxRate: s.fxRate,
     fxRateAsOf: s.fxRateUpdatedAt?.slice(0, 10) ?? "",
     units: landing.units.map((u) => cardUnit(translated(u))),
-    amenities: s.propertyAmenities ?? [],
+    amenities: mergeRows(s.propertyAmenities, setTr?.propertyAmenities),
     power: { baseUsd: s.powerBaseUsd },
     discounts: s.discounts ?? [],
     // Per-unit availability: a booking with a unit blocks that unit; one without
     // a unit is a whole-property closure that blocks every unit.
     availability: buildAvailability(bookings),
     location: {
-      heading: landing.location?.heading ?? "",
-      addressLine: landing.location?.addressLine ?? "",
-      distances: landing.location?.distances ?? [],
+      heading: locTr?.heading ?? landing.location?.heading ?? "",
+      addressLine: locTr?.addressLine ?? landing.location?.addressLine ?? "",
+      distances: mergeRows(landing.location?.distances, locTr?.distances),
     },
   };
 }

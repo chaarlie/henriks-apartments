@@ -180,14 +180,22 @@ function restoreWhitespace(src, out) {
 let done = 0;
 
 for (const locale of locales) {
-  const dir = path.join(PENDING, locale);
+  const root = path.join(PENDING, locale);
+  // Pending files sit under a folder per document type (unit, hero, …), so the
+  // listing goes one level deeper than it used to.
   const files = fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith(".json"))
-    .filter((f) => !slugArg || f === `${slugArg}.json`);
+    .readdirSync(root, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .flatMap((e) =>
+      fs
+        .readdirSync(path.join(root, e.name))
+        .filter((f) => f.endsWith(".json"))
+        .filter((f) => !slugArg || f === `${slugArg}.json`)
+        .map((f) => `${e.name}/${f}`),
+    );
 
   for (const file of files) {
-    const full = path.join(dir, file);
+    const full = path.join(root, file);
     const doc = JSON.parse(fs.readFileSync(full, "utf8"));
     const src = doc.strings;
 

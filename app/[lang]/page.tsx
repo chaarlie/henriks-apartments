@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getSiteContent } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
 import { businessJsonLd } from "@/lib/structured-data";
+import { isLocale, localeAlternates } from "@/lib/locales";
 import JsonLd from "@/app/components/JsonLd";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
@@ -17,12 +19,23 @@ import BookingForm from "@/app/components/landing/BookingForm";
 import Trust from "@/app/components/landing/Trust";
 import CostEstimator from "@/app/components/landing/CostEstimator";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/" },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  if (!isLocale(lang)) return {};
+  return { alternates: localeAlternates(lang, "/") };
+}
 
-export default async function Home() {
-  const content = await getSiteContent();
+export default async function Home({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  if (!isLocale(lang)) notFound();
+
+  // Everything below reads Sanity content through this one call, so the whole
+  // page follows the locale without a single component knowing about languages.
+  const content = await getSiteContent(lang);
   return (
     <BookingProvider content={content}>
       <JsonLd data={businessJsonLd(content)} />

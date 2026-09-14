@@ -4,6 +4,7 @@ import { sanityFetch } from "@/sanity/lib/live";
 import { urlFor } from "@/sanity/lib/image";
 import { panoramaUrl } from "@/lib/panorama";
 import { landingQuery, unitQuery, availabilityQuery } from "@/sanity/lib/queries";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/locales";
 import type {
   SiteContent,
   Unit,
@@ -41,6 +42,19 @@ const DEFAULT_STAY = {
 
 // A Sanity image field: an asset reference plus our custom `alt`.
 type SanityImage = SanityImageSource & { alt?: string };
+
+/**
+ * The object form of an image, which is what these queries actually return.
+ *
+ * `SanityImageSource` also admits a bare asset-id string, and TypeScript will
+ * not spread a union containing one — so translating alt text needs the narrower
+ * type rather than a runtime guard for a shape GROQ never gives us here. `_key`
+ * comes along because gallery alts are matched by key, not by position.
+ */
+type SanityImageObject = Extract<SanityImageSource, object> & {
+  alt?: string;
+  _key?: string;
+};
 
 /**
  * Sanity encodes the real pixel size in the asset id —
@@ -116,6 +130,24 @@ interface RawTourStop {
   sphereCorrection?: { pan?: string; tilt?: string; roll?: string };
   links?: { to: string; yaw: string }[];
 }
+/**
+ * One row of `unit.i18n` — the same prose fields, in another language. Written
+ * by scripts/i18n/apply.mjs; everything absent falls back to the English.
+ */
+interface RawTranslation {
+  locale: string;
+  tagline?: string;
+  keywords?: string;
+  saleNote?: string;
+  chips?: string[];
+  coverAlt?: string;
+  galleryAlts?: { _key: string; alt?: string }[];
+  about?: Block[];
+  space?: SpaceItem[];
+  termsOverride?: Term[];
+  amenitiesOverride?: { inside?: Amenity[]; building?: Amenity[] };
+}
+
 interface RawUnit {
   slug: string;
   name: string;
@@ -131,13 +163,55 @@ interface RawUnit {
   forSale?: boolean;
   salePriceUsd?: number;
   saleNote?: string;
-  coverImage?: SanityImage;
-  gallery?: SanityImage[];
+  coverImage?: SanityImageObject;
+  gallery?: SanityImageObject[];
   tour?: RawTourStop[];
   about?: Block[];
   space?: SpaceItem[];
   amenities?: { inside?: Amenity[]; building?: Amenity[] };
   terms?: Term[];
+  /** This language's row, or null. See `translated()`. */
+  tr?: RawTranslation | null;
+}
+
+/**
+ * The unit as it reads in the requested language, falling back to English field
+ * by field.
+ *
+ * Field by field, not all-or-nothing: a half-finished translation should show
+ * the Spanish it has and English for the rest, rather than reverting the whole
+ * apartment to English because one field is missing.
+ *
+ * Doing this here rather than in the components is the point — everything
+ * downstream (pages, JSON-LD, the share panel) keeps consuming the same `Unit`
+ * shape and needs no idea that translations exist.
+ *
+ * Photos are never duplicated: only their alt text is translated, matched by
+ * _key so reordering the gallery cannot move alt text onto the wrong picture.
+ */
+function translated(u: RawUnit): RawUnit {
+  const t = u.tr;
+  if (!t) return u;
+  const alts = new Map((t.galleryAlts ?? []).map((g) => [g._key, g.alt]));
+  return {
+    ...u,
+    tagline: t.tagline ?? u.tagline,
+    keywords: t.keywords ?? u.keywords,
+    saleNote: t.saleNote ?? u.saleNote,
+    chips: t.chips ?? u.chips,
+    about: t.about ?? u.about,
+    space: t.space ?? u.space,
+    coverImage:
+      u.coverImage && t.coverAlt ? { ...u.coverImage, alt: t.coverAlt } : u.coverImage,
+    gallery: (u.gallery ?? []).map((g) => {
+      const alt = g._key ? alts.get(g._key) : undefined;
+      return alt ? { ...g, alt } : g;
+    }),
+    // The unit's own translated override wins; then its English override; then
+    // the shared Stay defaults the query already coalesced in.
+    amenities: t.amenitiesOverride ?? u.amenities,
+    terms: t.termsOverride ?? u.terms,
+  };
 }
 interface RawSettings {
   propertyName: string;
@@ -204,7 +278,7 @@ function cardUnit(u: RawUnit): Unit {
 }
 
 /** Full site content for the landing page and the shared BookingProvider. */
-export async function getSiteContent(): Promise<SiteContent> {
+export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<SiteContent> {
   const [{ data: landing }, { data: bookings }] = await Promise.all([
     sanityFetch<{
       hero: {
@@ -218,7 +292,7 @@ export async function getSiteContent(): Promise<SiteContent> {
       location: { heading: string; addressLine: string; distances?: { label: string; value: string }[] };
       settings: RawSettings;
       units: RawUnit[];
-    }>({ query: landingQuery }),
+    }>({ query: landingQuery, params: { locale } }),
     sanityFetch<{ unit: string | null; start: string; end: string }[]>({
       query: availabilityQuery,
     }),
@@ -257,7 +331,7 @@ export async function getSiteContent(): Promise<SiteContent> {
     },
     fxRate: s.fxRate,
     fxRateAsOf: s.fxRateUpdatedAt?.slice(0, 10) ?? "",
-    units: landing.units.map(cardUnit),
+    units: landing.units.map((u) => cardUnit(translated(u))),
     amenities: s.propertyAmenities ?? [],
     power: { baseUsd: s.powerBaseUsd },
     discounts: s.discounts ?? [],
@@ -273,15 +347,19 @@ export async function getSiteContent(): Promise<SiteContent> {
 }
 
 /** One fully-populated apartment for /apartments/[slug]. */
-export async function getUnit(slug: string): Promise<Unit | null> {
-  const { data: u } = await sanityFetch<
+export async function getUnit(
+  slug: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<Unit | null> {
+  const { data: raw } = await sanityFetch<
     | (RawUnit & {
         amenities?: { inside?: Amenity[]; building?: Amenity[] };
         terms?: Term[];
       })
     | null
-  >({ query: unitQuery, params: { slug } });
-  if (!u) return null;
+  >({ query: unitQuery, params: { slug, locale } });
+  if (!raw) return null;
+  const u = translated(raw);
 
   return {
     _id: `unit-${u.slug}`,
@@ -312,8 +390,11 @@ export async function getUnit(slug: string): Promise<Unit | null> {
 
 /** Slugs for generateStaticParams. */
 export async function getUnitSlugs(): Promise<string[]> {
+  // Slugs are language-neutral, but the query takes $locale — GROQ errors on an
+  // undefined parameter, so pass the default rather than leaving it out.
   const { data } = await sanityFetch<{ units: { slug: string }[] }>({
     query: landingQuery,
+    params: { locale: DEFAULT_LOCALE },
   });
   return data.units.map((u) => u.slug);
 }

@@ -6,6 +6,7 @@ import { BookingProvider } from "@/lib/booking";
 import { unitJsonLd } from "@/lib/structured-data";
 import { ogImage } from "@/lib/image-url";
 import { unitHighlights } from "@/lib/unit";
+import { isLocale, localeAlternates, localePath } from "@/lib/locales";
 import JsonLd from "@/app/components/JsonLd";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
@@ -17,6 +18,11 @@ import UnitContent from "@/app/components/unit/UnitContent";
 import BookingCard from "@/app/components/unit/BookingCard";
 import UnitActionBar from "@/app/components/unit/UnitActionBar";
 
+/**
+ * Slugs only. `lang` is a root parameter supplied by app/[lang]/layout.tsx, and
+ * Next runs this once per language — an apartment keeps the same slug in every
+ * one, so the Spanish page is the same URL with a prefix.
+ */
 export async function generateStaticParams() {
   return (await getUnitSlugs()).map((slug) => ({ slug }));
 }
@@ -24,38 +30,49 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ lang: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const [unit, content] = await Promise.all([getUnit(slug), getSiteContent()]);
+  const { lang, slug } = await params;
+  if (!isLocale(lang)) return {};
+  const [unit, content] = await Promise.all([getUnit(slug, lang), getSiteContent(lang)]);
   if (!unit) return {};
   const title = `${unit.name} · ${content.property.name}`;
   const description = unit.about[0] ?? unit.tagline;
-  const images = unit.image.url ? [{ url: ogImage(unit.image.url), alt: unit.image.alt }] : undefined;
+  const images = unit.image.url
+    ? [{ url: ogImage(unit.image.url), alt: unit.image.alt }]
+    : undefined;
+  const path = `/apartments/${unit.slug}`;
   return {
     title,
     description,
-    alternates: { canonical: `/apartments/${unit.slug}` },
+    alternates: localeAlternates(lang, path),
     // What WhatsApp, Facebook and the admin's share preview show for this page.
     openGraph: {
       type: "website",
-      url: `/apartments/${unit.slug}`,
+      url: localePath(lang, path),
       siteName: content.property.name,
       title,
       description,
       images,
     },
-    twitter: { card: "summary_large_image", title, description, images: images?.map((i) => i.url) },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: images?.map((i) => i.url),
+    },
   };
 }
 
 export default async function UnitPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ lang: string; slug: string }>;
 }) {
-  const { slug } = await params;
-  const [unit, content] = await Promise.all([getUnit(slug), getSiteContent()]);
+  const { lang, slug } = await params;
+  if (!isLocale(lang)) notFound();
+
+  const [unit, content] = await Promise.all([getUnit(slug, lang), getSiteContent(lang)]);
   if (!unit) notFound();
 
   // Facts come from this unit's own data — never a shared hardcoded list.
@@ -69,7 +86,10 @@ export default async function UnitPage({
         <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
           {/* Title */}
           <nav aria-label="Breadcrumb" className="pt-6 text-[15px] text-copy">
-            <Link href="/#units" className="font-semibold text-lagoon underline underline-offset-[3px]">
+            <Link
+              href={localePath(lang, "/#units")}
+              className="font-semibold text-lagoon underline underline-offset-[3px]"
+            >
               Apartments
             </Link>
             <span aria-hidden className="mx-2">/</span>

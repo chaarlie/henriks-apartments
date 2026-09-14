@@ -26,6 +26,11 @@ export const unitQuery = groq`
     "slug": slug.current,
     coverImage, gallery, tour, about, space,
 
+    // The whole translation row for this language, or null. The field-by-field
+    // fallback to English happens in lib/sanity.server.ts, where per-image alt
+    // text can be matched up by _key without eight repeated subscripts here.
+    "tr": i18n[locale == $locale][0],
+
     // inherit shared defaults unless the unit overrides them
     "amenities": coalesce(amenitiesOverride, *[_type == "stayDefaults"][0].amenities),
     "terms":     coalesce(termsOverride,     *[_type == "stayDefaults"][0].houseRules),
@@ -44,7 +49,8 @@ export const landingQuery = groq`{
   "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
     "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, deposits, availableFrom, spec, chips, keywords,
     forSale, salePriceUsd, saleNote,
-    coverImage, gallery, space, tour
+    coverImage, gallery, space, tour,
+    "tr": i18n[locale == $locale][0]
   }
 }`
 

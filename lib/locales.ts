@@ -28,6 +28,21 @@ export function isLocale(value: string): value is Locale {
 }
 
 /**
+ * Any path, under a given language.
+ *
+ * English carries no prefix — `/apartments/x`, not `/en/apartments/x` — so the
+ * URLs already shared over WhatsApp and Facebook keep working. Every other
+ * language is prefixed. Both spellings resolve (a rewrite serves the unprefixed
+ * path from the same route tree), so the choice here is which one the site
+ * *emits*, and emitting one form consistently is what keeps canonicals honest.
+ */
+export function localePath(locale: Locale, path: string): string {
+  const clean = path.startsWith("/") ? path : `/${path}`;
+  if (locale === DEFAULT_LOCALE) return clean;
+  return clean === "/" ? `/${locale}` : `/${locale}${clean}`;
+}
+
+/**
  * The tag hreflang wants.
  *
  * Plain "es" rather than "es-DO": the people who rent these apartments search
@@ -51,3 +66,30 @@ export const LANGUAGE_NAME: Record<Locale, string> = {
   en: "English",
   es: "Español",
 };
+
+/**
+ * canonical + hreflang for a page that exists at the same path in every
+ * language — which here is every page, since apartments keep one slug.
+ *
+ * The canonical has to carry the language prefix. A Spanish page claiming
+ * `/apartments/x` as its canonical tells Google the Spanish catalogue is a
+ * duplicate of the English one — the whole translated half of the site asking
+ * not to be indexed. Building both tags from one function is what stops the two
+ * drifting apart.
+ *
+ * Generating the alternates from LOCALES also makes them reciprocal by
+ * construction: every page lists every other, which is the part hand-written
+ * hreflang reliably gets wrong.
+ *
+ * x-default points at English — what someone whose language we do not publish
+ * should land on.
+ */
+export function localeAlternates(locale: Locale, path: string) {
+  return {
+    canonical: localePath(locale, path),
+    languages: {
+      ...Object.fromEntries(LOCALES.map((l) => [HREFLANG[l], localePath(l, path)])),
+      "x-default": localePath(DEFAULT_LOCALE, path),
+    },
+  };
+}

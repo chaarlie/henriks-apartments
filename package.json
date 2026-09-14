@@ -7,12 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "studio": "sanity dev --port 3333",
+    "studio": "sanity dev",
     "studio:deploy": "sanity deploy",
     "typegen": "sanity schema extract --enforce-required-fields --path=./sanity/extract.json && sanity typegen generate",
-    "admin:password": "node scripts/admin-password.mjs"
+    "admin:password": "node scripts/admin-password.mjs",
+    "i18n:status": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/status.mjs",
+    "i18n:extract": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/extract.mjs",
+    "i18n:translate": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/translate.mjs",
+    "i18n:apply": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/apply.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
     "@photo-sphere-viewer/core": "^5.15.1",
     "@photo-sphere-viewer/markers-plugin": "^5.15.1",
     "@photo-sphere-viewer/virtual-tour-plugin": "^5.15.1",

@@ -26,9 +26,26 @@ export const unitQuery = groq`
     "slug": slug.current,
     coverImage, gallery, tour, about, space,
 
+    // The whole translation row for this language, or null. The field-by-field
+    // fallback to English happens in lib/sanity.server.ts, where per-image alt
+    // text can be matched up by _key without eight repeated subscripts here.
+    "tr": i18n[locale == $locale][0],
+
     // inherit shared defaults unless the unit overrides them
     "amenities": coalesce(amenitiesOverride, *[_type == "stayDefaults"][0].amenities),
     "terms":     coalesce(termsOverride,     *[_type == "stayDefaults"][0].houseRules),
+
+    // Which side that coalesce picked, plus the shared defaults' own translation.
+    // Both are needed to get the precedence right: the translated Stay defaults
+    // are only the correct answer when the unit is actually inheriting them, and
+    // the coalesce above has already thrown away which case it was.
+    //
+    // Line comments, never a block: GROQ has no /* */ and rejects the WHOLE
+    // query with a 400. Because these strings are parsed server-side at request
+    // time, that shows up as a broken apartment page, not a broken build.
+    "hasOwnAmenities": defined(amenitiesOverride),
+    "hasOwnTerms":     defined(termsOverride),
+    "sharedTr": *[_type == "stayDefaults"][0].i18n[locale == $locale][0]{amenities, houseRules},
 
     // shared, edited once
     "location": *[_type == "location"][0]{heading, addressLine, distances},
@@ -36,15 +53,24 @@ export const unitQuery = groq`
   }
 `
 
-/** LANDING — unit cards (no heavy fields) + shared hero/location/settings. */
+/**
+ * LANDING — unit cards (no heavy fields) + shared hero/location/settings.
+ *
+ * Each shared document carries its translation row for $locale as `tr`; the
+ * field-by-field fallback to English happens in lib/sanity.server.ts. The hero
+ * headline, the amenity tiles and the trust paragraph all come from here, which
+ * is why an untranslated singleton leaves the Spanish landing page reading as
+ * English however well the apartments themselves are translated.
+ */
 export const landingQuery = groq`{
-  "hero":     *[_type == "hero"][0],
-  "location": *[_type == "location"][0]{heading, addressLine, distances},
-  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, languages, ownerSince, replyTime, hostNote, checkIn, checkOut, stayNote, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities},
+  "hero":     *[_type == "hero"][0]{..., "tr": i18n[locale == $locale][0]},
+  "location": *[_type == "location"][0]{heading, addressLine, distances, "tr": i18n[locale == $locale][0]},
+  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, languages, ownerSince, replyTime, hostNote, checkIn, checkOut, stayNote, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities, seo, "tr": i18n[locale == $locale][0]},
   "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
     "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, deposits, availableFrom, spec, chips, keywords,
     forSale, salePriceUsd, saleNote,
-    coverImage, gallery, space, tour
+    coverImage, gallery, space, tour,
+    "tr": i18n[locale == $locale][0]
   }
 }`
 

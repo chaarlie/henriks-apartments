@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { type Unit } from "@/lib/content";
+import { sized } from "@/lib/image-url";
 import Tour from "@/app/components/tour/Tour";
 
 type Mode = "gallery" | "tour";
@@ -125,9 +126,21 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
             className="absolute left-5 top-1/2 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/[0.14] text-xl text-white hover:bg-white/[0.28]">‹</button>
           <button type="button" onClick={(e) => { e.stopPropagation(); move(1); }} aria-label="Next"
             className="absolute right-5 top-1/2 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/[0.14] text-xl text-white hover:bg-white/[0.28]">›</button>
+          {/*
+            A plain <img>, deliberately: this one is centred and keeps its own
+            aspect ratio, sized by the max-h/max-w below, which next/image's
+            `fill` does not do well.
+
+            But it MUST carry its own width. `photos[].url` is the untransformed
+            asset URL — img() in sanity.server.ts returns it that way so
+            next/image can request an exact size — and nothing here adds one. It
+            was rendering 6244px, 9.9MB originals into a box capped at 1100px,
+            one per arrow press. 2000 covers that box on a 2× screen, and
+            `fit=max` never enlarges a photo that was smaller to begin with.
+          */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={photos[lightbox].url}
+            src={sized(photos[lightbox].url, { width: 2000 })}
             alt={photos[lightbox].alt}
             onClick={(e) => e.stopPropagation()}
             className="max-h-[76vh] max-w-[min(1100px,92vw)] rounded-lg shadow-2xl"

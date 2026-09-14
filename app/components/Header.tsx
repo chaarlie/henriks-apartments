@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { type Unit } from "@/lib/content";
+import { localePath, splitLocale } from "@/lib/locales";
+import LocaleSwitcher from "@/app/components/LocaleSwitcher";
 import { whatsappHref } from "@/lib/money";
 import { dayLabel, plural, today } from "@/lib/dates";
 import { availableForDates, blockedFor, freeAgainFrom, scopeUnits } from "@/lib/availability";
@@ -17,6 +20,10 @@ export default function Header({
 }) {
   const { start, end, scope, openPicker } = useBooking();
   const content = useContent();
+  // Which language this page is being read in. Every link that leaves the page
+  // has to carry it, or a Spanish reader is quietly returned to English.
+  const { locale } = splitLocale(usePathname());
+  const home = localePath(locale, "/");
 
   const links =
     mode === "landing"
@@ -27,7 +34,7 @@ export default function Header({
           { label: "Location", href: "#location" },
         ]
       : [
-          { label: "Apartments", href: "/#units" },
+          { label: "Apartments", href: `${home}#units` },
           { label: "Amenities", href: "#amenities" },
           { label: "Details", href: "#details" },
         ];
@@ -69,7 +76,7 @@ export default function Header({
       {/* Header row */}
       <header className="border-b border-hair bg-page/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-3 sm:gap-5 sm:px-7">
-          <Link href="/" className="flex items-center gap-2.5 whitespace-nowrap text-ink">
+          <Link href={home} className="flex items-center gap-2.5 whitespace-nowrap text-ink">
             <span className="h-6 w-6 rounded-[7px] bg-deep" aria-hidden />
             <span className="text-lg font-bold tracking-[-0.015em] sm:text-xl">{content.property.name}</span>
           </Link>
@@ -83,6 +90,7 @@ export default function Header({
                 {l.label}
               </a>
             ))}
+            <LocaleSwitcher />
             <button
               type="button"
               onClick={openPicker}

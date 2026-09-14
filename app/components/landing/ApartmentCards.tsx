@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { type Unit } from "@/lib/content";
+import { localePath, splitLocale } from "@/lib/locales";
 import { display, whatsappHref, type Currency } from "@/lib/money";
 import { computeEstimate, dayLabel, fxRateNote, numberWord, plural, today } from "@/lib/dates";
 import { availableFrom } from "@/lib/filter";
@@ -31,7 +33,10 @@ function Card({ unit }: { unit: Unit }) {
   const est = computeEstimate(unit, start, end, currency, content);
   const againFrom = start !== null && !free ? freeAgainFrom(content, unit, start, end ?? start) : null;
   const highlights = unitHighlights(unit);
-  const href = `/apartments/${unit.slug}`;
+  // Keep the reader in the language they are browsing in — an unprefixed link
+  // here would drop a Spanish visitor back into the English apartment page.
+  const { locale } = splitLocale(usePathname());
+  const href = localePath(locale, `/apartments/${unit.slug}`);
 
   const badge =
     start !== null ? (

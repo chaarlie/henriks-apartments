@@ -9,6 +9,10 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    // lib/i18n/*.ts is imported by BOTH the app and scripts/i18n/*.mjs, and
+    // Node's ESM resolver needs the explicit .ts extension on those relative
+    // imports. Legal here because noEmit is on — nothing is rewritten.
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",

@@ -35,12 +35,14 @@ export const unitQuery = groq`
     "amenities": coalesce(amenitiesOverride, *[_type == "stayDefaults"][0].amenities),
     "terms":     coalesce(termsOverride,     *[_type == "stayDefaults"][0].houseRules),
 
-    /*
-      Which side that coalesce picked, plus the shared defaults' own translation.
-      Both are needed to get the precedence right: the translated Stay defaults
-      are only the correct answer when the unit is actually inheriting them, and
-      the coalesce above has already thrown away which case it was.
-    */
+    // Which side that coalesce picked, plus the shared defaults' own translation.
+    // Both are needed to get the precedence right: the translated Stay defaults
+    // are only the correct answer when the unit is actually inheriting them, and
+    // the coalesce above has already thrown away which case it was.
+    //
+    // Line comments, never a block: GROQ has no /* */ and rejects the WHOLE
+    // query with a 400. Because these strings are parsed server-side at request
+    // time, that shows up as a broken apartment page, not a broken build.
     "hasOwnAmenities": defined(amenitiesOverride),
     "hasOwnTerms":     defined(termsOverride),
     "sharedTr": *[_type == "stayDefaults"][0].i18n[locale == $locale][0]{amenities, houseRules},
@@ -63,7 +65,7 @@ export const unitQuery = groq`
 export const landingQuery = groq`{
   "hero":     *[_type == "hero"][0]{..., "tr": i18n[locale == $locale][0]},
   "location": *[_type == "location"][0]{heading, addressLine, distances, "tr": i18n[locale == $locale][0]},
-  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, languages, ownerSince, replyTime, hostNote, checkIn, checkOut, stayNote, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities, "tr": i18n[locale == $locale][0]},
+  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, languages, ownerSince, replyTime, hostNote, checkIn, checkOut, stayNote, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities, seo, "tr": i18n[locale == $locale][0]},
   "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
     "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, deposits, availableFrom, spec, chips, keywords,
     forSale, salePriceUsd, saleNote,

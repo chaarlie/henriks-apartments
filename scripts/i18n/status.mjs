@@ -1,10 +1,16 @@
 /*
-  What is not translated yet, and what has gone stale.
+  What is not translated yet, what nobody has read, and what has gone stale.
 
-  Two different problems, and only the first is obvious. A document with no
-  Spanish is visibly missing. One translated from older English looks finished
-  and is quietly wrong — that is what the fingerprint catches, and it needs
-  something to compare against.
+  Three different problems, and only the first is obvious. A document with no
+  Spanish is visibly missing. One that a model wrote and nobody checked reads
+  like finished work. One translated from older English looks finished and is
+  quietly wrong — that is what the fingerprint catches, and it needs something
+  to compare against.
+
+  The last two are separate fields on the row, and keeping them separate is the
+  point: `machine` says nobody has read it, `sourceHash` says which English it
+  was made from. Folding them together made every applied document look stale
+  forever, so i18n:extract re-translated it on every run.
 
   Reports; never writes. Safe to run before a deploy or in CI.
 
@@ -28,10 +34,10 @@ if (!locales.length) {
 const client = sanity();
 
 /*
-  Reads drafts as well as published documents. Without that, a translation that
-  exists but is waiting for review reports as "not translated" — two very
-  different states, and conflating them would send someone to redo work already
-  done.
+  Reads drafts as well as published documents. i18n:apply no longer writes one,
+  but the Studio still can — and a translation sitting in a draft is invisible
+  to the site and to /admin, which is worth saying out loud rather than
+  reporting as missing.
 */
 const units = await client.fetch(
   `*[_type == "unit" && !(_id in path("drafts.**"))] | order(name asc){
@@ -56,9 +62,10 @@ for (const type of Object.keys(TYPES)) {
   if (doc) docs.push({ type, name: type, doc });
 }
 
-const counts = { ok: 0, review: 0, stale: 0, nohash: 0, missing: 0, empty: 0 };
+const counts = { ok: 0, machine: 0, review: 0, stale: 0, nohash: 0, missing: 0, empty: 0 };
 const label = {
-  ok: "✓ published",
+  ok: "✓ reviewed",
+  machine: "◐ needs review",
   review: "◐ in draft",
   stale: "↻ stale",
   nohash: "? no baseline",
@@ -66,8 +73,10 @@ const label = {
   empty: "– nothing to translate",
 };
 const note = {
+  machine: "machine pass — read it in /admin, then save",
   stale: "English edited since translation",
   nohash: "translated before fingerprints existed — re-extract to baseline",
+  review: "sitting in a Sanity draft, where the site cannot see it",
 };
 
 for (const locale of locales) {
@@ -87,11 +96,16 @@ for (const locale of locales) {
     const draft = (doc.draftI18n ?? []).find((r) => r?.locale === locale);
     const row = draft ?? published;
 
+    /*
+      Order matters. Stale outranks unread: if the English moved, re-translating
+      is the fix, and reading the old Spanish would be wasted effort.
+    */
     let state;
     if (!row) state = "missing";
     else if (!row.sourceHash) state = "nohash";
     else if (row.sourceHash !== hash) state = "stale";
     else if (!published) state = "review";
+    else if (row.machine) state = "machine";
     else state = "ok";
 
     counts[state]++;
@@ -101,8 +115,10 @@ for (const locale of locales) {
 
 const total = Object.values(counts).reduce((a, b) => a + b, 0);
 console.log(
-  `\n${total} document-language pair(s): ${counts.ok} published, ${counts.review} awaiting review, ` +
-    `${counts.stale} stale, ${counts.nohash} without a baseline, ${counts.missing} missing`,
+  `\n${total} document-language pair(s): ${counts.ok} reviewed, ${counts.machine} awaiting review, ` +
+    `${counts.stale} stale, ${counts.review} stuck in a draft, ${counts.missing} missing`,
 );
 if (counts.missing || counts.stale) console.log(`\nNext:  npm run i18n:extract`);
-else if (counts.review) console.log(`\nReview and publish the drafts:  npm run studio`);
+else if (counts.machine)
+  console.log(`\nRead the machine pass and save it:  npm run dev → /admin (switch language in the sidebar)`);
+else if (counts.review) console.log(`\nPublish the drafts, or discard them:  npm run studio`);

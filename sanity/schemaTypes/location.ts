@@ -40,6 +40,14 @@ export const location = defineType({
             defineField({name: 'locale', title: 'Language', type: 'string', readOnly: true}),
             defineField({name: 'sourceHash', title: 'Source fingerprint', type: 'string', readOnly: true}),
             defineField({name: 'sourceRev', title: 'Translated from revision', type: 'string', readOnly: true}),
+            defineField({
+              name: 'machine',
+              title: 'Awaiting review',
+              type: 'boolean',
+              readOnly: true,
+              description:
+                'Written by the translation scripts and not yet read by a person. Saving the document in /admin clears it.',
+            }),
             defineField({name: 'heading', title: 'Eyebrow', type: 'string'}),
             defineField({name: 'addressLine', title: 'Address line', type: 'string'}),
             defineField({

@@ -5,11 +5,19 @@ import { revalidatePath } from "next/cache";
 import { getWriteClient } from "@/sanity/lib/writeClient";
 import { requireAdmin } from "@/lib/admin/session";
 import { toSlug } from "@/lib/slug";
+import { extractDoc, sourceHash, type RawDoc } from "@/lib/i18n/fingerprint";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/locales";
 import type {
   AdminUnitInput,
   AdminBookingInput,
   AdminPropertyInput,
+  AdminHeroInput,
+  AdminLocationInput,
   PropertyAmenityRow,
+  UnitTranslationInput,
+  SettingsTranslationInput,
+  HeroTranslationInput,
+  LocationTranslationInput,
 } from "@/lib/admin/types";
 
 const key = () => randomUUID().replace(/-/g, "").slice(0, 12);
@@ -55,6 +63,95 @@ function revalidateSite() {
 }
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/* ── Translation rows ───────────────────────────────────────────────────────
+
+  Every translation write lands in the document's own `i18n` array, on the
+  PUBLISHED document, exactly like every other admin save. No drafts: the review
+  gate that drafts used to provide is this editor — Henrik reads the Spanish
+  beside the English and saves when it reads right.
+
+  Two rules the writer enforces, both of which matter more than they look:
+
+  1. The row is MERGED, not replaced. A row may hold fields this editor doesn't
+     show (the SEO pair on siteSettings today, whatever is added later) and a
+     wholesale replace would silently drop them.
+
+  2. sourceHash is stamped by the SERVER from the current English, never sent by
+     the client — a client that could choose its own fingerprint could mark copy
+     as reviewed without anyone reading it.
+
+  Stamping on every save means "saved in the editor" is what clears a stale
+  badge. That is the intent: the editor shows the English beside the field being
+  translated, so saving IS the act of confirming the Spanish against today's
+  English.
+*/
+
+type I18nRow = Record<string, unknown> & { locale?: string };
+
+async function writeTranslationRow(
+  docId: string,
+  type: string,
+  locale: Locale,
+  fields: Record<string, unknown>,
+): Promise<void> {
+  if (locale === DEFAULT_LOCALE) throw new Error("English is the document, not a translation row.");
+  if (!isLocale(locale)) throw new Error(`"${locale}" is not a configured language.`);
+
+  const client = getWriteClient();
+  const doc = await client.getDocument(docId);
+  if (!doc) throw new Error(`${docId} not found`);
+
+  const rows = ((doc as RawDoc).i18n ?? []) as I18nRow[];
+  const prior = rows.find((r) => r?.locale === locale) ?? {};
+
+  /*
+    Undefined means "I am not the editor for this field", not "clear it".
+
+    Several screens write into the SAME row — the amenity tiles and the trust
+    paragraph both live on siteSettings — and each sends only what it owns.
+    Spreading an explicit undefined would overwrite, so one screen saving its
+    half would silently blank the other's. Dropping them first is what makes the
+    merge a merge.
+  */
+  const given = Object.fromEntries(
+    Object.entries(fields).filter(([, v]) => v !== undefined),
+  );
+
+  const row = {
+    ...prior,
+    _type: `${type}Translation`,
+    _key: locale,
+    locale,
+    ...given,
+    // Last, so neither can be overridden by a caller's field map.
+    sourceHash: sourceHash(extractDoc(type, doc as RawDoc)),
+    // A person just read this and pressed Save — that is the whole definition.
+    machine: false,
+  };
+
+  await client
+    .patch(docId)
+    .set({ i18n: [...rows.filter((r) => r?.locale !== locale), row] })
+    .commit();
+}
+
+/** Wraps a translation write in the shared auth + revalidate + error shape. */
+async function translationAction(
+  docId: string,
+  type: string,
+  locale: Locale,
+  fields: Record<string, unknown>,
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await writeTranslationRow(docId, type, locale, fields);
+    revalidateSite();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
+  }
+}
 
 export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
   try {
@@ -135,9 +232,15 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
               alt: input.cover.alt || undefined,
             }
           : undefined,
+        /*
+          Keep each photo's existing key. Translated alt text is matched to a
+          photo by _key (see lib/sanity.server.ts), so minting fresh keys here
+          would detach every language's alt text from its picture on the next
+          save of the English — silently, because the site just falls back.
+        */
         gallery: input.gallery.map((g) => ({
           _type: "image",
-          _key: key(),
+          _key: g.key || key(),
           asset: { _type: "reference", _ref: g.ref },
           alt: g.alt || undefined,
         })),
@@ -160,6 +263,45 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
   }
+}
+
+/**
+ * One apartment's prose in one language.
+ *
+ * The field names differ from the editor's on purpose: a translation row stores
+ * `termsOverride` and `amenitiesOverride`, mirroring the source document's own
+ * names, because that is what rebuildDoc writes and what lib/sanity.server.ts
+ * reads back.
+ */
+export async function saveUnitTranslation(
+  unitId: string,
+  locale: Locale,
+  input: UnitTranslationInput,
+): Promise<ActionResult> {
+  return translationAction(unitId, "unit", locale, {
+    tagline: input.tagline || undefined,
+    keywords: input.keywords || undefined,
+    saleNote: input.saleNote || undefined,
+    chips: input.chips.length ? input.chips : undefined,
+    about: input.about.trim() ? textToBlocks(input.about) : undefined,
+    space: input.space.length ? input.space.map((s) => ({ _key: key(), ...s })) : undefined,
+    amenitiesOverride: {
+      inside: input.amenities.inside.map((a) => ({ _key: key(), _type: "amenityItem", ...a })),
+      building: input.amenities.building.map((a) => ({ _key: key(), _type: "amenityItem", ...a })),
+    },
+    termsOverride: input.terms.length
+      ? input.terms.map((t) => ({ _key: key(), ...t }))
+      : undefined,
+    coverAlt: input.coverAlt || undefined,
+    /*
+      Alt text only — never a second copy of the image asset, and keyed by the
+      photo's own _key so reordering the gallery cannot move Spanish alt text
+      onto an English photo.
+    */
+    galleryAlts: Object.entries(input.galleryAlts)
+      .filter(([, alt]) => alt.trim())
+      .map(([k, alt]) => ({ _key: k, alt })),
+  });
 }
 
 export async function setUnitHidden(
@@ -216,6 +358,8 @@ export async function saveBooking(
 
 // ── Shared settings (the siteSettings singleton) ─────────────────────────────
 const SETTINGS_ID = "siteSettings";
+const HERO_ID = "hero";
+const LOCATION_ID = "location";
 
 /**
  * The site prints "rate as of <date>" next to peso prices. Keep that date on the
@@ -319,6 +463,111 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
   }
+}
+
+/**
+ * The shared prose in one language: the trust paragraph, the arrival note and
+ * the amenity tiles.
+ *
+ * Tiles merge POSITIONALLY — index i is tile i of the English list — which is
+ * how lib/sanity.server.ts reads them back. The icon never translates, so a
+ * translated tile carries only a title and a description.
+ */
+export async function saveSettingsTranslation(
+  locale: Locale,
+  input: SettingsTranslationInput,
+): Promise<ActionResult> {
+  return translationAction(SETTINGS_ID, "siteSettings", locale, {
+    hostNote: input.hostNote || undefined,
+    stayNote: input.stayNote || undefined,
+    propertyAmenities: input.propertyAmenities.map((t) => ({
+      _key: key(),
+      title: t.title || undefined,
+      desc: t.desc || undefined,
+    })),
+  });
+}
+
+/* ── Homepage cover and location ─────────────────────────────────────────────
+
+  Both were Studio-only until the language work. They hold the copy the landing
+  page opens with, which made them the one gap that would have left Henrik
+  unable to fix a Spanish headline in the editor he uses for everything else.
+*/
+
+export async function saveHero(input: AdminHeroInput): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    if (!input.headline.trim()) return { ok: false, error: "The homepage needs a headline." };
+
+    const client = getWriteClient();
+    const current = await client.getDocument(HERO_ID);
+    const hasBackground = Boolean((current as RawDoc | undefined)?.background);
+
+    await client
+      .patch(HERO_ID)
+      .set({
+        eyebrow: input.eyebrow.trim() || undefined,
+        headline: input.headline.trim(),
+        sub: input.sub.trim() || undefined,
+        videoId: input.videoId.trim() || undefined,
+        stats: input.stats
+          .filter((s) => s.value.trim() || s.label.trim())
+          .map((s) => ({ _key: key(), value: s.value.trim(), label: s.label.trim() })),
+        // Only the alt text — the asset itself is managed where it was uploaded,
+        // and a deep patch onto a missing parent would throw.
+        ...(hasBackground ? { "background.alt": input.backgroundAlt.trim() || undefined } : {}),
+      })
+      .commit();
+    revalidateSite();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
+  }
+}
+
+export async function saveHeroTranslation(
+  locale: Locale,
+  input: HeroTranslationInput,
+): Promise<ActionResult> {
+  return translationAction(HERO_ID, "hero", locale, {
+    eyebrow: input.eyebrow || undefined,
+    headline: input.headline || undefined,
+    sub: input.sub || undefined,
+    backgroundAlt: input.backgroundAlt || undefined,
+    stats: input.stats.map((s) => ({ _key: key(), value: s.value, label: s.label })),
+  });
+}
+
+export async function saveLocation(input: AdminLocationInput): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await getWriteClient()
+      .patch(LOCATION_ID)
+      .set({
+        heading: input.heading.trim() || undefined,
+        addressLine: input.addressLine.trim() || undefined,
+        distances: input.distances
+          .filter((d) => d.label.trim() || d.value.trim())
+          .map((d) => ({ _key: key(), label: d.label.trim(), value: d.value.trim() })),
+      })
+      .commit();
+    revalidateSite();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
+  }
+}
+
+export async function saveLocationTranslation(
+  locale: Locale,
+  input: LocationTranslationInput,
+): Promise<ActionResult> {
+  return translationAction(LOCATION_ID, "location", locale, {
+    heading: input.heading || undefined,
+    addressLine: input.addressLine || undefined,
+    distances: input.distances.map((d) => ({ _key: key(), label: d.label, value: d.value })),
+  });
 }
 
 export async function deleteBooking(id: string): Promise<ActionResult> {

@@ -47,6 +47,14 @@ export const hero = defineType({
             defineField({name: 'locale', title: 'Language', type: 'string', readOnly: true}),
             defineField({name: 'sourceHash', title: 'Source fingerprint', type: 'string', readOnly: true}),
             defineField({name: 'sourceRev', title: 'Translated from revision', type: 'string', readOnly: true}),
+            defineField({
+              name: 'machine',
+              title: 'Awaiting review',
+              type: 'boolean',
+              readOnly: true,
+              description:
+                'Written by the translation scripts and not yet read by a person. Saving the document in /admin clears it. Separate from the fingerprint on purpose: that records which English this came from, this records whether anyone has checked it.',
+            }),
             defineField({name: 'eyebrow', title: 'Eyebrow', type: 'string'}),
             defineField({name: 'headline', title: 'Headline', type: 'string'}),
             defineField({name: 'sub', title: 'Sub-copy', type: 'text', rows: 3}),

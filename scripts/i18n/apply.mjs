@@ -1,22 +1,27 @@
 /*
-  Turn filled-in pending files into translation rows on Sanity DRAFTS.
+  Turn filled-in pending files into translation rows on the published document.
 
   Usage:
     npm run i18n:apply es               every pending Spanish document
     npm run i18n:apply es apartment-1
     npm run i18n:apply es hero
 
-  A draft, not a published document, and that is the point: the translation is a
-  first pass. Open it in the Studio (npm run studio), read the Spanish, fix what
-  reads stiff, publish. Machine-assisted copy going live unread on pages quoting
-  prices is the failure this whole flow exists to prevent.
+  This used to write a DRAFT, so that someone would open the Studio, read the
+  Spanish and publish. That gate has moved: /admin now edits translations
+  directly, in the language being translated, with the English beside each
+  field. A draft would be worse than useless there — both of the app's Sanity
+  clients pin perspective "published", so a drafted translation is invisible to
+  the site AND to the editor meant to review it.
 
-  Both of the app's Sanity clients pin perspective "published", so nothing here
-  can reach the public site or the /admin list until someone hits Publish.
+  The review itself has not gone away, only the place it happens. Each row below
+  is marked `machine: true`, which makes /admin show it as needing review and
+  i18n:status count it as awaiting one. Saving it in the editor clears the flag.
+  Machine-assisted copy going live LOOKING reviewed, on pages quoting prices, is
+  the failure this flow exists to prevent.
 */
 import fs from "node:fs";
 import path from "node:path";
-import { rebuildDoc, draftId, extractDoc, sourceHash } from "./lib.mjs";
+import { rebuildDoc, extractDoc, sourceHash } from "./lib.mjs";
 import { sanity, die } from "./sanity.mjs";
 import { LOCALES, DEFAULT_LOCALE, isLocale } from "../../lib/locales.ts";
 
@@ -111,43 +116,38 @@ for (const file of files) {
   }
 
   /*
-    Record the fingerprint of the English this was translated from — under
-    --force that is deliberately the OLD one, so i18n:status keeps reporting the
-    row as behind until someone re-translates it.
+    Two different facts, two different fields.
+
+    sourceHash records WHICH English this Spanish was made from — that is what
+    i18n:extract compares to notice a translation has gone stale. `machine`
+    records that nobody has read it yet.
+
+    They were briefly folded together, by leaving the hash off a machine pass.
+    That made every applied document look permanently stale to extract, which
+    re-extracted and re-translated it on every run — a paid model call to
+    rewrite the same text with the same text.
   */
   const row = rebuildDoc(type, source, strings, localeArg, {
     sourceHash: pendingHash,
     sourceRev: _rev,
+    machine: true,
   });
-  const draft = draftId(_id);
 
   /*
-    createIfNotExists then patch, rather than createOrReplace: a draft may
-    already hold edits made in the Studio, and replacing it wholesale would
-    throw those away. This adds one language's row and leaves everything else
-    alone.
+    Patch, never createOrReplace: the document holds the English and every other
+    language, and this replaces exactly one language's row. Anything already
+    edited in /admin — including another translator's work — is left alone.
   */
-  const existing = await client.getDocument(draft);
-  const base = existing ?? source;
-  const i18n = [...(base.i18n ?? []).filter((r) => r?.locale !== localeArg), row];
-
-  const seed = { ...source };
-  delete seed._rev;
-  delete seed._createdAt;
-  delete seed._updatedAt;
-
-  await client
-    .transaction()
-    .createIfNotExists({ ...seed, _id: draft })
-    .patch(draft, (p) => p.set({ i18n }))
-    .commit();
+  const i18n = [...(source.i18n ?? []).filter((r) => r?.locale !== localeArg), row];
+  await client.patch(_id).set({ i18n }).commit();
 
   applied++;
-  console.log(`  ✓ ${type}/${name} — ${localeArg} row written to ${draft}`);
+  console.log(`  ✓ ${type}/${name} — ${localeArg} row written to ${_id}`);
 }
 
 if (applied) {
-  console.log(`\n${applied} draft(s) updated. Review and publish:`);
-  console.log(`  npm run studio   →  http://localhost:3334`);
-  console.log(`\nThe public site shows nothing until you publish (both clients pin perspective "published").`);
+  console.log(`\n${applied} document(s) updated — live on the site within a minute.`);
+  console.log(`\nThis is a machine first pass. Read it and fix what sounds stiff:`);
+  console.log(`  npm run dev   →  http://localhost:3000/admin   (switch the language in the sidebar)`);
+  console.log(`\nEach one shows as needing review until you save it there.`);
 }

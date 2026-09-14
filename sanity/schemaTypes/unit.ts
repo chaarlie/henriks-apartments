@@ -207,6 +207,14 @@ export const unit = defineType({
               description:
                 'Provenance only. Not used for staleness: writing a translation bumps the unit’s _rev, so this stops matching as soon as it is published.',
             }),
+            defineField({
+              name: 'machine',
+              title: 'Awaiting review',
+              type: 'boolean',
+              readOnly: true,
+              description:
+                'Written by the translation scripts and not yet read by a person. Saving the apartment in /admin clears it. Separate from the fingerprint on purpose: that records which English this came from, this records whether anyone has checked it.',
+            }),
             defineField({name: 'tagline', title: 'Tagline', type: 'string'}),
             defineField({name: 'keywords', title: 'Search keywords', type: 'text', rows: 2}),
             defineField({name: 'saleNote', title: 'For-sale note', type: 'text', rows: 2}),

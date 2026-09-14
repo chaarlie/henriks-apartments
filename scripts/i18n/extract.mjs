@@ -18,7 +18,7 @@
 */
 import fs from "node:fs";
 import path from "node:path";
-import { extractUnit } from "./lib.mjs";
+import { extractUnit, sourceHash } from "./lib.mjs";
 import { sanity, die, UNIT_PROJECTION } from "./sanity.mjs";
 import { LOCALES, DEFAULT_LOCALE, isLocale } from "../../lib/locales.ts";
 
@@ -56,20 +56,25 @@ for (const locale of locales) {
       continue;
     }
 
+    const strings = extractUnit(unit);
+    if (!Object.keys(strings).length) {
+      console.log(`  · ${locale}/${unit.slug} — nothing translatable`);
+      continue;
+    }
+    const hash = sourceHash(strings);
+
     // A draft translation awaiting review counts as done; it is the review gate
     // working, not a missing translation.
     const rows = unit.draftI18n ?? unit.i18n ?? [];
     const existing = rows.find((r) => r?.locale === locale);
-    const stale = existing && existing.sourceRev !== unit._rev;
+
+    // Compare the English against itself, never against the document revision:
+    // writing the translation onto the unit bumps its _rev, so a rev check would
+    // call every translated apartment stale the moment it is published.
+    const stale = existing && existing.sourceHash !== hash;
 
     if (existing && !stale) {
       console.log(`  ✓ ${locale}/${unit.slug} — translated, English unchanged`);
-      continue;
-    }
-
-    const strings = extractUnit(unit);
-    if (!Object.keys(strings).length) {
-      console.log(`  · ${locale}/${unit.slug} — nothing translatable`);
       continue;
     }
 
@@ -86,7 +91,15 @@ for (const locale of locales) {
     fs.writeFileSync(
       path.join(dir, `${unit.slug}.json`),
       JSON.stringify(
-        { _id: unit._id, _rev: unit._rev, locale, slug: unit.slug, translated: false, strings },
+        {
+          _id: unit._id,
+          _rev: unit._rev,
+          sourceHash: hash,
+          locale,
+          slug: unit.slug,
+          translated: false,
+          strings,
+        },
         null,
         2,
       ) + "\n",

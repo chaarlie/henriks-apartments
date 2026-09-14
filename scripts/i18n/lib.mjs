@@ -21,8 +21,35 @@
   language, and the moment a second copy exists one of them starts being wrong.
 */
 
+import { createHash } from "node:crypto";
+
 /** Whole-string fields outside any array. */
 export const SCALAR_FIELDS = ["tagline", "keywords", "saleNote"];
+
+/**
+ * A fingerprint of the English a translation was made from.
+ *
+ * This replaces comparing the document's _rev, which cannot work when
+ * translations live ON the unit: writing the Spanish rewrites the document and
+ * bumps its _rev, so a rev captured at extract time never matches again and
+ * every translated apartment reports stale the moment it is published.
+ *
+ * Hashing only the extracted English strings is immune to that — the hash moves
+ * when the English moves, and not when anything else about the document does.
+ * (The sibling project this pipeline came from gets away with _rev because its
+ * posts translate into a SEPARATE document; its in-place case does no staleness
+ * check at all.)
+ *
+ * Keys are sorted so the hash does not depend on projection order.
+ */
+export function sourceHash(strings) {
+  const canonical = JSON.stringify(
+    Object.keys(strings)
+      .sort()
+      .map((k) => [k, strings[k]]),
+  );
+  return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
+}
 
 const isText = (v) => typeof v === "string" && v.trim().length > 0;
 
@@ -114,8 +141,8 @@ export function extractUnit(unit) {
  * `coalesce(t.about, about)`, and `coalesce` treats `[]` as a value, so an empty
  * translated array would shadow the English instead of falling back to it.
  */
-export function rebuildUnit(unit, t, locale, sourceRev) {
-  const row = { _type: "unitTranslation", _key: locale, locale, sourceRev };
+export function rebuildUnit(unit, t, locale, { sourceHash, sourceRev }) {
+  const row = { _type: "unitTranslation", _key: locale, locale, sourceHash, sourceRev };
 
   for (const field of SCALAR_FIELDS) {
     if (t[field] !== undefined) row[field] = t[field];

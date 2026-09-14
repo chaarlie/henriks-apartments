@@ -10,7 +10,8 @@
 
   Usage:  npm run i18n:status [locale]
 */
-import { sanity, die } from "./sanity.mjs";
+import { sanity, die, UNIT_PROJECTION } from "./sanity.mjs";
+import { extractUnit, sourceHash } from "./lib.mjs";
 import { LOCALES, DEFAULT_LOCALE, isLocale } from "../../lib/locales.ts";
 
 const [localeArg] = process.argv.slice(2);
@@ -30,13 +31,9 @@ if (!locales.length) {
   different states, and conflating them would send someone to redo work already
   done.
 */
-const units = await sanity().fetch(`
-  *[_type == "unit" && !(_id in path("drafts.**"))] | order(name asc){
-    _id, _rev, name, "slug": slug.current,
-    "published": i18n[]{locale, sourceRev},
-    "draft": *[_id == "drafts." + ^._id][0].i18n[]{locale, sourceRev}
-  }
-`);
+const units = await sanity().fetch(
+  `*[_type == "unit" && !(_id in path("drafts.**"))] | order(name asc){${UNIT_PROJECTION}}`,
+);
 
 if (!units.length) {
   die(
@@ -45,31 +42,49 @@ if (!units.length) {
   );
 }
 
-const counts = { ok: 0, review: 0, stale: 0, missing: 0 };
-const label = { ok: "✓ published", review: "◐ in draft", stale: "↻ stale", missing: "· missing" };
+const counts = { ok: 0, review: 0, stale: 0, nohash: 0, missing: 0 };
+const label = {
+  ok: "✓ published",
+  review: "◐ in draft",
+  stale: "↻ stale",
+  nohash: "? no baseline",
+  missing: "· missing",
+};
+const note = {
+  stale: "English edited since translation",
+  nohash: "translated before fingerprints existed — re-extract to baseline",
+};
 
 for (const locale of locales) {
   console.log(`\n${locale.toUpperCase()}`);
   for (const unit of units) {
-    const published = (unit.published ?? []).find((r) => r?.locale === locale);
-    const draft = (unit.draft ?? []).find((r) => r?.locale === locale);
+    /*
+      Recomputed from the published English every run, and compared against the
+      fingerprint stored on the row. Never against unit._rev: the translation
+      lives on this document, so publishing it moves the rev on its own.
+    */
+    const hash = sourceHash(extractUnit(unit));
+    const published = (unit.i18n ?? []).find((r) => r?.locale === locale);
+    const draft = (unit.draftI18n ?? []).find((r) => r?.locale === locale);
     const row = draft ?? published;
 
     let state;
     if (!row) state = "missing";
-    else if (row.sourceRev !== unit._rev) state = "stale";
+    else if (!row.sourceHash) state = "nohash";
+    else if (row.sourceHash !== hash) state = "stale";
     else if (!published) state = "review";
     else state = "ok";
 
     counts[state]++;
     const name = `${unit.slug ?? unit._id}`.padEnd(26);
-    console.log(`  ${label[state].padEnd(12)} ${name}${state === "stale" ? "English edited since translation" : ""}`);
+    console.log(`  ${label[state].padEnd(14)} ${name}${note[state] ?? ""}`);
   }
 }
 
 const total = Object.values(counts).reduce((a, b) => a + b, 0);
 console.log(
-  `\n${total} apartment-language pair(s): ${counts.ok} published, ${counts.review} awaiting review, ${counts.stale} stale, ${counts.missing} missing`,
+  `\n${total} apartment-language pair(s): ${counts.ok} published, ${counts.review} awaiting review, ` +
+    `${counts.stale} stale, ${counts.nohash} without a baseline, ${counts.missing} missing`,
 );
 if (counts.missing || counts.stale) console.log(`\nNext:  npm run i18n:extract`);
 else if (counts.review) console.log(`\nReview and publish the drafts:  npm run studio`);

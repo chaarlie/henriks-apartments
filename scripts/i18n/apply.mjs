@@ -15,7 +15,7 @@
 */
 import fs from "node:fs";
 import path from "node:path";
-import { rebuildUnit, draftId } from "./lib.mjs";
+import { rebuildUnit, draftId, extractUnit, sourceHash } from "./lib.mjs";
 import { sanity, die } from "./sanity.mjs";
 import { LOCALES, DEFAULT_LOCALE, isLocale } from "../../lib/locales.ts";
 
@@ -42,7 +42,7 @@ const client = sanity({ write: true });
 let applied = 0;
 
 for (const file of files) {
-  const { _id, _rev, strings, slug, translated } = JSON.parse(
+  const { _id, _rev, sourceHash: pendingHash, strings, slug, translated } = JSON.parse(
     fs.readFileSync(path.join(dir, file), "utf8"),
   );
 
@@ -100,21 +100,33 @@ for (const file of files) {
 
     --force is the escape for a change you know was cosmetic.
   */
-  if (source._rev !== _rev && !force) {
+  /*
+    Compare the ENGLISH, not the document revision.
+
+    A _rev check false-positives here: publishing a translation rewrites the
+    unit, so its _rev moves for reasons that have nothing to do with the English
+    text. Hashing the extracted strings asks the question actually worth asking —
+    has the copy this was translated from changed?
+  */
+  const currentHash = sourceHash(extractUnit(source));
+  if (currentHash !== pendingHash && !force) {
     console.log(
-      `  ✗ ${slug} — English changed since extract (${_rev} → ${source._rev})\n` +
+      `  ✗ ${slug} — English changed since extract\n` +
         `      re-run:  npm run i18n:extract ${localeArg} ${slug}   (or apply with --force)`,
     );
     continue;
   }
 
   /*
-    The revision the Spanish was actually translated FROM — never the freshly
-    fetched one. Recording the new rev would stamp a stale translation as
-    current, which is precisely the failure sourceRev exists to catch. Under
-    --force this is what keeps i18n:status honest about the row being behind.
+    Record the fingerprint of the English this was translated from — under
+    --force that is deliberately the OLD one, so i18n:status keeps reporting the
+    row as behind until someone re-translates it. sourceRev rides along as
+    provenance only.
   */
-  const row = rebuildUnit(source, strings, localeArg, _rev);
+  const row = rebuildUnit(source, strings, localeArg, {
+    sourceHash: pendingHash,
+    sourceRev: _rev,
+  });
   const draft = draftId(_id);
 
   /*

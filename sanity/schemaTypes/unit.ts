@@ -192,11 +192,20 @@ export const unit = defineType({
           fields: [
             defineField({name: 'locale', title: 'Language', type: 'string', readOnly: true}),
             defineField({
+              name: 'sourceHash',
+              title: 'Source fingerprint',
+              type: 'string',
+              readOnly: true,
+              description:
+                'Fingerprint of the English this was translated from — what i18n:status compares to spot a stale translation. Do not edit.',
+            }),
+            defineField({
               name: 'sourceRev',
               title: 'Translated from revision',
               type: 'string',
               readOnly: true,
-              description: 'The English _rev this came from. Do not edit.',
+              description:
+                'Provenance only. Not used for staleness: writing a translation bumps the unit’s _rev, so this stops matching as soon as it is published.',
             }),
             defineField({name: 'tagline', title: 'Tagline', type: 'string'}),
             defineField({name: 'keywords', title: 'Search keywords', type: 'text', rows: 2}),

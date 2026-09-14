@@ -43,6 +43,28 @@ export function localePath(locale: Locale, path: string): string {
 }
 
 /**
+ * Split a browser path into the language it is being viewed in and the path
+ * without that prefix.
+ *
+ * The inverse of localePath, and the way client components learn the locale:
+ * `next/root-params` is server-only, and threading a prop down through every
+ * client component that happens to render a link is exactly the kind of sweep
+ * that misses one. The rewrite serving English unprefixed leaves the browser
+ * path matching the address bar, so the pathname is a reliable source.
+ *
+ * "/en/x" resolves to English at "/x" — that URL exists but is not the one the
+ * site emits, so this normalises it back to the canonical unprefixed form.
+ */
+export function splitLocale(pathname: string): { locale: Locale; path: string } {
+  const [, first = "", ...rest] = pathname.split("/");
+  if (isLocale(first)) {
+    const path = `/${rest.join("/")}`;
+    return { locale: first, path: path === "/" ? "/" : path };
+  }
+  return { locale: DEFAULT_LOCALE, path: pathname || "/" };
+}
+
+/**
  * The tag hreflang wants.
  *
  * Plain "es" rather than "es-DO": the people who rent these apartments search

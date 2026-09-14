@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { display, whatsappHref } from "@/lib/money";
+import { localePath, splitLocale } from "@/lib/locales";
 import { useBooking, useContent } from "@/lib/booking";
 import { ChatIcon } from "@/app/components/icons";
 
@@ -13,6 +15,7 @@ import { ChatIcon } from "@/app/components/icons";
 export default function ForSale() {
   const content = useContent();
   const { currency } = useBooking();
+  const { locale } = splitLocale(usePathname());
   const listed = content.units.filter((u) => u.forSale);
 
   return (
@@ -56,7 +59,7 @@ export default function ForSale() {
               <ul className="mt-4 flex flex-col gap-3.5">
                 {listed.map((u) => (
                   <li key={u.slug} className="border-b border-hairblue pb-3.5 last:border-b-0 last:pb-0">
-                    <Link href={`/apartments/${u.slug}`} className="text-[17px] font-extrabold underline-offset-[3px] hover:underline">
+                    <Link href={localePath(locale, `/apartments/${u.slug}`)} className="text-[17px] font-extrabold underline-offset-[3px] hover:underline">
                       {u.name}
                     </Link>
                     <p className="mt-1 text-[15px] text-white/80">

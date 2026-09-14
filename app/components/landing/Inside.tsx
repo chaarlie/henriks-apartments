@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { localePath, splitLocale } from "@/lib/locales";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Tour from "@/app/components/tour/Tour";
 import { ArrowIcon, CalendarIcon, ChevronIcon } from "@/app/components/icons";
@@ -33,6 +35,8 @@ export default function Inside() {
   const content = useContent();
   const { currency, selectedSlug, setSelected, setScope, openPicker } = useBooking();
   const reduced = useReducedMotion();
+  // "See the 101" has to stay in the language being read.
+  const { locale } = splitLocale(usePathname());
   const unit = content.units.find((u) => u.slug === selectedSlug) ?? content.units[0];
   const photos = unit.gallery.length ? unit.gallery : [unit.image];
   const hasTour = unit.tour.length > 0;
@@ -219,7 +223,7 @@ export default function Inside() {
               )}
 
               <Link
-                href={`/apartments/${unit.slug}`}
+                href={localePath(locale, `/apartments/${unit.slug}`)}
                 className="flex min-h-12 items-center justify-center gap-2 rounded-[11px] bg-white text-base font-extrabold text-ink transition-colors hover:bg-sand"
               >
                 See the {unit.name} <ArrowIcon />

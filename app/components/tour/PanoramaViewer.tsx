@@ -39,19 +39,42 @@ const DEFAULT_SPHERE_CORRECTION = { pan: 30, tilt: 0 };
 
 // ── Data transform: content TourNode → virtual-tour node ─────────────────────
 function toViewerNodes(nodes: TourNode[]) {
-  return nodes.map((node) => ({
-    id: node._id,
-    panorama: node.panorama,
-    name: node.name,
-    caption: node.name,
-    // Set one on every node rather than leaning on the viewer-level default, so
-    // each stop's framing is explicit and independent of the stop before it.
-    sphereCorrection: node.sphereCorrection ?? DEFAULT_SPHERE_CORRECTION,
-    links: node.links.map((link) => ({
-      nodeId: link.to,
-      position: { yaw: link.yaw, pitch: "0deg" },
-    })),
-  }));
+  /*
+    A hotspot pointing at a stop that isn't in this tour makes the virtual-tour
+    plugin throw from inside the Viewer constructor, which takes every stop down
+    to the flat fallback — one mistyped Stop ID in /admin used to cost the whole
+    tour. Drop the dead links instead, so the cost is the single arrow that had
+    nowhere to lead. Self-links throw the same way, and go the same way.
+  */
+  const known = new Set(nodes.map((n) => n._id));
+  const usable = (node: TourNode, to: string) => known.has(to) && to !== node._id;
+
+  return nodes.map((node) => {
+    const dead = node.links.filter((link) => !usable(node, link.to));
+    if (dead.length > 0) {
+      console.warn(
+        `360° tour: stop "${node._id}" links to ${dead
+          .map((l) => `"${l.to}"`)
+          .join(", ")}, which is not a stop in this tour — hotspot dropped.`,
+      );
+    }
+
+    return {
+      id: node._id,
+      panorama: node.panorama,
+      name: node.name,
+      caption: node.name,
+      // Set one on every node rather than leaning on the viewer-level default, so
+      // each stop's framing is explicit and independent of the stop before it.
+      sphereCorrection: node.sphereCorrection ?? DEFAULT_SPHERE_CORRECTION,
+      links: node.links
+        .filter((link) => usable(node, link.to))
+        .map((link) => ({
+          nodeId: link.to,
+          position: { yaw: link.yaw, pitch: "0deg" },
+        })),
+    };
+  });
 }
 
 export interface PanoramaViewerHandle {

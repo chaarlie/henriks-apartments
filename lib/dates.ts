@@ -1,3 +1,4 @@
+import { propertyToday } from "./reservations/rules";
 import { ui } from "@/lib/i18n/ui";
 import type { Locale } from "@/lib/locales";
 import type { Currency } from "@/lib/money";
@@ -16,11 +17,8 @@ export const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export const utc = (y: number, m: number, d: number) => Date.UTC(y, m, d);
 
-/** Today at UTC midnight (matches the calendar's day granularity). */
-export const today = (() => {
-  const d = new Date();
-  return utc(d.getFullYear(), d.getMonth(), d.getDate());
-})();
+/** Property-local today represented at UTC midnight for calendar arithmetic. */
+export const today = Date.parse(`${propertyToday()}T00:00:00Z`);
 
 /** "5 Sep 2026" */
 export function pretty(t: number, locale: Locale = "en"): string {

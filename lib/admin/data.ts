@@ -218,6 +218,9 @@ export async function getAdminBookings(): Promise<AdminBooking[]> {
   const rows = await getClient().fetch<
     {
       _id: string;
+      _rev: string;
+      holdExpiresAt?: string;
+      notificationStatus?: string;
       startDate?: string;
       endDate?: string;
       status?: AdminBooking["status"];
@@ -230,6 +233,9 @@ export async function getAdminBookings(): Promise<AdminBooking[]> {
   >(adminBookingsQuery, {}, { cache: "no-store" });
   return rows.map((b) => ({
     _id: b._id,
+    revision: b._rev,
+    holdExpiresAt: b.holdExpiresAt,
+    notificationStatus: b.notificationStatus,
     unitId: b.unitId ?? null,
     unit: b.unit ?? null,
     start: b.startDate ?? "",

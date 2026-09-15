@@ -1,10 +1,11 @@
 import "server-only";
+import { reservationAvailability } from "@/lib/reservations/availability";
 import { roomLabel } from "@/lib/i18n/labels";
 import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 import { sanityFetch } from "@/sanity/lib/live";
 import { urlFor } from "@/sanity/lib/image";
 import { panoramaUrl } from "@/lib/panorama";
-import { landingQuery, unitQuery, availabilityQuery } from "@/sanity/lib/queries";
+import { landingQuery, unitQuery } from "@/sanity/lib/queries";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/locales";
 import type {
   SiteContent,
@@ -283,7 +284,7 @@ function mergeRows<T extends object>(
 
 // Split the availability feed into whole-property closures + per-unit ranges.
 function buildAvailability(
-  bookings: { unit: string | null; start: string; end: string }[],
+  bookings: { unit: string | null; start: string; end: string; expiresAt?: string }[],
 ): SiteContent["availability"] {
   const closures: [string, string][] = [];
   const byUnit: Record<string, [string, string][]> = {};
@@ -292,7 +293,7 @@ function buildAvailability(
     if (b.unit) (byUnit[b.unit] ??= []).push([b.start, b.end]);
     else closures.push([b.start, b.end]);
   }
-  return { closures, byUnit };
+  return { closures, byUnit, nextExpiry: bookings.flatMap(b => b.expiresAt ? [b.expiresAt] : []).sort()[0] };
 }
 
 function cardUnit(u: RawUnit): Unit {
@@ -357,9 +358,7 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
       settings: RawSettings;
       units: RawUnit[];
     }>({ query: landingQuery, params: { locale } }),
-    sanityFetch<{ unit: string | null; start: string; end: string }[]>({
-      query: availabilityQuery,
-    }),
+    reservationAvailability(),
   ]);
 
   const s = landing.settings;

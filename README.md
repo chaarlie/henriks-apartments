@@ -1,3 +1,7 @@
+## Booking operations
+
+See [booking protection and rollout](docs/booking-operations.md) before deploying booking changes.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

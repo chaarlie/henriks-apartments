@@ -11,9 +11,12 @@ import {defineType, defineField} from 'sanity'
  */
 export const booking = defineType({
   name: 'booking',
-  title: 'Booking',
+  title: 'Booking (manage in /admin)',
+  readOnly: true,
   type: 'document',
   fields: [
+    defineField({name: 'holdExpiresAt', title: 'Hold expires', type: 'datetime', readOnly: true}),
+    defineField({name: 'notificationStatus', title: 'Owner email status', type: 'string', readOnly: true}),
     defineField({
       name: 'unit',
       title: 'Apartment',

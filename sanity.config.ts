@@ -21,13 +21,13 @@ export default defineConfig({
     types: schemaTypes,
     // Hide the singletons from the global "create new" menu.
     templates: (templates) =>
-      templates.filter(({schemaType}) => !singletonTypes.has(schemaType)),
+      templates.filter(({schemaType}) => !singletonTypes.has(schemaType) && schemaType !== "booking"),
   },
 
   document: {
     // Restrict the actions available on singleton documents.
     actions: (input, context) =>
-      singletonTypes.has(context.schemaType)
+      context.schemaType === "booking" ? [] : singletonTypes.has(context.schemaType)
         ? input.filter(({action}) => action && singletonActions.has(action))
         : input,
   },

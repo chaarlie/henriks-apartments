@@ -3,11 +3,13 @@
 import {
   createContext,
   useCallback,
+  useEffect,
   useContext,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { useUi } from "@/lib/i18n/client";
 import type { Currency } from "@/lib/money";
 import type { SiteContent } from "@/lib/content";
@@ -67,6 +69,14 @@ export function BookingProvider({
   children: ReactNode;
 }) {
   const t = useUi();
+  const router = useRouter();
+  useEffect(() => {
+    const refresh = () => router.refresh();
+    const expires = content.availability.nextExpiry;
+    const timer = expires ? setTimeout(refresh, Math.min(2_147_483_647, Math.max(100, Date.parse(expires) - Date.now() + 100))) : undefined;
+    window.addEventListener("focus", refresh);
+    return () => { clearTimeout(timer); window.removeEventListener("focus", refresh); };
+  }, [content.availability.nextExpiry, router]);
   const [currency, setCurrency] = useState<Currency>("USD");
   const [range, setRangeState] = useState<Range>({ start: null, end: null });
   const [scopeState, setScopeState] = useState("any");

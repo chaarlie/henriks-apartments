@@ -190,6 +190,9 @@ export interface AdminLocation extends Translatable<LocationTranslation> {
 
 export interface AdminBooking {
   _id: string;
+  revision: string;
+  holdExpiresAt?: string;
+  notificationStatus?: string;
   unitId: string | null;
   unit: string | null;
   start: string;
@@ -320,6 +323,8 @@ export type AdminPropertyInput = Omit<
 
 /** Payload the client sends back to saveBooking. */
 export interface AdminBookingInput {
+  revision?: string;
+  holdHours?: number;
   _id: string | null;
   unitId: string | null;
   start: string;

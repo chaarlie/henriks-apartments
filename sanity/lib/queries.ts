@@ -9,10 +9,11 @@ import {groq} from 'next-sanity'
  * dataset; feed the result to the calendar's blocked-date logic.
  */
 export const availabilityQuery = groq`
-  *[_type == "booking" && status in ["held", "confirmed"]]{
+  *[_type == "booking" && (status == "confirmed" || (status == "held" && (!defined(holdExpiresAt) || dateTime(holdExpiresAt) > dateTime(now())))) ]{
     "unit":  unit->slug.current,   // null = whole-property closure
     "start": startDate,
-    "end":   endDate
+    "end":   endDate,
+    "expiresAt": select(status == "held" => holdExpiresAt)
   }
 `
 

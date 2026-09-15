@@ -2,7 +2,7 @@
 
 import { useLocale, useUi } from "@/lib/i18n/client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { display, whatsappHref } from "@/lib/money";
 import { iso } from "@/lib/dates";
@@ -40,6 +40,8 @@ export default function BookingForm() {
   const router = useRouter();
   const unit = content.units.find((u) => u.slug === selectedSlug) ?? content.units[0];
 
+  const request = useRef<{ signature: string; id: string } | null>(null);
+  const [website, setWebsite] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -71,7 +73,11 @@ export default function BookingForm() {
       return;
     }
     startTransition(async () => {
+      const signature = JSON.stringify([unit.slug, start, end, name, phone, email, note]);
+      if (request.current?.signature !== signature) request.current = { signature, id: crypto.randomUUID() };
       const res = await requestHold({
+        requestId: request.current.id,
+        website,
         locale,
         unitSlug: unit.slug,
         start: iso(start!),
@@ -215,6 +221,7 @@ export default function BookingForm() {
                 <h3 className="text-2xl font-extrabold">{t.datesHeld}</h3>
                 <p className="text-base leading-[1.6] text-copy">
                   {t.holdConfirmation(unit.name, dateLabel)}
+                  {locale === "es" ? " La reserva provisional vence en 24 horas si Henrik no la confirma o amplía." : " This provisional hold expires in 24 hours unless Henrik confirms or extends it."}
                 </p>
                 <a
                   href={whatsappHref(content, { unit, note: waNote })}
@@ -229,6 +236,10 @@ export default function BookingForm() {
             ) : (
               <form onSubmit={submit} className="flex flex-col gap-3.5" noValidate>
                 <Step n={step.details}>{t.yourDetails}</Step>
+                <div aria-hidden="true" style={{ position: "absolute", left: "-10000px", width: 1, height: 1, overflow: "hidden" }}>
+                  <label htmlFor="bWebsite">Website</label>
+                  <input id="bWebsite" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={e => setWebsite(e.target.value)} />
+                </div>
                 <div>
                   <label htmlFor="bName" className={LABEL}>{t.yourName}</label>
                   <input id="bName" className={INPUT} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />

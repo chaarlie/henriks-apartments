@@ -1,5 +1,6 @@
+import { MAX_STAY_NIGHTS, propertyToday } from "./reservations/rules";
 import type { SiteContent, Unit } from "@/lib/content";
-import { DAY, fromIso, today } from "@/lib/dates";
+import { DAY, fromIso } from "@/lib/dates";
 import { availableFrom } from "@/lib/filter";
 
 /**
@@ -19,6 +20,7 @@ export function unitRanges(content: SiteContent, slug: string): [number, number]
 /** A predicate for the calendar: is this day unavailable for the given unit? */
 export function blockedFor(content: SiteContent, slug: string): (t: number) => boolean {
   const unit = content.units.find((u) => u.slug === slug);
+  const today = Date.parse(`${propertyToday()}T00:00:00Z`);
   const opens = unit ? Math.max(today, availableFrom(unit)) : today;
   const ranges = unitRanges(content, slug);
   return (t: number) => t < opens || ranges.some(([a, b]) => t >= a && t <= b);
@@ -31,7 +33,7 @@ export function rangeFree(
   startTs: number,
   endTs: number,
 ): boolean {
-  if (startTs === null || endTs === null || endTs <= startTs) return false;
+  if (startTs === null || endTs === null || endTs <= startTs || endTs - startTs > MAX_STAY_NIGHTS * DAY) return false;
   const blocked = blockedFor(content, slug);
   for (let t = startTs; t <= endTs; t += DAY) {
     if (blocked(t)) return false;
@@ -51,6 +53,7 @@ export function availableForDates(
   end: number | null,
 ): boolean {
   if (start === null) return true;
+  if (end !== null && (end <= start || end - start > MAX_STAY_NIGHTS * DAY)) return false;
   const blocked = blockedFor(content, u.slug);
   const last = end ?? start;
   for (let t = start; t <= last; t += DAY) {
@@ -80,7 +83,7 @@ export function freeUnits(content: SiteContent, scope: string, start: number, en
 }
 
 /** How far ahead lastLeaveDay looks for the next booking. */
-const HORIZON = 400 * DAY;
+const HORIZON = MAX_STAY_NIGHTS * DAY;
 
 /**
  * The latest leaving day reachable from `arrival` — some apartment in scope is

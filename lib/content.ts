@@ -245,6 +245,7 @@ export interface SiteContent {
    * inclusive.
    */
   availability: {
+    nextExpiry?: string;
     closures: [string, string][];
     byUnit: Record<string, [string, string][]>;
   };

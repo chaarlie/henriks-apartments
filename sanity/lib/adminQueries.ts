@@ -51,7 +51,7 @@ export const adminUnitsQuery = groq`
 
 export const adminBookingsQuery = groq`
   *[_type == "booking"] | order(startDate desc){
-    _id, startDate, endDate, status, source, note, guest,
+    _id, _rev, holdExpiresAt, notificationStatus, startDate, endDate, status, source, note, guest,
     "unitId": unit->_id,
     "unit": unit->name
   }

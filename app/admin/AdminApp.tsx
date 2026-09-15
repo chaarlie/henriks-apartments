@@ -13,6 +13,7 @@ import {
   setUnitHidden,
   saveBooking,
   deleteBooking,
+  retryBookingNotification,
   saveAmenities,
   saveProperty,
   saveSettingsTranslation,
@@ -1965,24 +1966,32 @@ function BookingsView({
   const [unitFilter, setUnitFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [modal, setModal] = useState<AdminBooking | "new" | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const filtered = useMemo(
     () =>
       bookings.filter((b) => {
         if (unitFilter && b.unitId !== unitFilter) return false;
-        if (statusFilter && b.status !== statusFilter) return false;
+        const effectiveStatus = b.status === "held" && b.holdExpiresAt && Date.parse(b.holdExpiresAt) <= now ? "expired" : b.status;
+        if (statusFilter && effectiveStatus !== statusFilter) return false;
         if (q) {
           const hay = `${b.guest.name} ${b.guest.phone} ${b.unit ?? ""}`.toLowerCase();
           if (!hay.includes(q.toLowerCase())) return false;
         }
         return true;
       }),
-    [bookings, q, unitFilter, statusFilter],
+    [bookings, q, unitFilter, statusFilter, now],
   );
 
   async function onDelete(id: string) {
     if (!confirm("Delete this booking? This frees its dates on the site.")) return;
-    const res = await deleteBooking(id);
+    const booking = bookings.find(b => b._id === id);
+    if (!booking) return;
+    const res = await deleteBooking(id, booking.revision);
     if (res.ok) setBookings((prev) => prev.filter((b) => b._id !== id));
     else alert(res.error);
   }
@@ -2040,6 +2049,7 @@ function BookingsView({
             <option value="">All</option>
             <option value="confirmed">Confirmed</option>
             <option value="held">Held</option>
+            <option value="expired">Expired</option>
             <option value="cancelled">Cancelled</option>
           </select>
         </span>
@@ -2066,7 +2076,14 @@ function BookingsView({
                   <td className="dt">{b.end}</td>
                   <td className="g">{b.guest.name || "—"}</td>
                   <td className="contact">{b.guest.phone || "—"}</td>
-                  <td><span className={`pill ${b.status === "confirmed" ? "pub" : "draft"}`}>{b.status}</span></td>
+                  <td><span className={`pill ${b.status === "confirmed" ? "pub" : "draft"}`}>{b.status === "held" && b.holdExpiresAt && Date.parse(b.holdExpiresAt) <= now ? "expired" : b.status}</span>
+                    {b.status === "held" && b.holdExpiresAt && <small style={{ display: "block" }}>Until {new Date(b.holdExpiresAt).toLocaleString("en", { timeZone: "America/Santo_Domingo" })} (DR)</small>}
+                    {b.source === "web" && b.notificationStatus !== "sent" && <button className="bk-rowbtn" type="button" onClick={async () => {
+                      const result = await retryBookingNotification(b._id);
+                      if (!result.ok) alert(result.error);
+                      else setBookings(prev => prev.map(row => row._id === b._id ? { ...row, notificationStatus: "sent" } : row));
+                    }}>Email alert {b.notificationStatus || "pending"} · Retry</button>}
+                  </td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                     <button type="button" className="bk-rowbtn" onClick={() => setModal(b)}>Edit</button>{" "}
                     <button type="button" className="bk-rowbtn" onClick={() => onDelete(b._id)}>Delete</button>
@@ -2080,8 +2097,14 @@ function BookingsView({
 
       {modal && (
         <BookingModal
+          key={modal === "new" ? "new" : modal._id}
           booking={modal === "new" ? null : modal}
           unitOptions={unitOptions}
+          onConflict={id => {
+            const other = bookings.find(b => b._id === id);
+            if (other) setModal(other);
+            else alert("This booking was just created. Reload to view it.");
+          }}
           onClose={() => setModal(null)}
           onSaved={(saved) =>
             setBookings((prev) => {
@@ -2100,11 +2123,13 @@ function BookingModal({
   unitOptions,
   onClose,
   onSaved,
+  onConflict,
 }: {
   booking: AdminBooking | null;
   unitOptions: UnitOption[];
   onClose: () => void;
   onSaved: (b: AdminBooking) => void;
+  onConflict: (id: string) => void;
 }) {
   const [unitId, setUnitId] = useState(booking?.unitId ?? "");
   const [status, setStatus] = useState<AdminBooking["status"]>(booking?.status ?? "confirmed");
@@ -2114,14 +2139,19 @@ function BookingModal({
   const [phone, setPhone] = useState(booking?.guest.phone ?? "");
   const [email, setEmail] = useState(booking?.guest.email ?? "");
   const [note, setNote] = useState(booking?.note ?? "");
+  const [holdHours, setHoldHours] = useState<number | undefined>(undefined);
+  const [conflictId, setConflictId] = useState<string | undefined>();
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function save() {
     setSaving(true);
     setErr(null);
+    setConflictId(undefined);
     const input: AdminBookingInput = {
       _id: booking?._id ?? null,
+      revision: booking?.revision,
+      holdHours,
       unitId: unitId || null,
       start,
       end,
@@ -2133,16 +2163,20 @@ function BookingModal({
     setSaving(false);
     if (!res.ok) {
       setErr(res.error);
+      setConflictId(res.conflictId);
       return;
     }
     onSaved({
       _id: res.id,
+      revision: res.revision,
+      holdExpiresAt: res.holdExpiresAt,
+      notificationStatus: booking?.notificationStatus,
       unitId: unitId || null,
       unit: unitOptions.find((u) => u._id === unitId)?.name ?? null,
       start,
       end,
       status,
-      source: "manual",
+      source: booking?.source ?? "manual",
       note,
       guest: { name, phone, email },
     });
@@ -2178,12 +2212,21 @@ function BookingModal({
             <Field label="Check-in" req><input className="ctrl" type="date" value={start} onChange={(e) => setStart(e.target.value)} /></Field>
             <Field label="Check-out" req><input className="ctrl" type="date" value={end} onChange={(e) => setEnd(e.target.value)} /></Field>
           </div>
+          {status === "held" && <Field label="Hold duration" opt="(from now; Dominican Republic time)">
+            <select className="ctrl" value={holdHours ?? ""} onChange={e => setHoldHours(e.target.value ? Number(e.target.value) : undefined)}>
+              <option value="">{booking?.holdExpiresAt ? `Keep expiry: ${new Date(booking.holdExpiresAt).toLocaleString("en", { timeZone: "America/Santo_Domingo" })}` : "24 hours"}</option>
+              <option value="24">Extend hold to 24 hours from now</option>
+              <option value="48">Extend hold to 48 hours from now</option>
+              <option value="168">Extend hold to 7 days from now</option>
+            </select>
+          </Field>}
           <Field label="Guest name"><input className="ctrl" value={name} onChange={(e) => setName(e.target.value)} placeholder="Maria López" /></Field>
           <div className="grid2">
             <Field label="Phone / WhatsApp"><input className="ctrl" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 809 …" /></Field>
             <Field label="Email" opt="(optional)"><input className="ctrl" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
           </div>
           <Field label="Private note" opt="(only you see this)"><textarea className="ctrl" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Deposit paid, returning guest…" /></Field>
+          {conflictId && <button type="button" className="btn ghost" onClick={() => onConflict(conflictId)}>View conflicting booking</button>}
           {err && <p className="err" role="alert" style={{ marginTop: 10 }}>{err}</p>}
         </div>
         <div className="m-foot">

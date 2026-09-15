@@ -3,6 +3,9 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getWriteClient } from "@/sanity/lib/writeClient";
+import { BookingError, holdExpiry, textField, validateDates, validateGuest } from "@/lib/reservations/rules";
+import { ConflictError, writeReservation, removeReservation, type BookingDocument } from "@/lib/reservations/store";
+import { notifyOwner } from "@/lib/reservations/notify";
 import { requireAdmin } from "@/lib/admin/session";
 import { toSlug } from "@/lib/slug";
 import { extractDoc, sourceHash, type RawDoc } from "@/lib/i18n/fingerprint";
@@ -342,41 +345,53 @@ export async function setUnitHidden(
 }
 
 export type SaveBookingResult =
-  | { ok: true; id: string }
-  | { ok: false; error: string };
+  | { ok: true; id: string; revision: string; holdExpiresAt?: string }
+  | { ok: false; error: string; conflictId?: string };
 
-export async function saveBooking(
-  input: AdminBookingInput,
-): Promise<SaveBookingResult> {
+export async function saveBooking(input: AdminBookingInput): Promise<SaveBookingResult> {
   try {
     await requireAdmin();
-    if (!input.start || !input.end) return { ok: false, error: "Pick both dates." };
-    if (input.end <= input.start)
-      return { ok: false, error: "Check-out must be after check-in." };
-
-    const id = input._id ?? `booking.${randomUUID()}`;
-    await getWriteClient().createOrReplace({
-      _id: id,
-      _type: "booking",
-      ...(input.unitId
-        ? { unit: { _type: "reference", _ref: input.unitId } }
-        : {}),
-      startDate: input.start,
-      endDate: input.end,
-      status: input.status,
-      source: "manual",
-      note: input.note || undefined,
-      guest: {
-        name: input.guest.name || undefined,
-        phone: input.guest.phone || undefined,
-        email: input.guest.email || undefined,
-      },
+    if (!input || !["held", "confirmed", "cancelled"].includes(input.status)) throw new BookingError("Choose a valid booking status.");
+    const client = getWriteClient();
+    const existing = input._id ? await client.getDocument<BookingDocument>(input._id) : undefined;
+    if (input._id && (!existing || existing._type !== "booking" || !input.revision)) throw new BookingError("Booking not found. Reload before editing.");
+    const unit = input.unitId ? await client.getDocument<{ _type: string; availableFrom?: string }>(input.unitId) : null;
+    if (input.unitId && unit?._type !== "unit") throw new BookingError("Choose a valid apartment.");
+    // Existing stays can be cancelled or have their contact details corrected
+    // after check-in. Changing dates still enforces today's date and opening.
+    const unchangedDates = existing?.startDate === input.start && existing?.endDate === input.end && (existing?.unit?._ref ?? null) === input.unitId;
+    validateDates(input.start, input.end, {
+      allowPast: !!existing && (unchangedDates || input.status === "cancelled"),
+      opening: unchangedDates || input.status === "cancelled" ? undefined : unit?.availableFrom,
     });
+    const guest = validateGuest(input.guest, !!input.unitId && input.status !== "cancelled");
+    const expires = holdExpiry(input.status, existing?.status === "held" ? existing.holdExpiresAt : undefined, input.holdHours);
+    const saved = await writeReservation(client, {
+      _id: input._id ?? `booking.${randomUUID()}`, _type: "booking",
+      ...(input.unitId ? { unit: { _type: "reference", _ref: input.unitId } } : {}),
+      startDate: input.start, endDate: input.end, status: input.status,
+      source: existing?.source ?? "manual", note: textField(input.note, "Note", 2000), guest,
+      holdExpiresAt: expires,
+    }, input.revision);
     revalidateSite();
-    return { ok: true, id };
+    return { ok: true, id: saved._id, revision: saved._rev!, holdExpiresAt: expires };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
+    if (e instanceof ConflictError) return { ok: false, error: e.message, conflictId: e.conflict._key };
+    return { ok: false, error: e instanceof BookingError ? e.message : "Save failed. Please try again." };
   }
+}
+
+export async function retryBookingNotification(id: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const client = getWriteClient();
+    const booking = await client.getDocument<BookingDocument>(id);
+    if (!booking || booking._type !== "booking" || booking.source !== "web") throw new BookingError("Booking not found.");
+    await notifyOwner(client, booking);
+    const saved = await client.getDocument<BookingDocument>(id);
+    if (saved?.notificationStatus !== "sent") throw new BookingError("Email could not be sent. Check the email service configuration.");
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e instanceof BookingError ? e.message : "Email could not be sent." }; }
 }
 
 // ── Shared settings (the siteSettings singleton) ─────────────────────────────
@@ -604,10 +619,10 @@ export async function saveLocationTranslation(
   });
 }
 
-export async function deleteBooking(id: string): Promise<ActionResult> {
+export async function deleteBooking(id: string, revision: string): Promise<ActionResult> {
   try {
     await requireAdmin();
-    await getWriteClient().delete(id);
+    await removeReservation(getWriteClient(), id, revision);
     revalidateSite();
     return { ok: true };
   } catch (e) {

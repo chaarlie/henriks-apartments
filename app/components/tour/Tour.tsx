@@ -1,5 +1,7 @@
 "use client";
 
+import { useUi } from "@/lib/i18n/client";
+
 import { useCallback, useRef, useState } from "react";
 import type { TourNode } from "@/lib/content";
 import PanoramaViewer, { type PanoramaViewerHandle } from "./PanoramaViewer";
@@ -17,6 +19,7 @@ export default function Tour({
   /** "dark" restyles the stop rail for an ink background (landing Inside band). */
   tone?: "light" | "dark";
 }) {
+  const t = useUi();
   const viewerRef = useRef<PanoramaViewerHandle>(null);
   const [currentId, setCurrentId] = useState(nodes[0]?._id ?? "");
   const [ready, setReady] = useState(false);
@@ -54,7 +57,7 @@ export default function Tour({
 
         {failed && (
           <div className="pointer-events-none absolute right-4 top-3.5 z-10 rounded-full bg-ink/60 px-3 py-1.75 font-mono text-[10px] uppercase tracking-[0.14em] text-white">
-            Flat view · 360° unavailable
+            {t.flatViewUnavailable}
           </div>
         )}
 
@@ -63,7 +66,7 @@ export default function Tour({
             <div
               className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-pool"
               role="status"
-              aria-label="Loading 360° tour"
+              aria-label={t.loadingTour}
             />
           </div>
         )}
@@ -72,14 +75,14 @@ export default function Tour({
           <div className="pointer-events-none absolute left-4 top-3.5 z-10 flex items-center gap-2 rounded-full bg-ink/60 px-3 py-1.75">
             <span className="h-1.75 w-1.75 rounded-full bg-pool" />
             <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-white">
-              360° · drag to look around
+              {t.dragBadge}
             </span>
           </div>
         )}
 
         <div className="pointer-events-none absolute bottom-4 left-4 z-10">
           <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/70">
-            Stop {index + 1} of {total}
+            {t.stopOf(index + 1, total)}
           </div>
           <div className="mt-0.5 text-[24px] font-semibold text-white">
             {current?.name}

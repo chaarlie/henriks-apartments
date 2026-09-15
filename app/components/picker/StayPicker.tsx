@@ -1,5 +1,7 @@
 "use client";
 
+import { useUi } from "@/lib/i18n/client";
+
 import {
   useEffect,
   useMemo,
@@ -11,10 +13,8 @@ import {
 } from "react";
 import { useBooking, useContent } from "@/lib/booking";
 import { blockedForScope, freeUnits, lastLeaveDay } from "@/lib/availability";
-import {
-  DAY, DOW, MONTHS, WEEKDAYS,
-  addMonths, billingLabel, dayLabel, fullDay, nights, plural, today, utc,
-} from "@/lib/dates";
+import { DAY, addMonths, nights, today, utc } from "@/lib/dates";
+import { useDates } from "@/lib/i18n/dates";
 import { ChevronIcon, CloseIcon, InfoIcon } from "@/app/components/icons";
 
 /**
@@ -32,12 +32,12 @@ const MONTHS_AHEAD = 11;
 /** Two months side by side from this width — the `@2xl` container breakpoint (42rem). */
 const TWO_MONTHS_PX = 672;
 
-const PRESETS: { label: string; leave: (arrival: number) => number }[] = [
-  { label: "1 week", leave: (t) => t + 7 * DAY },
-  { label: "2 weeks", leave: (t) => t + 14 * DAY },
-  { label: "1 month", leave: (t) => addMonths(t, 1) },
-  { label: "3 months", leave: (t) => addMonths(t, 3) },
-  { label: "6 months", leave: (t) => addMonths(t, 6) },
+const presets = (t: ReturnType<typeof useUi>): { label: string; leave: (arrival: number) => number }[] => [
+  { label: t.weeksCount(1), leave: (t) => t + 7 * DAY },
+  { label: t.weeksCount(2), leave: (t) => t + 14 * DAY },
+  { label: t.monthsCount(1), leave: (t) => addMonths(t, 1) },
+  { label: t.monthsCount(3), leave: (t) => addMonths(t, 3) },
+  { label: t.monthsCount(6), leave: (t) => addMonths(t, 6) },
 ];
 
 // Booked days and the legend swatch share this, so the legend always matches.
@@ -76,6 +76,9 @@ function Note({ children, status }: { children: ReactNode; status?: boolean }) {
 }
 
 export default function StayPicker({ variant }: { variant: "inline" | "dialog" }) {
+  const t = useUi();
+  const copy = t;
+  const { DOW, MONTHS, WEEKDAYS, billingLabel, dayLabel, fullDay } = useDates();
   const {
     start, end, setArrival, setLeave, clearDates,
     scope, setScope, scopeFixed, notice, closePicker,
@@ -147,10 +150,10 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
     if (!selectable(t)) return;
     if (start !== null && end === null) {
       setLeave(t);
-      setAnnouncement(`Leaving ${fullDay(t)}. ${plural(nights(start, t), "night")}.`);
+      setAnnouncement(copy.leavingAnnouncement(fullDay(t), copy.nightsCount(nights(start, t))));
     } else {
       setArrival(t);
-      setAnnouncement(`Arriving ${fullDay(t)}. Now choose how long you’re staying.`);
+      setAnnouncement(copy.arrivingAnnouncement(fullDay(t)));
     }
     setHover(null);
     setFocusDay(t);
@@ -161,7 +164,7 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
     setLeave(leave);
     reveal(leave);
     setFocusDay(leave);
-    setAnnouncement(`Leaving ${fullDay(leave)}. ${plural(nights(start, leave), "night")}.`);
+    setAnnouncement(t.leavingAnnouncement(fullDay(leave), t.nightsCount(nights(start, leave))));
   }
 
   function onGridKey(e: KeyboardEvent<HTMLDivElement>) {
@@ -198,10 +201,10 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
   const target = scope === "any" ? "units" : "reserve";
   const ctaLabel =
     step < 3
-      ? "Pick your dates"
+      ? t.pickYourDates
       : scope === "any"
-        ? `Show ${plural(free.length, "free apartment")}`
-        : "Hold these dates";
+        ? t.showFree(free.length)
+        : t.holdTheseDates;
 
   function confirm() {
     if (step !== 3) return;
@@ -216,15 +219,15 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
   // Why the stay can't run longer: shown whenever it rules out one of the length buttons.
   let limit: string | null = null;
   if (start !== null && end === null && last !== null && last < addMonths(start, 6)) {
-    const longest = plural(nights(start, last), "night");
+    const longest = t.nightsCount(nights(start, last));
     if (last === start) {
       limit = scope === "any"
-        ? "Every apartment is booked the next day. Choose another arrival day."
-        : `The ${unitName} is booked from ${dayLabel(start + DAY)}. Choose another arrival day.`;
+        ? t.allBookedNext
+        : t.bookedFromChoose(unitName ?? "", dayLabel(start + DAY));
     } else {
       limit = scope === "any"
-        ? `From this arrival, the longest stay in any apartment is ${longest}, leaving ${dayLabel(last)}.`
-        : `The ${unitName} is booked from ${dayLabel(last + DAY)}, so the longest stay from this arrival is ${longest}.`;
+        ? t.longestAny(longest, dayLabel(last))
+        : t.longestUnit(unitName ?? "", dayLabel(last + DAY), longest);
     }
   }
 
@@ -278,19 +281,19 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
     let status: string;
     if (isEdge) {
       tone = "w-full font-extrabold text-white";
-      status = isStart ? "your arrival day" : "your leaving day";
+      status = isStart ? copy.yourArrival : copy.yourLeaving;
     } else if (t < today) {
       tone = "w-full cursor-default font-semibold text-muted opacity-50";
-      status = "in the past";
+      status = copy.pastDay;
     } else if (blocked(t)) {
       tone = `${BOOKED} mx-0.5 w-[calc(100%-4px)] cursor-not-allowed font-semibold text-booked-ink`;
-      status = "booked";
+      status = copy.booked;
     } else if (!sel) {
       tone = "w-full cursor-default font-semibold text-copy opacity-40";
-      status = "not possible for this stay";
+      status = copy.impossibleStay;
     } else {
       tone = `w-full cursor-pointer text-ink hover:bg-ink/5 ${isPreviewEnd ? "font-extrabold" : "font-semibold"}`;
-      status = inStay ? "part of your stay" : "available";
+      status = inStay ? copy.partOfStay : copy.available;
     }
 
     return (
@@ -300,7 +303,7 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
           type="button"
           data-t={t}
           tabIndex={t === tabDay ? 0 : -1}
-          aria-label={`${fullDay(t)}${t === today ? ", today" : ""}, ${status}`}
+          aria-label={`${fullDay(t)}${t === today ? `, ${copy.today}` : ""}, ${status}`}
           aria-disabled={!sel}
           onClick={() => choose(t)}
           className={`relative isolate grid h-12 place-items-center rounded-xl text-base tabular-nums transition-colors ${tone}`}
@@ -331,14 +334,14 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
       {variant === "dialog" && (
         <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-hair-soft bg-surface px-4 py-3 @2xl:px-7">
           <h2 id="stay-picker-title" className="text-lg font-bold tracking-[-0.01em]">
-            {scopeFixed && unitName ? `Dates for the ${unitName}` : "Choose your dates"}
+            {scopeFixed && unitName ? t.datesFor(unitName) : t.chooseYourDates}
           </h2>
           <button
             type="button"
             onClick={closePicker}
             className="inline-flex min-h-11 items-center gap-2 rounded-full border-[1.5px] border-line-card px-4 text-[15px] font-bold text-ink transition-colors hover:border-ink"
           >
-            Close
+            {t.close}
             <CloseIcon />
           </button>
         </div>
@@ -347,8 +350,8 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
       {/* Apartment, question, lengths */}
       <div className="grid gap-[18px] px-4 pt-5 @2xl:px-7 @2xl:pt-6">
         {!scopeFixed && (
-          <div role="group" aria-label="Apartment" className={`${SWIPE_ROW} @2xl:flex-wrap`}>
-            {[{ slug: "any", name: "Any apartment" }, ...content.units.map(({ slug, name }) => ({ slug, name }))].map((u) => {
+          <div role="group" aria-label={t.apartment} className={`${SWIPE_ROW} @2xl:flex-wrap`}>
+            {[{ slug: "any", name: t.anyApartment }, ...content.units.map(({ slug, name }) => ({ slug, name }))].map((u) => {
               const on = scope === u.slug;
               return (
                 <button
@@ -371,24 +374,24 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
           {notice && <Note status>{notice}</Note>}
           {step === 1 && (
             <>
-              <h3 className={heading}>When do you arrive?</h3>
+              <h3 className={heading}>{t.whenDoYouArrive}</h3>
               <p className={lede}>
-                Tap your arrival day. Striped days are already booked{scope === "any" ? " in every apartment" : ""}.
+                {scope === "any" ? t.tapArrivalDay : t.tapArrivalDayUnit}
               </p>
               {firstFree !== null && firstFree > today && (
                 <button type="button" onClick={() => moveFocus(firstFree)} className={LINK}>
-                  Go to the first free day, {dayLabel(firstFree)}
+                  {t.firstFreeDay(dayLabel(firstFree))}
                 </button>
               )}
             </>
           )}
           {step === 2 && start !== null && (
             <>
-              <h3 className={heading}>How long are you staying?</h3>
+              <h3 className={heading}>{t.howLongAreYouStaying}</h3>
               <p className={lede}>
-                Arriving <b className="font-bold text-ink">{fullDay(start)}</b>. Choose a length, or tap your leaving day.{" "}
+                {t.arrive} <b className="font-bold text-ink">{fullDay(start)}</b>. {t.chooseLengthNote}{" "}
                 <button type="button" onClick={clearDates} className={LINK}>
-                  Change arrival day
+                  {t.changeArrival}
                 </button>
               </p>
               {limit && <Note>{limit}</Note>}
@@ -396,25 +399,24 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
           )}
           {step === 3 && start !== null && end !== null && (
             <>
-              <h3 className={heading}>Your stay: {plural(n, "night")}</h3>
+              <h3 className={heading}>{t.yourStay}: {t.nightsCount(n)}</h3>
               <p className={lede}>
-                {dayLabel(start)} to {dayLabel(end)}, {billingLabel(n)}.
-                {scope === "any" && ` Free for these dates: ${free.map((u) => u.name).join(", ")}.`} Change the length
-                below, or tap a new arrival day.
+                {dayLabel(start)} → {dayLabel(end)}, {billingLabel(n)}.
+                {scope === "any" && ` ${t.freeNames(free.map((u) => u.name).join(", "))}`} {t.changeLengthNote}
               </p>
             </>
           )}
         </div>
 
-        <div role="group" aria-label="Length of stay" className={`${SWIPE_ROW} @2xl:grid @2xl:grid-cols-5`}>
-          {PRESETS.map((p) => {
+        <div role="group" aria-label={t.lengthOfStay} className={`${SWIPE_ROW} @2xl:grid @2xl:grid-cols-5`}>
+          {presets(t).map((p) => {
             const base =
               "flex min-h-16 min-w-[132px] flex-none flex-col items-start gap-px rounded-xl border-[1.5px] px-3.5 py-[11px] text-left @2xl:min-w-0";
             if (start === null) {
               return (
                 <button key={p.label} type="button" tabIndex={-1} aria-disabled className={`${base} cursor-default border-line-card bg-surface opacity-50`}>
                   <b className="text-[17px] font-extrabold">{p.label}</b>
-                  <span className="text-sm text-copy">after arrival</span>
+                  <span className="text-sm text-copy">{t.afterArrival}</span>
                 </button>
               );
             }
@@ -423,7 +425,7 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
               return (
                 <button key={p.label} type="button" aria-disabled className={`${base} ${BOOKED} cursor-not-allowed border-dashed border-line-card text-booked-ink`}>
                   <b className="text-[17px] font-extrabold">{p.label}</b>
-                  <span className="text-sm">Booked</span>
+                  <span className="text-sm">{t.booked}</span>
                 </button>
               );
             }
@@ -441,7 +443,7 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
                 }`}
               >
                 <b className="text-[17px] font-extrabold text-ink">{p.label}</b>
-                <span className="whitespace-nowrap text-sm text-copy">Leave {dayLabel(leave)}</span>
+                <span className="whitespace-nowrap text-sm text-copy">{t.leave} {dayLabel(leave)}</span>
               </button>
             );
           })}
@@ -451,14 +453,14 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
       {/* Calendar */}
       <div className="px-3.5 pb-1 pt-4 @2xl:px-7 @2xl:pt-5">
         <div className="mb-1 flex items-center gap-3">
-          <button type="button" aria-label="Earlier month" disabled={off === 0} onClick={() => { setOffset(off - 1); setFocusDay(null); }} className={NAV}>
+          <button type="button" aria-label={t.earlierMonth} disabled={off === 0} onClick={() => { setOffset(off - 1); setFocusDay(null); }} className={NAV}>
             <ChevronIcon dir="left" className="h-5 w-5" />
           </button>
           <div className="flex-1 text-center text-[17px] font-bold" aria-live="polite">
             <span className="@2xl:hidden">{months[0].month} {months[0].year}</span>
             <span className="hidden @2xl:inline">{wideLabel}</span>
           </div>
-          <button type="button" aria-label="Later month" disabled={off >= maxOffset} onClick={() => { setOffset(off + 1); setFocusDay(null); }} className={NAV}>
+          <button type="button" aria-label={t.laterMonth} disabled={off >= maxOffset} onClick={() => { setOffset(off + 1); setFocusDay(null); }} className={NAV}>
             <ChevronIcon dir="right" className="h-5 w-5" />
           </button>
         </div>
@@ -495,15 +497,15 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
 
       {/* Legend — swatches reuse the day styles */}
       <div className="mx-4 mt-2.5 flex flex-wrap gap-x-[22px] gap-y-2.5 border-t border-hair-soft py-3.5 text-sm text-copy @2xl:mx-7">
-        <span className="inline-flex items-center gap-2"><i className="h-6 w-6 rounded-[7px] border border-hair-strong" />Available</span>
-        <span className="inline-flex items-center gap-2"><i className="h-6 w-6 rounded-full bg-deep" />Arrive / leave</span>
-        <span className="inline-flex items-center gap-2"><i className="h-6 w-6 rounded-[7px] bg-sand" />Your stay</span>
-        <span className="inline-flex items-center gap-2"><i className={`h-6 w-6 rounded-[7px] ${BOOKED}`} />Booked</span>
+        <span className="inline-flex items-center gap-2"><i className="h-6 w-6 rounded-[7px] border border-hair-strong" />{t.available}</span>
+        <span className="inline-flex items-center gap-2"><i className="h-6 w-6 rounded-full bg-deep" />{t.arriveLeave}</span>
+        <span className="inline-flex items-center gap-2"><i className="h-6 w-6 rounded-[7px] bg-sand" />{t.yourStay}</span>
+        <span className="inline-flex items-center gap-2"><i className={`h-6 w-6 rounded-[7px] ${BOOKED}`} />{t.booked}</span>
         <span className="inline-flex items-center gap-2">
           <i className="relative h-6 w-6 rounded-[7px] border border-hair-strong">
             <span className="absolute bottom-1 left-1/2 h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-lagoon" />
           </i>
-          Today
+          {t.today}
         </span>
       </div>
 
@@ -517,36 +519,36 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
           <button
             type="button"
             onClick={clearDates}
-            aria-label={start === null ? "Arrive: choose a day" : `Arrive ${fullDay(start)}. Change arrival day`}
+            aria-label={start === null ? `${t.arrive}: ${t.chooseADay}` : `${t.arrive} ${fullDay(start)}. ${t.changeArrival}`}
             className={`${FIELD} ${step === 1 ? "shadow-[inset_0_-3px_0_var(--color-deep)]" : ""}`}
           >
-            <span className={FIELD_LABEL}>Arrive</span>
+            <span className={FIELD_LABEL}>{t.arrive}</span>
             <span className={`whitespace-nowrap text-[15px] @2xl:text-base ${start === null ? "font-semibold text-muted" : "font-bold text-ink"}`}>
-              {start === null ? "Choose a day" : dayLabel(start, true)}
+              {start === null ? t.chooseADay : dayLabel(start, true)}
             </span>
           </button>
           <button
             type="button"
             disabled={start === null}
             onClick={() => start !== null && setArrival(start)}
-            aria-label={end === null ? "Leave: choose a day" : `Leave ${fullDay(end)}. Change leaving day`}
+            aria-label={end === null ? `${t.leave}: ${t.chooseADay}` : `${t.leave} ${fullDay(end)}`}
             className={`${FIELD} border-l border-hair-strong ${step === 2 ? "shadow-[inset_0_-3px_0_var(--color-deep)]" : ""}`}
           >
-            <span className={FIELD_LABEL}>Leave</span>
+            <span className={FIELD_LABEL}>{t.leave}</span>
             <span className={`whitespace-nowrap text-[15px] @2xl:text-base ${end === null ? "font-semibold text-muted" : "font-bold text-ink"}`}>
-              {end === null ? "Choose a day" : dayLabel(end, true)}
+              {end === null ? t.chooseADay : dayLabel(end, true)}
             </span>
           </button>
         </div>
         {step === 3 && (
           <p className="basis-full text-[15px] text-copy @2xl:basis-auto">
-            <b className="text-ink">{plural(n, "night")}</b> · {billingLabel(n)}
+            <b className="text-ink">{t.nightsCount(n)}</b> · {billingLabel(n)}
           </p>
         )}
         <div className="flex w-full items-center gap-2 @2xl:ml-auto @2xl:w-auto">
           {start !== null && (
             <button type="button" onClick={clearDates} className="px-2 py-3 text-[15px] font-bold text-copy underline underline-offset-[3px]">
-              Start over
+              {t.startOver}
             </button>
           )}
           <button

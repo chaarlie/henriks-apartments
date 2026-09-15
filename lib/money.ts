@@ -1,3 +1,4 @@
+import { ui } from "@/lib/i18n/ui";
 import type { SiteContent, Unit } from "@/lib/content";
 
 export type Currency = "USD" | "DOP";
@@ -16,15 +17,13 @@ export function whatsappHref(
   opts?: { unit?: Unit; note?: string; sale?: boolean },
 ): string {
   const { whatsappNumber, whatsappMessage } = content.property;
-  let message = whatsappMessage;
+  const t = ui(content.locale ?? "en");
+  let message = content.locale && content.locale !== "en" ? t.whatsappDefault : whatsappMessage;
   if (opts?.sale) {
-    message = `Hi Henrik — I'd like more information about buying${
-      opts.unit ? ` the ${opts.unit.name}` : ` an apartment at ${content.property.name}`
-    }. Could you send the price and the details?`;
+    message = t.whatsappSale(content.property.name, opts.unit?.name);
   } else if (opts?.unit) {
-    message = `Hi Henrik — I'm interested in the ${opts.unit.name} (${opts.unit.code})${
-      opts.note ? `, ${opts.note}` : ""
-    }. Is it available?`;
+    message = t.whatsappUnit(opts.unit.name, opts.unit.code, opts.note);
   }
+  if (!opts?.unit && !opts?.sale && opts?.note) message += ` ${opts.note}`;
   return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 }

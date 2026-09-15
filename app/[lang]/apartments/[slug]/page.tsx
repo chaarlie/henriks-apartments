@@ -1,3 +1,4 @@
+import { ui } from "@/lib/i18n/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,7 +6,7 @@ import { getSiteContent, getUnit, getUnitSlugs } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
 import { unitJsonLd } from "@/lib/structured-data";
 import { ogImage } from "@/lib/image-url";
-import { unitHighlights } from "@/lib/unit";
+import { unitFacts, unitHighlights } from "@/lib/unit";
 import { isLocale, localeAlternates, localePath } from "@/lib/locales";
 import JsonLd from "@/app/components/JsonLd";
 import Header from "@/app/components/Header";
@@ -75,8 +76,9 @@ export default async function UnitPage({
   const [unit, content] = await Promise.all([getUnit(slug, lang), getSiteContent(lang)]);
   if (!unit) notFound();
 
+  const t = ui(lang);
   // Facts come from this unit's own data — never a shared hardcoded list.
-  const facts = [unit.spec.area, unit.spec.bath, unit.spec.sleeps, ...unitHighlights(unit)];
+  const facts = [...unitFacts(unit).map(([key, value]) => `${t[key]}: ${value}`), ...unitHighlights(unit)];
 
   return (
     <BookingProvider content={content} unitSlug={unit.slug}>
@@ -85,12 +87,12 @@ export default async function UnitPage({
       <main className="pb-16 md:pb-[88px]">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
           {/* Title */}
-          <nav aria-label="Breadcrumb" className="pt-6 text-[15px] text-copy">
+          <nav aria-label={t.breadcrumb} className="pt-6 text-[15px] text-copy">
             <Link
               href={localePath(lang, "/#units")}
               className="font-semibold text-lagoon underline underline-offset-[3px]"
             >
-              Apartments
+              {t.navApartments}
             </Link>
             <span aria-hidden className="mx-2">/</span>
             <span aria-current="page">{unit.name}</span>
@@ -125,9 +127,9 @@ export default async function UnitPage({
         </div>
 
         <AvailabilitySection
-          heading="Availability"
-          eyebrow="Any range, any length"
-          sub="Tap the day you arrive, then how long you’re staying."
+          heading={t.availability}
+          eyebrow={t.anyRangeAnyLength}
+          sub={t.arrivalInstructions}
         />
         <BookingForm />
       </main>

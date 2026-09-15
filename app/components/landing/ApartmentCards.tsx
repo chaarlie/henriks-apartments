@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 import { type Unit } from "@/lib/content";
 import { localePath, splitLocale } from "@/lib/locales";
 import { display, whatsappHref, type Currency } from "@/lib/money";
-import { computeEstimate, dayLabel, fxRateNote, numberWord, plural, today } from "@/lib/dates";
+import { today } from "@/lib/dates";
+import { useDates } from "@/lib/i18n/dates";
+import { useUi } from "@/lib/i18n/client";
 import { availableFrom } from "@/lib/filter";
 import { availableForDates, freeAgainFrom, scopeUnits } from "@/lib/availability";
 import { unitFacts, unitHighlights } from "@/lib/unit";
@@ -26,6 +28,8 @@ const LINK = "text-[15px] font-bold text-lagoon underline underline-offset-[3px]
 function Card({ unit }: { unit: Unit }) {
   const { currency, start, end, setScope, openPicker } = useBooking();
   const content = useContent();
+  const t = useUi();
+  const { computeEstimate, dayLabel } = useDates();
   const money = (usd: number) => display(usd, currency, content.fxRate);
 
   const free = availableForDates(content, unit, start, end);
@@ -43,18 +47,18 @@ function Card({ unit }: { unit: Unit }) {
       free ? (
         <span className={`${BADGE} bg-olive text-white`}>
           <CheckIcon className="h-3.5 w-3.5" />
-          Free for your dates
+          {t.freeForYourDates}
         </span>
       ) : (
-        <span className={`${BADGE} bg-ink text-white`}>Booked for your dates</span>
+        <span className={`${BADGE} bg-ink text-white`}>{t.bookedForYourDates}</span>
       )
     ) : opens <= today ? (
       <span className={`${BADGE} bg-olive text-white`}>
         <CheckIcon className="h-3.5 w-3.5" />
-        Free now
+        {t.freeNow}
       </span>
     ) : (
-      <span className={`${BADGE} bg-white text-ink`}>Free from {dayLabel(opens)}</span>
+      <span className={`${BADGE} bg-white text-ink`}>{t.freeFrom(dayLabel(opens))}</span>
     );
 
   return (
@@ -71,7 +75,7 @@ function Card({ unit }: { unit: Unit }) {
         {/* decorative — the accessible version is the line under the tagline */}
         {unit.forSale && (
           <span className="absolute right-2.5 top-2.5 inline-flex items-center rounded-full bg-sand px-3 py-1.5 text-[13px] font-bold leading-tight text-ink">
-            For sale
+            {t.forSaleBadge}
           </span>
         )}
       </Link>
@@ -86,8 +90,8 @@ function Card({ unit }: { unit: Unit }) {
           <p className="mt-[3px] text-[15px] text-dense">{unit.tagline}</p>
           {unit.forSale && (
             <p className="mt-2 text-[15px] font-bold text-lagoon">
-              Also for sale ·{" "}
-              {unit.salePriceUsd ? money(unit.salePriceUsd) : "price on request"}
+              {t.alsoForSale} ·{" "}
+              {unit.salePriceUsd ? money(unit.salePriceUsd) : t.priceOnRequestInline}
             </p>
           )}
         </div>
@@ -95,15 +99,17 @@ function Card({ unit }: { unit: Unit }) {
         <div className="rounded-xl bg-sand px-4 pb-[13px] pt-3.5">
           <p className="flex items-baseline gap-1.5">
             <b className="text-[31px] font-extrabold leading-[1.1] tracking-[-0.03em]">{money(unit.priceUsd)}</b>
-            <span className="text-[15px] font-semibold text-dense">per month</span>
+            <span className="text-[15px] font-semibold text-dense">{t.perMonth}</span>
           </p>
           <p className="mt-0.5 text-[15px] text-dense">
-            or <b className="text-ink">{money(unit.priceNightlyUsd)}</b> a night for short stays
+            {t.nightlyBefore}
+            <b className="text-ink">{money(unit.priceNightlyUsd)}</b>
+            {t.nightlyAfter}
           </p>
           <dl className="mt-3 grid grid-cols-3 border-t border-sand2 pt-[11px]">
             {unitFacts(unit).map(([k, v], i) => (
               <div key={k} className={i ? "border-l border-sand2 pl-3" : ""}>
-                <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-dense">{k}</dt>
+                <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-dense">{t[k]}</dt>
                 <dd className="text-[17px] font-extrabold">{v}</dd>
               </div>
             ))}
@@ -125,7 +131,9 @@ function Card({ unit }: { unit: Unit }) {
           <p className="flex items-start gap-2.5 rounded-[10px] bg-page bg-hatch px-3 py-2.5 text-[15px] leading-[1.45] shadow-[inset_0_0_0_1px_var(--color-hair)]">
             <InfoIcon className="mt-0.5 h-4 w-4 text-dense" />
             <span>
-              Booked during your dates. Free again from <b>{dayLabel(againFrom)}</b>.
+              {t.bookedDuringBefore}
+              <b>{dayLabel(againFrom)}</b>
+              {t.bookedDuringAfter}
             </span>
           </p>
         )}
@@ -133,8 +141,8 @@ function Card({ unit }: { unit: Unit }) {
           <p className="flex items-start gap-2.5 rounded-[10px] bg-olive/10 px-3 py-2.5 text-[15px] leading-[1.45]">
             <CheckIcon className="mt-0.5 h-4 w-4 text-olive" />
             <span>
-              <b>{est.totalDisplay}</b> estimated for {plural(est.nights, "night")}
-              {est.lines.some((l) => l.key === "deposit") ? ", incl. refundable deposit" : ""}
+              <b>{est.totalDisplay}</b> {t.estimatedForNights(est.nights)}
+              {est.lines.some((l) => l.key === "deposit") ? t.inclDeposit : ""}
             </span>
           </p>
         )}
@@ -144,7 +152,7 @@ function Card({ unit }: { unit: Unit }) {
             href={href}
             className="flex min-h-[50px] items-center justify-center gap-2 rounded-[11px] bg-ink text-base font-extrabold text-white transition-colors hover:bg-ink-hover"
           >
-            See the apartment <ArrowIcon />
+            {t.seeTheApartment} <ArrowIcon />
           </Link>
           <div className="grid grid-cols-[1.4fr_1fr] gap-2">
             <button
@@ -156,17 +164,17 @@ function Card({ unit }: { unit: Unit }) {
               className={LINE_BTN}
             >
               <CalendarIcon className="h-4 w-4 text-deep" />
-              Check dates
+              {t.checkDates}
             </button>
             <a
               href={whatsappHref(content, { unit })}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Ask about the ${unit.name} on WhatsApp`}
+              aria-label={t.askAboutOnWhatsapp(unit.name)}
               className={LINE_BTN}
             >
               <ChatIcon className="h-4 w-4 text-deep" />
-              Ask
+              {t.ask}
             </a>
           </div>
         </div>
@@ -178,6 +186,8 @@ function Card({ unit }: { unit: Unit }) {
 export default function ApartmentCards() {
   const { currency, setCurrency, start, end, scope, setScope, openPicker } = useBooking();
   const content = useContent();
+  const t = useUi();
+  const { dayLabel, fxRateNote } = useDates();
   const list = scopeUnits(content, scope);
 
   return (
@@ -185,35 +195,35 @@ export default function ApartmentCards() {
       <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
         <div className="flex flex-wrap items-end justify-between gap-[18px]">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.14em] text-lagoon">The apartments</p>
+            <p className="font-mono text-xs uppercase tracking-[0.14em] text-lagoon">{t.theApartments}</p>
             <h2 className="mt-2.5 text-[clamp(30px,4vw,44px)] font-bold leading-[1.1] tracking-[-0.025em]">
-              {numberWord(content.units.length)} ways to stay
+              {t.waysToStay(t.numberWord(content.units.length))}
             </h2>
             <div className="mt-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-base text-copy">
               {start !== null && end !== null ? (
                 <>
                   <span>
-                    Showing prices and availability for{" "}
+                    {t.showingPricesFor}{" "}
                     <b className="text-ink">
                       {dayLabel(start)} → {dayLabel(end)}
                     </b>
                   </span>
                   <button type="button" onClick={openPicker} className={LINK}>
-                    Change dates
+                    {t.changeDates}
                   </button>
                 </>
               ) : (
-                <span>Water, garbage and 200 Mbps fibre are in the rent. Power is metered.</span>
+                <span>{t.rentIncludesNote}</span>
               )}
               {scope !== "any" && (
                 <button type="button" onClick={() => setScope("any")} className={LINK}>
-                  Show all {content.units.length} apartments
+                  {t.showAllApartments(content.units.length)}
                 </button>
               )}
             </div>
           </div>
           <div className="md:text-right">
-            <div className="inline-flex gap-[3px] rounded-[10px] bg-sand p-[3px]" role="group" aria-label="Currency">
+            <div className="inline-flex gap-[3px] rounded-[10px] bg-sand p-[3px]" role="group" aria-label={t.currency}>
               {(["USD", "DOP"] as Currency[]).map((c) => (
                 <button
                   key={c}

@@ -1,13 +1,15 @@
 "use client";
 
+import { useUi } from "@/lib/i18n/client";
+
 import { useState } from "react";
 import Image from "next/image";
 import { useContent } from "@/lib/booking";
-import { numberWord } from "@/lib/dates";
 import VideoModal from "@/app/components/VideoModal";
 
 /** Full-bleed hero. Its bottom edge leaves room for the StayBar, which overlaps it. */
 export default function Hero() {
+  const t = useUi();
   const { hero, units } = useContent();
   const [playing, setPlaying] = useState(false);
 
@@ -43,9 +45,9 @@ export default function Hero() {
               <span className="ml-[3px] h-0 w-0 border-y-8 border-l-[13px] border-y-transparent border-l-white" />
             </span>
             <span className="text-left">
-              Watch the walkthrough
+              {t.watchWalkthrough}
               <span className="block font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-muted">
-                3-min film · YouTube
+                {t.filmNote}
               </span>
             </span>
           </button>
@@ -53,7 +55,7 @@ export default function Hero() {
             href="#units"
             className="border-b-[1.5px] border-white/50 pb-0.5 text-base font-semibold transition-colors hover:border-white"
           >
-            Browse the {numberWord(units.length).toLowerCase()} apartments
+            {t.browseCount(t.numberWord(units.length))}
           </a>
         </div>
 

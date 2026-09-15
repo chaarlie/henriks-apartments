@@ -1,4 +1,5 @@
 import "server-only";
+import { roomLabel } from "@/lib/i18n/labels";
 import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 import { sanityFetch } from "@/sanity/lib/live";
 import { urlFor } from "@/sanity/lib/image";
@@ -124,6 +125,7 @@ function mapTour(tour: RawTourStop[] | undefined): TourNode[] {
 
 // ── Raw GROQ result shapes (only the fields we read) ──────────────────────────
 interface RawTourStop {
+  _key?: string;
   stopId: string;
   name: string;
   panorama?: string;
@@ -141,6 +143,7 @@ interface RawTranslation {
   saleNote?: string;
   chips?: string[];
   coverAlt?: string;
+  tour?: { _key: string; name: string }[];
   galleryAlts?: { _key: string; alt?: string }[];
   about?: Block[];
   space?: SpaceItem[];
@@ -197,7 +200,7 @@ interface RawUnit {
  * Photos are never duplicated: only their alt text is translated, matched by
  * _key so reordering the gallery cannot move alt text onto the wrong picture.
  */
-function translated(u: RawUnit): RawUnit {
+function translated(u: RawUnit, locale: Locale): RawUnit {
   /*
     No early return when the unit has no translation row of its own: the shared
     Stay defaults may still have one, and an apartment that inherits them should
@@ -213,7 +216,11 @@ function translated(u: RawUnit): RawUnit {
     saleNote: t.saleNote ?? u.saleNote,
     chips: t.chips ?? u.chips,
     about: t.about ?? u.about,
-    space: t.space ?? u.space,
+    space: (t.space ?? u.space)?.map((row) => ({ ...row, key: roomLabel(row.key, locale) })),
+    tour: u.tour?.map((stop) => ({
+      ...stop,
+      name: roomLabel(t.tour?.find((row) => row._key === stop._key)?.name ?? stop.name, locale),
+    })),
     coverImage:
       u.coverImage && t.coverAlt ? { ...u.coverImage, alt: t.coverAlt } : u.coverImage,
     gallery: (u.gallery ?? []).map((g) => {
@@ -364,6 +371,7 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
   const setTr = s?.tr;
 
   return {
+    locale,
     property: {
       name: s.propertyName,
       addressLine: landing.location?.addressLine ?? "",
@@ -399,7 +407,7 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
     },
     fxRate: s.fxRate,
     fxRateAsOf: s.fxRateUpdatedAt?.slice(0, 10) ?? "",
-    units: landing.units.map((u) => cardUnit(translated(u))),
+    units: landing.units.map((u) => cardUnit(translated(u, locale))),
     amenities: mergeRows(s.propertyAmenities, setTr?.propertyAmenities),
     power: { baseUsd: s.powerBaseUsd },
     discounts: s.discounts ?? [],
@@ -433,7 +441,7 @@ export async function getUnit(
     | null
   >({ query: unitQuery, params: { slug, locale } });
   if (!raw) return null;
-  const u = translated(raw);
+  const u = translated(raw, locale);
 
   return {
     _id: `unit-${u.slug}`,

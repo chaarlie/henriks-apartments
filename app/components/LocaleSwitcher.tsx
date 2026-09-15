@@ -1,5 +1,6 @@
 "use client";
 
+import { ui } from "@/lib/i18n/ui";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LANGUAGE_NAME, LOCALES, localePath, splitLocale } from "@/lib/locales";
@@ -26,7 +27,7 @@ export default function LocaleSwitcher() {
   return (
     <div
       role="group"
-      aria-label="Language"
+      aria-label={ui(locale).language}
       className="inline-flex items-center rounded-full border-[1.5px] border-hair p-[2px]"
     >
       {LOCALES.map((l) => {

@@ -178,6 +178,7 @@ export interface PropertyAmenity {
 }
 
 export interface SiteContent {
+  locale?: import("@/lib/locales").Locale;
   property: {
     name: string;
     addressLine: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useUi } from "@/lib/i18n/client";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { Viewer as ViewerType } from "@photo-sphere-viewer/core";
 import type { VirtualTourPlugin as VirtualTourPluginType } from "@photo-sphere-viewer/virtual-tour-plugin";
@@ -99,6 +100,7 @@ interface Props {
  */
 const PanoramaViewer = forwardRef<PanoramaViewerHandle, Props>(
   function PanoramaViewer({ nodes, onNodeChange, onReady, onError }, ref) {
+    const t = useUi();
     const containerRef = useRef<HTMLDivElement>(null);
     const viewerRef = useRef<ViewerType | null>(null);
 
@@ -129,6 +131,7 @@ const PanoramaViewer = forwardRef<PanoramaViewerHandle, Props>(
           const viewer = new Viewer({
             container: containerRef.current,
             navbar: ["zoom", "fullscreen"],
+            lang: { zoomIn: t.zoomIn, zoomOut: t.zoomOut, fullscreen: t.fullScreen, loading: t.loading, loadError: t.loadError, twoFingers: t.moveTwoFingers },
             defaultZoomLvl: 20,
             touchmoveTwoFingers: true,
             mousewheelCtrlKey: false,
@@ -181,7 +184,7 @@ const PanoramaViewer = forwardRef<PanoramaViewerHandle, Props>(
       <div
         ref={containerRef}
         className="h-full w-full cursor-grab touch-none [&_.psv-container]:bg-ink"
-        aria-label="Drag to look around the 360° panorama"
+        aria-label={t.panoramaLabel}
       />
     );
   },

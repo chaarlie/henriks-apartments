@@ -17,8 +17,8 @@
   only — no enums, no parameter properties, nothing that needs a compiler to
   emit real code. Same rule, and the same reason, as lib/locales.ts.
 
-  What is deliberately NOT here: names, codes, slugs, prices, deposits, dates,
-  spec, panoramas, icons and image assets. Those are the same fact in every
+  What is deliberately NOT here: unit names, codes, slugs, prices, deposits, dates,
+  spec, panorama assets, icons and image assets. Those are the same fact in every
   language, and the moment a second copy exists one of them starts being wrong.
   The admin reads this table to decide what to grey out.
 */
@@ -52,7 +52,8 @@ export const TYPES: Record<string, TranslatableSpec> = {
     stringArrays: ["chips"],
     blocks: ["about"],
     rows: [
-      ["space", ["title", "desc"]],
+      ["space", ["key", "title", "desc"]],
+      ["tour", ["name"]],
       ["termsOverride", ["title", "desc"]],
     ],
     nested: [

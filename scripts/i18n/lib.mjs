@@ -88,6 +88,8 @@ export function rebuildDoc(type, doc, t, locale, { sourceHash, sourceRev, machin
 
   for (const [field, keys] of s.rows ?? []) {
     if (doc[field]?.length) row[field] = rebuildRows(field, doc[field], keys, t);
+    // Tour translations own labels only; geometry and media stay on the source.
+    if (field === "tour" && row[field]) row[field] = row[field].map(({ _key, name }) => ({ _key, name }));
   }
 
   for (const [obj, field, keys] of s.nested ?? []) {

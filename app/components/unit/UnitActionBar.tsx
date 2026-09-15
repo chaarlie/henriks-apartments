@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { type Unit } from "@/lib/content";
 import { display } from "@/lib/money";
-import { computeEstimate, dayLabel, plural } from "@/lib/dates";
+import { useDates } from "@/lib/i18n/dates";
 import { availableForDates } from "@/lib/availability";
 import { useBooking, useContent } from "@/lib/booking";
+import { useUi } from "@/lib/i18n/client";
 
 /** Sections that carry their own actions; the bar steps aside while they're on screen. */
 const OWN_ACTIONS = ["book", "availability", "reserve"];
@@ -17,6 +18,8 @@ const OWN_ACTIONS = ["book", "availability", "reserve"];
 export default function UnitActionBar({ unit }: { unit: Unit }) {
   const { currency, start, end, openPicker } = useBooking();
   const content = useContent();
+  const t = useUi();
+  const { computeEstimate, dayLabel } = useDates();
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
@@ -51,17 +54,21 @@ export default function UnitActionBar({ unit }: { unit: Unit }) {
         <div className="min-w-0 flex-1">
           {hasDates ? (
             <>
-              <p className="text-[17px] font-extrabold leading-tight">{free ? est.totalDisplay : "Booked for your dates"}</p>
+              <p className="text-[17px] font-extrabold leading-tight">{free ? est.totalDisplay : t.bookedForYourDates}</p>
               <p className="truncate text-sm text-copy">
-                {dayLabel(start)} → {dayLabel(end)} · {plural(est.nights, "night")}
+                {dayLabel(start)} → {dayLabel(end)} · {t.nightsCount(est.nights)}
               </p>
             </>
           ) : (
             <>
               <p className="text-[17px] font-extrabold leading-tight">
-                {money(unit.priceUsd)} <span className="text-sm font-semibold text-dense">per month</span>
+                {money(unit.priceUsd)} <span className="text-sm font-semibold text-dense">{t.perMonth}</span>
               </p>
-              <p className="truncate text-sm text-copy">or {money(unit.priceNightlyUsd)} a night for short stays</p>
+              <p className="truncate text-sm text-copy">
+                {t.nightlyBefore}
+                {money(unit.priceNightlyUsd)}
+                {t.nightlyAfter}
+              </p>
             </>
           )}
         </div>
@@ -71,7 +78,7 @@ export default function UnitActionBar({ unit }: { unit: Unit }) {
             tabIndex={hidden ? -1 : undefined}
             className="flex min-h-[50px] flex-none items-center rounded-xl bg-olive px-5 text-base font-extrabold text-white"
           >
-            Hold dates
+            {t.holdDates}
           </a>
         ) : (
           <button
@@ -80,7 +87,7 @@ export default function UnitActionBar({ unit }: { unit: Unit }) {
             tabIndex={hidden ? -1 : undefined}
             className="flex min-h-[50px] flex-none items-center rounded-xl bg-ink px-5 text-base font-extrabold text-white"
           >
-            {hasDates ? "Other dates" : "Check dates"}
+            {hasDates ? t.otherDates : t.checkDates}
           </button>
         )}
       </div>

@@ -227,6 +227,10 @@ export const unit = defineType({
               description: 'Alt text only — the photos themselves are shared across languages.',
               of: [defineArrayMember({type: 'object', fields: [defineField({name: 'alt', type: 'string'})]})],
             }),
+            defineField({
+              name: 'tour', title: 'Tour labels', type: 'array',
+              of: [defineArrayMember({type: 'object', fields: [defineField({name: 'name', title: 'Name', type: 'string'})]})],
+            }),
             defineField({name: 'about', title: 'About this apartment', type: 'array', of: [defineArrayMember({type: 'block'})]}),
             defineField({
               name: 'space',

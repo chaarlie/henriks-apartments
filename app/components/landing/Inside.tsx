@@ -140,12 +140,7 @@ export default function Inside() {
           {/* Media: 360 tour or gallery */}
           <div className="min-w-0">
             {effectiveMode === "tour" ? (
-              <>
-                <Tour key={unit.slug} nodes={unit.tour} tone="dark" />
-                <p className="mt-3 font-mono text-xs leading-[1.5] text-white/60">
-                  360° capture: Apartment 101 — shown for every unit until the others are photographed.
-                </p>
-              </>
+              <Tour key={unit.slug} nodes={unit.tour} tone="dark" />
             ) : (
               <>
                 <div

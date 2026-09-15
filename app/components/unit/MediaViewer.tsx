@@ -64,12 +64,7 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
 
       {/* Panel */}
       {mode === "tour" ? (
-        <>
-          <Tour nodes={unit.tour} />
-          <p className="mt-2.5 font-mono text-xs leading-[1.5] text-copy">
-            360° capture: Apartment 101 — shown for every unit until the others are photographed.
-          </p>
-        </>
+        <Tour nodes={unit.tour} />
       ) : (
         <div>
           <button

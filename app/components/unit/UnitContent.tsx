@@ -1,25 +1,22 @@
 import type { SiteContent, Unit } from "@/lib/content";
 import { CheckIcon, CloseIcon } from "@/app/components/icons";
+import { getUi } from "@/lib/i18n/server";
 
 const Divider = () => <div className="my-10 h-px bg-hair" />;
 const H2 = "text-[clamp(24px,2.6vw,30px)] font-bold leading-[1.15] tracking-[-0.02em]";
 
-export default function UnitContent({ unit, stay }: { unit: Unit; stay: SiteContent["stay"] }) {
+export default async function UnitContent({ unit, stay }: { unit: Unit; stay: SiteContent["stay"] }) {
+  const t = await getUi();
   return (
     <div>
       {/* About */}
       <section>
-        <h2 className={H2}>About this apartment</h2>
+        <h2 className={H2}>{t.aboutThisApartment}</h2>
         <div className="mt-4 flex max-w-[62ch] flex-col gap-3.5 text-base leading-[1.72] text-dense">
           {unit.about.map((p) => (
             <p key={p}>{p}</p>
           ))}
-          <p>
-            The building sits one block back from the water on Calle Dr. Rosen — quiet at night, but a
-            four-minute walk to Playa Sosúa and the restaurants on Pedro Clisante. A shared pool deck
-            with a shaded bar runs the length of the courtyard, and there&rsquo;s an inverter plus a
-            generator so the power never actually goes out.
-          </p>
+          <p>{t.buildingNote}</p>
         </div>
       </section>
 
@@ -27,7 +24,7 @@ export default function UnitContent({ unit, stay }: { unit: Unit; stay: SiteCont
 
       {/* The space — the room name is the label, the value ("Full", "En-suite") sits under it */}
       <section>
-        <h2 className={H2}>The space</h2>
+        <h2 className={H2}>{t.theSpace}</h2>
         <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3">
           {unit.space.map((s) => (
             <div key={s.key} className="rounded-[14px] border-[1.5px] border-line-card bg-surface p-[18px]">
@@ -43,13 +40,15 @@ export default function UnitContent({ unit, stay }: { unit: Unit; stay: SiteCont
 
       {/* What this place offers */}
       <section id="amenities" className="scroll-mt-28">
-        <h2 className={H2}>What this place offers</h2>
+        <h2 className={H2}>{t.whatThisPlaceOffers}</h2>
         <div className="mt-4 grid gap-6 sm:grid-cols-2">
           {[
-            { title: "Inside", list: unit.amenities.inside },
-            { title: "Building & connectivity", list: unit.amenities.building },
+            // Keyed by a stable id rather than the title, which now changes with
+            // the language.
+            { key: "inside", title: t.amenitiesInside, list: unit.amenities.inside },
+            { key: "building", title: t.amenitiesBuilding, list: unit.amenities.building },
           ].map((group) => (
-            <div key={group.title}>
+            <div key={group.key}>
               <h3 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-copy">{group.title}</h3>
               <ul className="flex flex-col gap-3">
                 {group.list.map((a) => (
@@ -64,7 +63,7 @@ export default function UnitContent({ unit, stay }: { unit: Unit; stay: SiteCont
                     )}
                     <span>
                       {a.label}
-                      {!a.included && <span className="sr-only"> (not included)</span>}
+                      {!a.included && <span className="sr-only">{t.notIncluded}</span>}
                     </span>
                   </li>
                 ))}
@@ -78,14 +77,14 @@ export default function UnitContent({ unit, stay }: { unit: Unit; stay: SiteCont
 
       {/* Terms & house rules */}
       <section id="details" className="scroll-mt-28">
-        <h2 className={H2}>Terms &amp; house rules</h2>
+        <h2 className={H2}>{t.termsAndHouseRules}</h2>
 
         {/* Arrival & departure — the two times every guest asks about first */}
         <div className="mt-4 rounded-[14px] border-[1.5px] border-line-card bg-sand-soft p-[18px]">
           <dl className="flex flex-wrap gap-x-10 gap-y-3">
             {[
-              ["Check-in from", stay.checkIn],
-              ["Check-out by", stay.checkOut],
+              [t.checkInFrom, stay.checkIn],
+              [t.checkOutBy, stay.checkOut],
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="font-mono text-xs uppercase tracking-[0.12em] text-lagoon">{label}</dt>

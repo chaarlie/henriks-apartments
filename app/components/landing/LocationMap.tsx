@@ -1,3 +1,4 @@
+import { getUi } from "@/lib/i18n/server";
 import type { SiteContent } from "@/lib/content";
 
 /**
@@ -6,7 +7,8 @@ import type { SiteContent } from "@/lib/content";
  * the hero; this section adds the actual map Henrik asked for. Not shown on unit
  * pages.
  */
-export default function LocationMap({ content }: { content: SiteContent }) {
+export default async function LocationMap({ content }: { content: SiteContent }) {
+  const t = await getUi();
   const { location } = content;
   return (
     <section id="location" className="scroll-mt-28 pb-[84px] pt-[70px]">
@@ -18,12 +20,11 @@ export default function LocationMap({ content }: { content: SiteContent }) {
           {location.addressLine}
         </h2>
         <p className="mt-2 max-w-[46em] text-[15px] text-copy">
-          El Batey, Sosúa — a four-minute walk to Playa Sosúa and the restaurants on Pedro Clisante,
-          18 minutes from Puerto Plata (POP) airport.
+          {t.mapDescription}
         </p>
         <div className="mt-5 overflow-hidden rounded-2xl border border-hair bg-white">
           <iframe
-            title="Map of El Batey, Sosúa"
+            title={t.mapTitle}
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
             className="min-h-[420px] w-full"

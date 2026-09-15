@@ -1,3 +1,4 @@
+import { getUi } from "@/lib/i18n/server";
 import type { PropertyAmenity } from "@/lib/content";
 
 const Icon = ({ path, className }: { path: string; className: string }) => (
@@ -16,8 +17,9 @@ function pick(list: PropertyAmenity[], keywords: string[]) {
  * wide feature cards, the rest as bordered tiles. Falls back to the first two
  * when the keyword match misses, so it never renders empty.
  */
-export default function Amenities({ amenities }: { amenities: PropertyAmenity[] }) {
-  const power = pick(amenities, ["power", "generator", "inverter"]) ?? amenities[0];
+export default async function Amenities({ amenities }: { amenities: PropertyAmenity[] }) {
+  const t = await getUi();
+  const power = pick(amenities, ["power", "generator", "inverter", "electricidad", "planta eléctrica", "inversor"]) ?? amenities[0];
   const net = pick(amenities, ["fibre", "fiber", "mbps", "internet", "wi-fi", "wifi"]) ?? amenities[1];
   const large = [power, net].filter(Boolean) as PropertyAmenity[];
   const small = amenities.filter((a) => !large.includes(a));
@@ -25,9 +27,9 @@ export default function Amenities({ amenities }: { amenities: PropertyAmenity[] 
   return (
     <section id="amenities" className="scroll-mt-28 pt-16 md:pt-[88px]">
       <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
-        <p className="font-mono text-xs uppercase tracking-[0.14em] text-lagoon">What&rsquo;s on site</p>
+        <p className="font-mono text-xs uppercase tracking-[0.14em] text-lagoon">{t.onSite}</p>
         <h2 className="mt-2.5 text-[clamp(30px,4vw,44px)] font-bold leading-[1.1] tracking-[-0.025em]">
-          The two that actually decide it
+          {t.decidingAmenities}
         </h2>
 
         <div className="mt-7 grid gap-4 md:grid-cols-2">

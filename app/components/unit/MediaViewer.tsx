@@ -5,6 +5,7 @@ import Image from "next/image";
 import { type Unit } from "@/lib/content";
 import { sized } from "@/lib/image-url";
 import Tour from "@/app/components/tour/Tour";
+import { useUi } from "@/lib/i18n/client";
 
 type Mode = "gallery" | "tour";
 
@@ -14,6 +15,7 @@ type Mode = "gallery" | "tour";
  * opens first whenever the unit has one.
  */
 export default function MediaViewer({ unit }: { unit: Unit }) {
+  const t = useUi();
   const photos = unit.gallery.length ? unit.gallery : [unit.image];
   const hasTour = unit.tour.length > 0;
   const [mode, setMode] = useState<Mode>(hasTour ? "tour" : "gallery");
@@ -53,29 +55,24 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
     <section id="tour" className="scroll-mt-28">
       {/* Controls on top */}
       <div className="mb-3.5 flex flex-wrap items-center gap-3">
-        <div className="inline-flex gap-[3px] rounded-xl bg-sand p-1" role="group" aria-label="View">
-          {hasTour && seg("tour", "360° tour")}
-          {seg("gallery", `Photos · ${photos.length}`)}
+        <div className="inline-flex gap-[3px] rounded-xl bg-sand p-1" role="group" aria-label={t.viewLabel}>
+          {hasTour && seg("tour", t.tour360)}
+          {seg("gallery", t.photosCount(photos.length))}
         </div>
         <span className="ml-auto hidden font-mono text-xs uppercase tracking-[0.12em] text-copy sm:inline">
-          {mode === "tour" ? "Drag to look around" : `Photo ${active + 1} of ${photos.length}`}
+          {mode === "tour" ? t.dragToLookAround : t.photoOf(active + 1, photos.length)}
         </span>
       </div>
 
       {/* Panel */}
       {mode === "tour" ? (
-        <>
-          <Tour nodes={unit.tour} />
-          <p className="mt-2.5 font-mono text-xs leading-[1.5] text-copy">
-            360° capture: Apartment 101 — shown for every unit until the others are photographed.
-          </p>
-        </>
+        <Tour nodes={unit.tour} />
       ) : (
         <div>
           <button
             type="button"
             onClick={() => setLightbox(active)}
-            aria-label="Open photo full screen"
+            aria-label={t.openPhotoFullScreen}
             className="relative block aspect-video w-full overflow-hidden rounded-2xl border-[1.5px] border-line-card bg-ink"
           >
             <Image
@@ -89,7 +86,7 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
             />
             {/* Always visible — hover-only hints never show on touch screens */}
             <span className="absolute bottom-4 right-4 rounded-full bg-white/95 px-4 py-2.5 text-sm font-bold text-ink shadow-[0_10px_24px_-10px_rgba(6,43,68,0.6)]">
-              Full screen ⤢
+              {t.fullScreen}
             </span>
           </button>
 
@@ -120,11 +117,11 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
           role="dialog"
           aria-modal="true"
         >
-          <button type="button" onClick={() => setLightbox(null)} aria-label="Close"
+          <button type="button" onClick={() => setLightbox(null)} aria-label={t.close}
             className="absolute right-5 top-5 flex h-[46px] w-[46px] items-center justify-center rounded-full border border-white/30 bg-white/[0.14] text-xl text-white hover:bg-white/[0.28]">✕</button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); move(-1); }} aria-label="Previous"
+          <button type="button" onClick={(e) => { e.stopPropagation(); move(-1); }} aria-label={t.previous}
             className="absolute left-5 top-1/2 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/[0.14] text-xl text-white hover:bg-white/[0.28]">‹</button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); move(1); }} aria-label="Next"
+          <button type="button" onClick={(e) => { e.stopPropagation(); move(1); }} aria-label={t.next}
             className="absolute right-5 top-1/2 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/[0.14] text-xl text-white hover:bg-white/[0.28]">›</button>
           {/*
             A plain <img>, deliberately: this one is centred and keeps its own

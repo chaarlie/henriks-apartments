@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useUi } from "@/lib/i18n/client";
 import type { Currency } from "@/lib/money";
 import type { SiteContent } from "@/lib/content";
 import { blockedForScope, freeUnits } from "@/lib/availability";
@@ -65,6 +66,7 @@ export function BookingProvider({
   unitSlug?: string;
   children: ReactNode;
 }) {
+  const t = useUi();
   const [currency, setCurrency] = useState<Currency>("USD");
   const [range, setRangeState] = useState<Range>({ start: null, end: null });
   const [scopeState, setScopeState] = useState("any");
@@ -115,9 +117,9 @@ export function BookingProvider({
       }
       const name = content.units.find((u) => u.slug === next)?.name ?? "that apartment";
       setRangeState({ start: null, end: null });
-      setNotice(`Your dates aren’t free in the ${name}, so they were cleared. Pick new dates.`);
+      setNotice(t.scopeCleared(name));
     },
-    [content, range, unitSlug],
+    [content, range, unitSlug, t],
   );
 
   const openPicker = useCallback(() => setPickerOpen(true), []);

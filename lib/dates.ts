@@ -1,3 +1,5 @@
+import { ui } from "@/lib/i18n/ui";
+import type { Locale } from "@/lib/locales";
 import type { Currency } from "@/lib/money";
 import { display } from "@/lib/money";
 import type { SiteContent, Unit } from "@/lib/content";
@@ -21,22 +23,27 @@ export const today = (() => {
 })();
 
 /** "5 Sep 2026" */
-export function pretty(t: number): string {
-  const d = new Date(t);
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()].slice(0, 3)} ${d.getUTCFullYear()}`;
+export function pretty(t: number, locale: Locale = "en"): string {
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(t);
 }
 
-/** "Mon 14 Sep", or "Mon 14 Sep 2026" — written out, so there's no dd/mm vs mm/dd to decode. */
-export function dayLabel(t: number, withYear = false): string {
-  const d = new Date(t);
-  const label = `${WEEKDAYS[d.getUTCDay()].slice(0, 3)} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()].slice(0, 3)}`;
-  return withYear ? `${label} ${d.getUTCFullYear()}` : label;
+export function dayLabel(t: number, withYear = false, locale: Locale = "en"): string {
+  return new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", ...(withYear ? { year: "numeric" as const } : {}), timeZone: "UTC" }).format(t);
 }
 
-/** "Monday 14 September 2026" — the spoken label for a calendar day. */
-export function fullDay(t: number): string {
-  const d = new Date(t);
-  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+export function fullDay(t: number, locale: Locale = "en"): string {
+  return new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(t);
+}
+
+export function calendarLabels(locale: Locale) {
+  const month = new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" });
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" });
+  const short = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  return {
+    MONTHS: Array.from({ length: 12 }, (_, m) => month.format(utc(2026, m, 1))),
+    WEEKDAYS: Array.from({ length: 7 }, (_, d) => weekday.format(utc(2026, 0, 4 + d))),
+    DOW: Array.from({ length: 7 }, (_, d) => short.format(utc(2026, 0, 5 + d))),
+  };
 }
 
 /** The same day k months later, clamped to that month's length (31 Jan + 1 → 28 Feb). */
@@ -57,9 +64,8 @@ const NUMBER_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Sev
 export const numberWord = (n: number) => NUMBER_WORDS[n] ?? String(n);
 
 /** "At RD$61 / US$1 · rate as of 1 Sep 2026" — printed beside every currency toggle. */
-export function fxRateNote(content: SiteContent): string {
-  const asOf = content.fxRateAsOf ? ` · rate as of ${pretty(fromIso(content.fxRateAsOf))}` : "";
-  return `At RD$${content.fxRate} / US$1${asOf}`;
+export function fxRateNote(content: SiteContent, locale: Locale = "en"): string {
+  return ui(locale).fxRateNote(content.fxRate, content.fxRateAsOf ? pretty(fromIso(content.fxRateAsOf), locale) : null);
 }
 
 /** ISO yyyy-mm-dd from a UTC timestamp. */
@@ -111,9 +117,9 @@ export function depositFor(unit: Unit, months: number): number {
 export const MONTHLY_FROM_NIGHTS = 28;
 
 /** "billed nightly" / "billed as 2 months" — the same split computeEstimate uses. */
-export function billingLabel(n: number): string {
-  if (n < MONTHLY_FROM_NIGHTS) return "billed nightly";
-  return `billed as ${plural(Math.max(1, Math.ceil(n / 30.4)), "month")}`;
+export function billingLabel(n: number, locale: Locale = "en"): string {
+  if (n < MONTHLY_FROM_NIGHTS) return ui(locale).billedNightly;
+  return ui(locale).billedAsMonths(Math.max(1, Math.ceil(n / 30.4)));
 }
 
 /** Date-range cost estimate. Short stays bill by the night (utilities included);
@@ -125,7 +131,9 @@ export function computeEstimate(
   end: number | null,
   currency: Currency,
   content: SiteContent,
+  locale: Locale = "en",
 ): Estimate {
+  const t = ui(locale);
   const n = nights(start, end);
   const d = (usd: number) => display(usd, currency, content.fxRate);
 
@@ -134,10 +142,10 @@ export function computeEstimate(
     const rent = unit.priceNightlyUsd * n;
     const deposit = depositFor(unit, 0);
     const lines: EstimateLine[] = [
-      { key: "rent", label: `${n} night${n > 1 ? "s" : ""} × ${d(unit.priceNightlyUsd)}`, value: d(rent) },
-      { key: "utilities", label: "Power, water & 200 Mbps fibre", value: "Included", teal: true },
+      { key: "rent", label: t.nightsLine(n, d(unit.priceNightlyUsd)), value: d(rent) },
+      { key: "utilities", label: t.powerWaterFibre, value: t.included, teal: true },
     ];
-    if (deposit > 0) lines.push({ key: "deposit", label: "Deposit (refundable)", value: d(deposit) });
+    if (deposit > 0) lines.push({ key: "deposit", label: t.depositRefundable, value: d(deposit) });
     const total = rent + deposit;
     return { nights: n, months: 0, mode: "nightly", total, lines, totalDisplay: d(total) };
   }
@@ -155,15 +163,15 @@ export function computeEstimate(
   const total = rent + power + deposit - discount;
 
   const lines: EstimateLine[] = [
-    { key: "rent", label: `Rent, ${months} × ${d(unit.priceUsd)}`, value: d(rent) },
-    { key: "power", label: "Electricity, metered estimate", value: d(power) },
-    { key: "utilities", label: "Water, garbage, 200 Mbps fibre", value: "Included", teal: true },
+    { key: "rent", label: t.rentLine(months, d(unit.priceUsd)), value: d(rent) },
+    { key: "power", label: t.electricityMetered, value: d(power) },
+    { key: "utilities", label: t.waterGarbageFibre, value: t.included, teal: true },
   ];
-  if (deposit > 0) lines.push({ key: "deposit", label: "Deposit (refundable)", value: d(deposit) });
+  if (deposit > 0) lines.push({ key: "deposit", label: t.depositRefundable, value: d(deposit) });
   if (tier && discount > 0) {
     lines.push({
       key: "discount",
-      label: `Long-stay discount, ${tier.months} mo+`,
+      label: t.longStayDiscount(tier.months),
       value: `− ${d(discount)}`,
       teal: true,
     });

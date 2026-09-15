@@ -4,6 +4,7 @@ import { getSiteContent } from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
 import { businessJsonLd } from "@/lib/structured-data";
 import { isLocale, localeAlternates } from "@/lib/locales";
+import { getUi } from "@/lib/i18n/server";
 import JsonLd from "@/app/components/JsonLd";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
@@ -36,6 +37,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
   // Everything below reads Sanity content through this one call, so the whole
   // page follows the locale without a single component knowing about languages.
   const content = await getSiteContent(lang);
+  const t = await getUi();
   return (
     <BookingProvider content={content}>
       <JsonLd data={businessJsonLd(content)} />
@@ -48,9 +50,9 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
         <Inside />
         <Amenities amenities={content.amenities} />
         <AvailabilitySection
-          heading="Check availability"
-          eyebrow="Any range, any length"
-          sub="Leave it on “Any apartment” or choose one. Tap the day you arrive, then how long you’re staying."
+          heading={t.checkAvailability}
+          eyebrow={t.anyRangeAnyLength}
+          sub={t.availabilityIntro}
         />
         <BookingForm />
         <Trust content={content} />

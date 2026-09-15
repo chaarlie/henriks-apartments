@@ -11,6 +11,7 @@ import { ArrowIcon, CalendarIcon, ChevronIcon } from "@/app/components/icons";
 import { display } from "@/lib/money";
 import { unitFacts } from "@/lib/unit";
 import { useBooking, useContent } from "@/lib/booking";
+import { useUi } from "@/lib/i18n/client";
 
 const AUTOPLAY_MS = 5000;
 type Mode = "tour" | "gallery";
@@ -34,6 +35,7 @@ const PHOTO_NAV =
 export default function Inside() {
   const content = useContent();
   const { currency, selectedSlug, setSelected, setScope, openPicker } = useBooking();
+  const t = useUi();
   const reduced = useReducedMotion();
   // "See the 101" has to stay in the language being read.
   const { locale } = splitLocale(usePathname());
@@ -84,27 +86,26 @@ export default function Inside() {
         <div className="flex flex-wrap items-end justify-between gap-[18px]">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.14em] text-pool">
-              {effectiveMode === "tour" ? "360° walkthrough" : "Photo walkthrough"}
+              {effectiveMode === "tour" ? t.walkthrough360 : t.photoWalkthrough}
             </p>
             <h2 className="mt-2.5 text-[clamp(30px,4vw,44px)] font-bold leading-[1.1] tracking-[-0.025em]">
-              {effectiveMode === "tour" ? `See the ${unit.name} before you fly.` : `Inside the ${unit.name}`}
+              {effectiveMode === "tour" ? t.seeBeforeYouFly(unit.name) : t.insideThe(unit.name)}
             </h2>
             <p className="mt-3 max-w-[40em] text-[17px] text-white/[0.78]">
-              Every room shot as it is.{" "}
-              {hasTour ? "Drag the view to look around, or switch to photos." : "Use the arrows to move through the photos."}
+              {t.everyRoomShot} {hasTour ? t.dragOrSwitch : t.useArrows}
             </p>
           </div>
           {hasTour && (
-            <div className="inline-flex gap-[3px] rounded-xl border border-white/[0.18] bg-white/10 p-1" role="group" aria-label="Show">
-              {seg("tour", "360° tour")}
-              {seg("gallery", `Photos · ${photos.length}`)}
+            <div className="inline-flex gap-[3px] rounded-xl border border-white/[0.18] bg-white/10 p-1" role="group" aria-label={t.showLabel}>
+              {seg("tour", t.tour360)}
+              {seg("gallery", t.photosCount(photos.length))}
             </div>
           )}
         </div>
 
         {/* Apartment tabs — switch the band's active unit. The active fill is one
             shared element that slides between tabs; static with reduced motion. */}
-        <div className="mt-7 flex flex-wrap gap-2.5" role="group" aria-label="Choose apartment">
+        <div className="mt-7 flex flex-wrap gap-2.5" role="group" aria-label={t.chooseApartment}>
           {content.units.map((u) => {
             const on = u.slug === unit.slug;
             return (
@@ -140,12 +141,7 @@ export default function Inside() {
           {/* Media: 360 tour or gallery */}
           <div className="min-w-0">
             {effectiveMode === "tour" ? (
-              <>
-                <Tour key={unit.slug} nodes={unit.tour} tone="dark" />
-                <p className="mt-3 font-mono text-xs leading-[1.5] text-white/60">
-                  360° capture: Apartment 101 — shown for every unit until the others are photographed.
-                </p>
-              </>
+              <Tour key={unit.slug} nodes={unit.tour} tone="dark" />
             ) : (
               <>
                 <div
@@ -170,13 +166,13 @@ export default function Inside() {
                     </motion.div>
                   </AnimatePresence>
                   <span className="pointer-events-none absolute left-3.5 top-3.5 z-10 rounded-full border border-white/[0.22] bg-ink/65 px-3 py-2 text-[13px] font-semibold backdrop-blur">
-                    Photo {index + 1} of {photos.length}
+                    {t.photoOf(index + 1, photos.length)}
                   </span>
                   <div className="absolute bottom-3.5 right-3.5 z-10 flex gap-2">
-                    <button type="button" onClick={() => go(-1)} aria-label="Previous photo" className={PHOTO_NAV}>
+                    <button type="button" onClick={() => go(-1)} aria-label={t.previousPhoto} className={PHOTO_NAV}>
                       <ChevronIcon dir="left" className="h-5 w-5" />
                     </button>
-                    <button type="button" onClick={() => go(1)} aria-label="Next photo" className={PHOTO_NAV}>
+                    <button type="button" onClick={() => go(1)} aria-label={t.nextPhoto} className={PHOTO_NAV}>
                       <ChevronIcon dir="right" className="h-5 w-5" />
                     </button>
                   </div>
@@ -202,7 +198,7 @@ export default function Inside() {
                 <dl className="mt-4 grid grid-cols-3 gap-2.5 border-t border-white/[0.16] pt-3.5">
                   {unitFacts(unit).map(([k, v]) => (
                     <div key={k}>
-                      <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-white/60">{k}</dt>
+                      <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-white/60">{t[k]}</dt>
                       <dd className="text-[17px] font-bold">{v}</dd>
                     </div>
                   ))}
@@ -226,7 +222,7 @@ export default function Inside() {
                 href={localePath(locale, `/apartments/${unit.slug}`)}
                 className="flex min-h-12 items-center justify-center gap-2 rounded-[11px] bg-white text-base font-extrabold text-ink transition-colors hover:bg-sand"
               >
-                See the {unit.name} <ArrowIcon />
+                {t.seeThe(unit.name)} <ArrowIcon />
               </Link>
               <button
                 type="button"
@@ -237,7 +233,7 @@ export default function Inside() {
                 className="flex min-h-12 items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-white/30 text-[15px] font-bold transition-colors hover:border-white"
               >
                 <CalendarIcon />
-                Check dates
+                {t.checkDates}
               </button>
             </motion.aside>
           </AnimatePresence>

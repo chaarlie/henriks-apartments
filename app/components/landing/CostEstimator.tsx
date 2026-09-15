@@ -1,8 +1,9 @@
 "use client";
 
 import { whatsappHref } from "@/lib/money";
-import { computeEstimate, pretty } from "@/lib/dates";
+import { useDates } from "@/lib/i18n/dates";
 import { useBooking, useContent } from "@/lib/booking";
+import { useUi } from "@/lib/i18n/client";
 
 /**
  * Landing closing band, deep blue and two columns: "What a stay costs" and
@@ -14,15 +15,15 @@ import { useBooking, useContent } from "@/lib/booking";
 export default function CostEstimator() {
   const { currency, start, end, selectedSlug, setSelected } = useBooking();
   const content = useContent();
+  const t = useUi();
+  const { computeEstimate, pretty } = useDates();
   const { location } = content;
   const unit = content.units.find((u) => u.slug === selectedSlug) ?? content.units[0];
   const est = computeEstimate(unit, start, end, currency, content);
 
-  const term =
-    est.mode === "nightly"
-      ? `${est.nights} night${est.nights > 1 ? "s" : ""}`
-      : `${est.months} month${est.months > 1 ? "s" : ""}`;
-  const note = start !== null && end !== null ? `${pretty(start)} to ${pretty(end)}` : undefined;
+  const term = est.mode === "nightly" ? t.nightsCount(est.nights) : t.monthsCount(est.months);
+  const note =
+    start !== null && end !== null ? t.dateRangeNote(pretty(start), pretty(end)) : undefined;
 
   return (
     <div className="mt-16 bg-deep text-page md:mt-[88px]">
@@ -33,13 +34,13 @@ export default function CostEstimator() {
           aria-labelledby="estimate-title"
           className="scroll-mt-28 border-b border-hairblue px-7 py-14 lg:border-b-0 lg:border-r lg:px-12"
         >
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-page/60">What a stay costs</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-page/60">{t.whatAStayCosts}</p>
           <h2 id="estimate-title" className="mt-4 text-[clamp(26px,3.2vw,32px)] font-semibold leading-[1.15] tracking-[-0.02em]">
             {unit.name} · {term}
           </h2>
 
           {/* Unit picker — the stay being priced */}
-          <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Choose apartment to price">
+          <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label={t.chooseApartmentToPrice}>
             {content.units.map((u) => {
               const on = u.slug === unit.slug;
               return (
@@ -70,14 +71,12 @@ export default function CostEstimator() {
               </div>
             ))}
             <div className="mt-2 flex items-baseline justify-between gap-5 border-t-2 border-sand2 pt-[22px]">
-              <span className="text-base font-bold">Estimated total</span>
+              <span className="text-base font-bold">{t.estimatedTotal}</span>
               <span className="font-mono text-[30px] font-medium tracking-[-0.02em] text-sand2">
                 {est.totalDisplay}
               </span>
             </div>
-            <p className="mt-2.5 text-[13px] leading-[1.6] text-page/60">
-              Power is metered and varies with AC use; the estimate is what tenants actually paid last year.
-            </p>
+            <p className="mt-2.5 text-[13px] leading-[1.6] text-page/60">{t.powerNote}</p>
           </div>
         </section>
 
@@ -89,7 +88,7 @@ export default function CostEstimator() {
           </h2>
           <div className="mt-6 h-[210px] overflow-hidden rounded-xl border border-hairblue">
             <iframe
-              title="Map of El Batey, Sosúa"
+              title={t.mapTitle}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               className="h-full w-full"
@@ -114,15 +113,15 @@ export default function CostEstimator() {
               rel="noopener noreferrer"
               className="flex-1 rounded-[9px] bg-olive px-4 py-4 text-center text-sm font-bold text-white transition-opacity hover:opacity-90"
             >
-              Check dates on WhatsApp
+              {t.checkDatesOnWhatsapp}
             </a>
             <a
-              href={whatsappHref(content, { unit, note: "I'd like to ask about 6-month terms" })}
+              href={whatsappHref(content, { unit, note: t.sixMonthMessage })}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 rounded-[9px] border border-hairblue px-4 py-4 text-center text-sm font-semibold text-page transition-colors hover:border-page"
             >
-              Ask about 6-month terms
+              {t.askAboutSixMonths}
             </a>
           </div>
         </section>

@@ -1,8 +1,10 @@
 "use client";
 
-import { dayLabel, nights, plural } from "@/lib/dates";
+import { nights } from "@/lib/dates";
+import { useDates } from "@/lib/i18n/dates";
 import { availableForDates, scopeUnits } from "@/lib/availability";
 import { useBooking, useContent } from "@/lib/booking";
+import { useUi } from "@/lib/i18n/client";
 import { CalendarIcon, ChevronIcon, InfoIcon } from "@/app/components/icons";
 
 /**
@@ -12,14 +14,16 @@ import { CalendarIcon, ChevronIcon, InfoIcon } from "@/app/components/icons";
 export default function StayBar() {
   const { start, end, scope, setScope, notice, openPicker } = useBooking();
   const content = useContent();
+  const t = useUi();
+  const { dayLabel } = useDates();
 
   const free = scopeUnits(content, scope).filter((u) => availableForDates(content, u, start, end)).length;
   const dates =
     start === null
       ? null
       : end === null
-        ? `${dayLabel(start)} → add leaving day`
-        : `${dayLabel(start)} → ${dayLabel(end)} · ${plural(nights(start, end), "night")}`;
+        ? `${dayLabel(start)} → ${t.addLeavingDay}`
+        : `${dayLabel(start)} → ${dayLabel(end)} · ${t.nightsCount(nights(start, end))}`;
 
   const label = "font-mono text-xs uppercase tracking-[0.1em] text-muted";
 
@@ -31,16 +35,16 @@ export default function StayBar() {
           onClick={openPicker}
           className="flex flex-col justify-center gap-[3px] border-b border-hair px-[22px] py-3.5 text-left transition-colors hover:bg-tint md:border-b-0 md:border-r"
         >
-          <span className={label}>Dates</span>
+          <span className={label}>{t.dates}</span>
           <span className={`flex items-center gap-[9px] text-[17px] ${dates ? "font-bold text-ink" : "font-semibold text-copy"}`}>
             <CalendarIcon className="h-[18px] w-[18px] text-deep" />
-            {dates ?? "Add dates"}
+            {dates ?? t.addDates}
           </span>
         </button>
 
         <div className="flex flex-col justify-center gap-[3px] border-b border-hair px-[22px] py-3.5 md:border-b-0 md:border-r">
           <label htmlFor="stayUnit" className={label}>
-            Apartment
+            {t.apartment}
           </label>
           <div className="relative">
             <select
@@ -49,7 +53,7 @@ export default function StayBar() {
               onChange={(e) => setScope(e.target.value)}
               className="w-full cursor-pointer appearance-none border-0 bg-transparent pr-7 text-[17px] font-bold text-ink"
             >
-              <option value="any">Any apartment</option>
+              <option value="any">{t.anyApartment}</option>
               {content.units.map((u) => (
                 <option key={u.slug} value={u.slug}>
                   {u.name}
@@ -64,7 +68,7 @@ export default function StayBar() {
           href="#units"
           className="m-3 flex min-h-[58px] items-center justify-center whitespace-nowrap rounded-xl bg-olive px-7 text-base font-extrabold text-white transition-opacity hover:opacity-90 md:m-2.5"
         >
-          {free ? `Show ${plural(free, "apartment")}` : "No free apartments"}
+          {free ? t.showApartments(free) : t.noFreeApartments}
         </a>
       </div>
 
@@ -74,9 +78,7 @@ export default function StayBar() {
           {notice}
         </p>
       )}
-      <p className="mx-1 mt-3 text-sm text-copy">
-        One set of dates for the whole page — the apartments, prices and the hold form all follow it.
-      </p>
+      <p className="mx-1 mt-3 text-sm text-copy">{t.oneSetOfDates}</p>
     </div>
   );
 }

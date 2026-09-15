@@ -27,8 +27,10 @@ export default function Tour({
   const total = nodes.length;
   const dark = tone === "dark";
 
-  // When WebGL is unavailable the interactive viewer can't start; the rail then
-  // drives a flat equirectangular preview instead of an endless loader.
+  // When the interactive viewer can't start — no WebGL, or panorama data the
+  // plugin rejects — the rail drives a flat equirectangular preview instead of
+  // an endless loader. The badge stays vague about the cause on purpose: it was
+  // blaming WebGL for failures that had nothing to do with it.
   const goTo = useCallback((id: string) => {
     setCurrentId(id);
     viewerRef.current?.goTo(id);
@@ -52,7 +54,7 @@ export default function Tour({
 
         {failed && (
           <div className="pointer-events-none absolute right-4 top-3.5 z-10 rounded-full bg-ink/60 px-3 py-1.75 font-mono text-[10px] uppercase tracking-[0.14em] text-white">
-            Flat view · 360° needs WebGL
+            Flat view · 360° unavailable
           </div>
         )}
 

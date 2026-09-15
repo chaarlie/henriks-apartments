@@ -23,6 +23,22 @@ const nextConfig: NextConfig = {
       { source: "/apartments/:slug", destination: `/${DEFAULT_LOCALE}/apartments/:slug` },
     ];
   },
+  /*
+    Headroom for /admin photo uploads.
+
+    proxy.ts matches /admin/:path*, so Next clones and buffers those request
+    bodies to make them readable twice. Past this ceiling it does not refuse the
+    request — it hands the route the first N bytes, and the upload route's
+    multipart parse then fails on a body cut in half. The default is 10MB, which
+    ordinary phone photos clear.
+
+    Photos are shrunk client-side well below this (see SHRINK_ABOVE_BYTES in
+    app/admin/AdminApp.tsx); this covers the ones the browser cannot decode to
+    shrink, like HEIC straight off an iPhone.
+  */
+  experimental: {
+    proxyClientMaxBodySize: "25mb",
+  },
   images: {
     // Sanity's CDN does the resizing, from the original, once — see
     // lib/sanity-image-loader.ts. Other hosts pass through untouched.

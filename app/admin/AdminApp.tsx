@@ -90,16 +90,41 @@ async function uploadImage(file: File): Promise<MediaImage> {
 }
 
 /**
- * Full quality first. Only a photo the host refuses outright gets resized, and
- * then only as far as it must — so originals survive wherever they're allowed.
+ * Shrink before sending above this, rather than after a refusal.
+ *
+ * A proxied request body — /admin/:path* all is — gets buffered and then
+ * TRUNCATED at next.config.ts's proxyClientMaxBodySize, so a photo near that
+ * ceiling arrives unparseable instead of being refused cleanly. Sending
+ * something smaller beats depending on which error a given host produces at its
+ * own limit, which differs between `next dev` and a serverless deploy.
+ */
+const SHRINK_ABOVE_BYTES = 9_000_000;
+
+/**
+ * Full quality first, for everything small enough that the original is likely
+ * to survive the trip. Anything bigger is shrunk up front, and a photo the host
+ * still refuses is shrunk again — so originals survive wherever they're allowed.
  */
 async function uploadOne(file: File): Promise<{ image: MediaImage; resized: boolean }> {
+  let candidate = file;
+  let resized = false;
+
+  // Anything the browser can't decode (HEIC, typically) comes back unchanged;
+  // it goes as-is and the server answers for it.
+  if (file.size > SHRINK_ABOVE_BYTES) {
+    const smaller = await shrinkImage(file);
+    if (smaller !== file) {
+      candidate = smaller;
+      resized = true;
+    }
+  }
+
   try {
-    return { image: await uploadImage(file), resized: false };
+    return { image: await uploadImage(candidate), resized };
   } catch (e) {
     if (!(e instanceof TooLargeError)) throw e;
-    const smaller = await shrinkImage(file);
-    if (smaller === file) throw new Error("Too large to upload, and the browser couldn’t resize it.");
+    const smaller = await shrinkImage(candidate);
+    if (smaller === candidate) throw new Error("Too large to upload, and the browser couldn’t resize it.");
     return { image: await uploadImage(smaller), resized: true };
   }
 }
@@ -1683,6 +1708,14 @@ function TourCard({
   const upd = (i: number, next: TourStopRow) =>
     onChange(tour.map((s, j) => (j === i ? next : s)));
 
+  /*
+    Hotspot targets are chosen, not typed. A link to a Stop ID that doesn't
+    exist — a typo, a leading space, a stop since renamed — makes
+    photo-sphere-viewer throw and drops the entire tour to a flat image, which
+    is a lot to pay for one character.
+  */
+  const stopIds = tour.map((s) => s.stopId).filter(Boolean);
+
   return (
     <div className="card">
       <h3>360° tour</h3>
@@ -1761,7 +1794,24 @@ function TourCard({
             {stop.links.map((l, li) => (
               <div className="grid2" key={li} style={{ alignItems: "end" }}>
                 <Field label="Links to Stop ID">
-                  <input className="ctrl" value={l.to} onChange={(e) => upd(i, { ...stop, links: stop.links.map((x, k) => (k === li ? { ...x, to: e.target.value } : x)) })} />
+                  <select
+                    className="ctrl"
+                    value={l.to}
+                    onChange={(e) => upd(i, { ...stop, links: stop.links.map((x, k) => (k === li ? { ...x, to: e.target.value } : x)) })}
+                  >
+                    <option value="">— pick a stop —</option>
+                    {stopIds
+                      .filter((id) => id !== stop.stopId)
+                      .map((id) => (
+                        <option key={id} value={id}>{id}</option>
+                      ))}
+                    {/* Whatever is already saved stays visible even when it
+                        matches no stop, so a broken link can be seen and fixed
+                        rather than silently reset to blank. */}
+                    {l.to && !stopIds.includes(l.to) && (
+                      <option value={l.to}>{l.to} — no such stop</option>
+                    )}
+                  </select>
                 </Field>
                 <Field label="Yaw" opt='(e.g. "30deg")'>
                   <div style={{ display: "flex", gap: 8 }}>

@@ -2842,6 +2842,13 @@ function HeroView({
         sub: tr?.sub ?? "",
         backgroundAlt: tr?.backgroundAlt ?? "",
         stats: hero.stats.map((_, i) => tr?.stats[i] ?? { value: "", label: "" }),
+        /*
+          Carried so both branches keep the same shape and `set` stays typed.
+          It is never rendered while translating (the field sits behind
+          !translating) and never sent — saveHeroTranslation does not take it,
+          because the video is the same in every language.
+        */
+        videoId: hero.videoId,
       }
     : {
         eyebrow: hero.eyebrow,
@@ -2849,6 +2856,7 @@ function HeroView({
         sub: hero.sub,
         backgroundAlt: hero.background?.alt ?? "",
         stats: hero.stats,
+        videoId: hero.videoId,
       };
 
   const [d, setD] = useState(initial);
@@ -2877,7 +2885,7 @@ function HeroView({
           eyebrow: d.eyebrow,
           headline: d.headline,
           sub: d.sub,
-          videoId: hero.videoId,
+          videoId: d.videoId,
           backgroundAlt: d.backgroundAlt,
           stats: d.stats,
         });
@@ -2908,6 +2916,7 @@ function HeroView({
             headline: d.headline,
             sub: d.sub,
             stats: d.stats,
+            videoId: d.videoId,
             background: hero.background ? { ...hero.background, alt: d.backgroundAlt } : null,
           },
     );
@@ -2996,9 +3005,18 @@ function HeroView({
             {translating && <Ref value={hero.background?.alt ?? ""} />}
           </Field>
           {!translating && (
-            <Field label="Walkthrough video" opt="(YouTube id)">
-              <input className="ctrl" aria-label="YouTube video id" value={hero.videoId} disabled />
-              <p className="field-note">The same video in every language. Change it in the Studio.</p>
+            <Field label="Walkthrough video" opt="(YouTube link or id)">
+              <input
+                className="ctrl"
+                aria-label="YouTube video id"
+                placeholder="3EA0J6JyIcA — or paste the full YouTube link"
+                value={d.videoId}
+                onChange={(e) => set("videoId", e.target.value)}
+              />
+              <p className="field-note">
+                The same video in every language. Paste the whole watch link if that is
+                easier — it is reduced to the id on save.
+              </p>
             </Field>
           )}
         </div>

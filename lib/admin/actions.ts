@@ -43,6 +43,29 @@ function degrees(input: string | undefined): string | undefined {
   return `${m[1]}${unit}`;
 }
 
+/** A YouTube id: exactly 11 characters of the URL-safe alphabet. */
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+/**
+ * Reduces whatever lands in the walkthrough field to a bare YouTube id.
+ *
+ * VideoModal builds `embed/${videoId}`, so a pasted watch URL becomes
+ * `embed/https://www.youtube.com/watch?v=...` — a dead player with nothing in
+ * the console, the same silent shape as a mistyped hotspot id. Nobody has the
+ * id to hand; they have the link. So accept the forms people actually paste and
+ * return undefined for anything else, leaving the caller to reject it rather
+ * than store an embed that cannot load.
+ */
+function youtubeId(input: string | undefined): string | undefined {
+  const v = (input ?? "").trim();
+  if (!v) return undefined;
+  if (YOUTUBE_ID.test(v)) return v;
+  const m = v.match(
+    /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtube-nocookie\.com\/embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+  );
+  return m ? m[1] : undefined;
+}
+
 function textToBlocks(text: string) {
   return text
     .split(/\n{2,}/)
@@ -500,6 +523,17 @@ export async function saveHero(input: AdminHeroInput): Promise<ActionResult> {
     await requireAdmin();
     if (!input.headline.trim()) return { ok: false, error: "The homepage needs a headline." };
 
+    // Say so now, rather than leaving a player that loads nothing on the
+    // homepage. Clearing the field is still allowed — that just drops the video.
+    const videoId = youtubeId(input.videoId);
+    if (input.videoId.trim() && !videoId) {
+      return {
+        ok: false,
+        error:
+          "That does not look like a YouTube video — paste the link from the address bar, or the 11-character id.",
+      };
+    }
+
     const client = getWriteClient();
     const current = await client.getDocument(HERO_ID);
     const hasBackground = Boolean((current as RawDoc | undefined)?.background);
@@ -510,7 +544,7 @@ export async function saveHero(input: AdminHeroInput): Promise<ActionResult> {
         eyebrow: input.eyebrow.trim() || undefined,
         headline: input.headline.trim(),
         sub: input.sub.trim() || undefined,
-        videoId: input.videoId.trim() || undefined,
+        videoId,
         stats: input.stats
           .filter((s) => s.value.trim() || s.label.trim())
           .map((s) => ({ _key: key(), value: s.value.trim(), label: s.label.trim() })),

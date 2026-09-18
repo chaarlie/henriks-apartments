@@ -78,6 +78,46 @@ export const siteSettings = defineType({
       ],
     }),
 
+    /*
+      Landing "Beyond your apartment" band — the shared spaces.
+
+      Property-wide, so it lives here rather than on a unit: the pool is the
+      same pool whichever apartment you book. `kind` drives the filter chips,
+      and is a fixed list because a free-text value would silently fall out of
+      every chip and leave the photo unreachable.
+    */
+    defineField({
+      name: 'commonAreas',
+      title: 'Common area photos',
+      type: 'array',
+      group: 'amenities',
+      description: 'The pool, lounge, gym and grounds. Shown high on the landing page.',
+      of: [
+        defineArrayMember({
+          type: 'image',
+          options: {hotspot: true},
+          fields: [
+            defineField({name: 'label', title: 'Area', type: 'string', description: 'Short name over the photo, e.g. "Sun deck".'}),
+            defineField({name: 'title', title: 'Caption', type: 'string', description: 'The line under it, e.g. "A spot in the sun".'}),
+            defineField({
+              name: 'kind',
+              title: 'Kind',
+              type: 'string',
+              initialValue: 'pool',
+              options: {list: [
+                {title: 'Pool', value: 'pool'},
+                {title: 'Lounge', value: 'lounge'},
+                {title: 'Gym', value: 'gym'},
+                {title: 'Grounds', value: 'grounds'},
+              ]},
+            }),
+            defineField({name: 'alt', title: 'Alt text', type: 'string', description: 'What the photo shows, for screen readers and Google.'}),
+          ],
+          preview: {select: {title: 'title', subtitle: 'label', media: 'asset'}},
+        }),
+      ],
+    }),
+
     defineField({
       name: 'seo',
       title: 'SEO defaults',

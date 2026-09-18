@@ -22,6 +22,18 @@ export interface ImageRef {
   alt: string;
   width: number;
   height: number;
+  /**
+   * Sanity's LQIP — a ~500-byte base64 JPEG of the photo, inlined in the HTML.
+   *
+   * Full-screen views ask the CDN for a far larger rendition than the thumbnail
+   * that was on screen (w=2000 against w=128 on a unit page), so opening one
+   * meant most of a second staring at an empty box while a fresh image
+   * downloaded. This paints underneath it immediately.
+   *
+   * Optional because it only arrives where the query asks for it, and absent on
+   * anything not served from the Sanity CDN.
+   */
+  blurDataURL?: string;
 }
 
 /** A flat photo shipped from /public/apt1 (resized from the client originals).
@@ -177,6 +189,21 @@ export interface PropertyAmenity {
   desc: string;
 }
 
+/** The kinds a common-area photo can be filed under. Mirrors the `kind` list
+ *  in sanity/schemaTypes/siteSettings.ts — a value outside this set would have
+ *  no chip to appear under. */
+export const COMMON_AREA_KINDS = ["pool", "lounge", "gym", "grounds"] as const;
+export type CommonAreaKind = (typeof COMMON_AREA_KINDS)[number];
+
+/** One shared space — a photo plus the two lines shown over it. */
+export interface CommonArea extends ImageRef {
+  /** Short area name, e.g. "Sun deck". */
+  label: string;
+  /** The line under it, e.g. "A spot in the sun". */
+  title: string;
+  kind: CommonAreaKind;
+}
+
 export interface SiteContent {
   locale?: import("@/lib/locales").Locale;
   property: {
@@ -188,6 +215,8 @@ export interface SiteContent {
     whatsappMessage: string;
     email: string;
   };
+  /** Shared spaces — pool, lounge, gym, grounds. Empty hides the band. */
+  commonAreas: CommonArea[];
   hero: {
     eyebrow: string;
     headline: string;
@@ -426,6 +455,10 @@ export const content: SiteContent = {
       "Hi Henrik — I'm interested in one of your Sosúa apartments. Is it available for my dates?",
     email: "stay@henriksosua.com", // PLACEHOLDER
   },
+
+  // Shared spaces come from Sanity only — there is no placeholder photography
+  // for them, and an invented pool is worse than an absent one.
+  commonAreas: [],
 
   hero: {
     eyebrow: "El Batey, Sosúa · furnished rentals",

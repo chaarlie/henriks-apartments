@@ -76,7 +76,16 @@ export const TYPES: Record<string, TranslatableSpec> = {
   },
   siteSettings: {
     scalars: ["hostNote", "stayNote"],
-    rows: [["propertyAmenities", ["title", "desc"]]],
+    /*
+      commonAreas is an image array, but its translatable surface is the same
+      shape as any other row — a caption, an area name and the alt text, each
+      carrying a _key. The photo itself is the same in every language, so only
+      the words are listed here.
+    */
+    rows: [
+      ["propertyAmenities", ["title", "desc"]],
+      ["commonAreas", ["label", "title", "alt"]],
+    ],
     objects: [["seo", ["title", "description"]]],
   },
   stayDefaults: {

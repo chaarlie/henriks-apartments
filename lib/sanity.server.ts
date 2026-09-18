@@ -6,10 +6,12 @@ import { urlFor } from "@/sanity/lib/image";
 import { panoramaUrl } from "@/lib/panorama";
 import { landingQuery, unitQuery, availabilityQuery } from "@/sanity/lib/queries";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/locales";
+import { COMMON_AREA_KINDS } from "@/lib/content";
 import type {
   SiteContent,
   Unit,
   ImageRef,
+  CommonAreaKind,
   TourNode,
   SphereCorrection,
   Amenity,
@@ -85,6 +87,12 @@ function img(source: SanityImage | undefined, fallbackAlt = ""): ImageRef {
     alt: source.alt ?? fallbackAlt,
     width: size.width,
     height: size.height,
+    /*
+      The queries project asset->metadata.lqip onto the image object itself, so
+      every photo picks up its placeholder here rather than each caller
+      remembering to. Undefined wherever a query did not ask for it.
+    */
+    blurDataURL: (source as { lqip?: string }).lqip,
   };
 }
 
@@ -256,11 +264,21 @@ interface RawSettings {
   powerBaseUsd: number;
   discounts?: { months: number; pct: number }[];
   propertyAmenities?: { icon: string; title: string; desc: string }[];
+  commonAreas?: (SanityImageObject & {
+    label?: string;
+    title?: string;
+    kind?: string;
+    alt?: string;
+    /** asset->metadata.lqip, pulled in by the landing query. */
+    lqip?: string;
+  })[];
   seo?: { title?: string; description?: string };
   tr?: {
     hostNote?: string;
     stayNote?: string;
     propertyAmenities?: { title?: string; desc?: string }[];
+    // Words only — the photo is the same in every language.
+    commonAreas?: { label?: string; title?: string; alt?: string }[];
     seo?: { title?: string; description?: string };
   } | null;
 }
@@ -409,6 +427,22 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
     fxRateAsOf: s.fxRateUpdatedAt?.slice(0, 10) ?? "",
     units: landing.units.map((u) => cardUnit(translated(u, locale))),
     amenities: mergeRows(s.propertyAmenities, setTr?.propertyAmenities),
+    /*
+      `kind` is validated rather than trusted. It drives the filter chips, so a
+      value outside the list would leave that photo reachable under
+      "Everything" and nowhere else — visible enough to ship, quiet enough to
+      miss. Rows whose asset went missing drop out on the url check.
+    */
+    commonAreas: mergeRows(s.commonAreas, setTr?.commonAreas)
+      .map((a) => ({
+        ...img(a, a.alt ?? ""),
+        label: a.label ?? "",
+        title: a.title ?? "",
+        kind: ((COMMON_AREA_KINDS as readonly string[]).includes(a.kind ?? "")
+          ? a.kind
+          : "pool") as CommonAreaKind,
+      }))
+      .filter((a) => a.url !== ""),
     power: { baseUsd: s.powerBaseUsd },
     discounts: s.discounts ?? [],
     // Per-unit availability: a booking with a unit blocks that unit; one without

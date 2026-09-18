@@ -24,7 +24,12 @@ export const unitQuery = groq`
   *[_type == "unit" && slug.current == $slug && hidden != true][0]{
     name, code, tagline, priceUsd, priceNightlyUsd, deposits, availableFrom, spec, chips, keywords,
     "slug": slug.current,
-    coverImage, gallery, tour, about, space,
+    tour, about, space,
+
+    // The LQIP rides along on the image object, so img() in sanity.server.ts
+    // turns it into a blur placeholder without every caller asking.
+    "coverImage": coverImage{..., "lqip": asset->metadata.lqip},
+    "gallery":    gallery[]{..., "lqip": asset->metadata.lqip},
 
     // The whole translation row for this language, or null. The field-by-field
     // fallback to English happens in lib/sanity.server.ts, where per-image alt
@@ -65,11 +70,13 @@ export const unitQuery = groq`
 export const landingQuery = groq`{
   "hero":     *[_type == "hero"][0]{..., "tr": i18n[locale == $locale][0]},
   "location": *[_type == "location"][0]{heading, addressLine, distances, "tr": i18n[locale == $locale][0]},
-  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, languages, ownerSince, replyTime, hostNote, checkIn, checkOut, stayNote, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities, seo, "tr": i18n[locale == $locale][0]},
+  "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, languages, ownerSince, replyTime, hostNote, checkIn, checkOut, stayNote, fxRate, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities, "commonAreas": commonAreas[]{..., "lqip": asset->metadata.lqip}, seo, "tr": i18n[locale == $locale][0]},
   "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
     "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, deposits, availableFrom, spec, chips, keywords,
     forSale, salePriceUsd, saleNote,
-    coverImage, gallery, space, tour,
+    space, tour,
+    "coverImage": coverImage{..., "lqip": asset->metadata.lqip},
+    "gallery":    gallery[]{..., "lqip": asset->metadata.lqip},
     "tr": i18n[locale == $locale][0]
   }
 }`

@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
-import { type Unit } from "@/lib/content";
-import { sized } from "@/lib/image-url";
+import { type ImageRef, type Unit } from "@/lib/content";
 import Tour from "@/app/components/tour/Tour";
 import { useUi } from "@/lib/i18n/client";
+import { Lightbox, useLightboxControls, useLightboxPhoto } from "@/app/components/media/Lightbox";
 
 type Mode = "gallery" | "tour";
 
@@ -13,30 +13,30 @@ type Mode = "gallery" | "tour";
  * Reusable unit media panel: a toggle that switches the panel between the 360°
  * tour and the photo gallery. The tour is the page's one unique asset, so it
  * opens first whenever the unit has one.
+ *
+ * The full-screen viewer is Lightbox, shared with the landing page's common
+ * areas. It replaced a hand-rolled one here that re-implemented Escape, had no
+ * focus trap, and fetched a w=2000 rendition nothing had ever loaded — ~825ms
+ * of empty screen per click.
  */
 export default function MediaViewer({ unit }: { unit: Unit }) {
-  const t = useUi();
   const photos = unit.gallery.length ? unit.gallery : [unit.image];
+  return (
+    // Eager: someone on an apartment page came to look at the photos, so the
+    // strip should be there when they reach for it rather than loading under
+    // their thumb. The landing band mounts the same viewer lazily.
+    <Lightbox.Provider photos={photos} loading="eager">
+      <Panel unit={unit} photos={photos} />
+    </Lightbox.Provider>
+  );
+}
+
+function Panel({ unit, photos }: { unit: Unit; photos: ImageRef[] }) {
+  const t = useUi();
+  const { open, warm } = useLightboxControls();
   const hasTour = unit.tour.length > 0;
   const [mode, setMode] = useState<Mode>(hasTour ? "tour" : "gallery");
   const [active, setActive] = useState(0);
-  const [lightbox, setLightbox] = useState<number | null>(null);
-
-  const move = useCallback(
-    (delta: number) => setLightbox((i) => (i === null ? null : (i + delta + photos.length) % photos.length)),
-    [photos.length],
-  );
-
-  useEffect(() => {
-    if (lightbox === null) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLightbox(null);
-      if (e.key === "ArrowRight") move(1);
-      if (e.key === "ArrowLeft") move(-1);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [lightbox, move]);
 
   const seg = (m: Mode, label: string) => (
     <button
@@ -71,7 +71,9 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
         <div>
           <button
             type="button"
-            onClick={() => setLightbox(active)}
+            onClick={() => open(active)}
+            onPointerEnter={() => warm(photos[active].url)}
+            onFocus={() => warm(photos[active].url)}
             aria-label={t.openPhotoFullScreen}
             className="relative block aspect-video w-full overflow-hidden rounded-2xl border-[1.5px] border-line-card bg-ink"
           >
@@ -82,6 +84,8 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
               fill
               priority
               sizes="(min-width:1200px) 1140px, 100vw"
+              placeholder={photos[active].blurDataURL ? "blur" : "empty"}
+              blurDataURL={photos[active].blurDataURL}
               className="object-cover"
             />
             {/* Always visible — hover-only hints never show on touch screens */}
@@ -96,58 +100,51 @@ export default function MediaViewer({ unit }: { unit: Unit }) {
                 key={p.url}
                 type="button"
                 onClick={() => setActive(i)}
+                onPointerEnter={() => warm(p.url)}
                 aria-current={i === active ? "true" : undefined}
                 aria-label={p.alt}
                 className={`relative aspect-3/2 h-[76px] shrink-0 overflow-hidden rounded-lg border-2 transition-colors ${
                   i === active ? "border-deep" : "border-transparent opacity-80 hover:opacity-100"
                 }`}
               >
-                <Image src={p.url} alt="" fill sizes="120px" className="object-cover" />
+                <Image
+                  src={p.url}
+                  alt=""
+                  fill
+                  sizes="120px"
+                  loading="eager"
+                  placeholder={p.blurDataURL ? "blur" : "empty"}
+                  blurDataURL={p.blurDataURL}
+                  className="object-cover"
+                />
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Lightbox */}
-      {lightbox !== null && (
-        <div
-          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-ink/[0.93] p-6 backdrop-blur-sm"
-          onClick={() => setLightbox(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <button type="button" onClick={() => setLightbox(null)} aria-label={t.close}
-            className="absolute right-5 top-5 flex h-[46px] w-[46px] items-center justify-center rounded-full border border-white/30 bg-white/[0.14] text-xl text-white hover:bg-white/[0.28]">✕</button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); move(-1); }} aria-label={t.previous}
-            className="absolute left-5 top-1/2 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/[0.14] text-xl text-white hover:bg-white/[0.28]">‹</button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); move(1); }} aria-label={t.next}
-            className="absolute right-5 top-1/2 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/[0.14] text-xl text-white hover:bg-white/[0.28]">›</button>
-          {/*
-            A plain <img>, deliberately: this one is centred and keeps its own
-            aspect ratio, sized by the max-h/max-w below, which next/image's
-            `fill` does not do well.
-
-            But it MUST carry its own width. `photos[].url` is the untransformed
-            asset URL — img() in sanity.server.ts returns it that way so
-            next/image can request an exact size — and nothing here adds one. It
-            was rendering 6244px, 9.9MB originals into a box capped at 1100px,
-            one per arrow press. 2000 covers that box on a 2× screen, and
-            `fit=max` never enlarges a photo that was smaller to begin with.
-          */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={sized(photos[lightbox].url, { width: 2000 })}
-            alt={photos[lightbox].alt}
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[76vh] max-w-[min(1100px,92vw)] rounded-lg shadow-2xl"
-          />
-          <div className="mt-4 text-base text-white">{photos[lightbox].alt}</div>
-          <div className="mt-1 font-mono text-xs tracking-[0.1em] text-white/60">
-            {lightbox + 1} / {photos.length}
-          </div>
-        </div>
-      )}
+      {/*
+        A unit gallery has no area names — the alt text is the whole caption,
+        so this composes the same parts the common areas do, minus the label.
+      */}
+      <Lightbox.Dialog>
+        <Lightbox.Stage>
+          <Lightbox.Prev />
+          <Lightbox.Next />
+          <Lightbox.Close />
+        </Lightbox.Stage>
+        <Lightbox.Caption>
+          <PhotoAlt />
+          <Lightbox.Counter />
+        </Lightbox.Caption>
+        <Lightbox.Thumbs />
+      </Lightbox.Dialog>
     </section>
   );
+}
+
+function PhotoAlt() {
+  const photo = useLightboxPhoto();
+  if (!photo?.alt) return <span />;
+  return <p className="min-w-0 max-w-[62ch] text-[15px] text-white/[0.78]">{photo.alt}</p>;
 }

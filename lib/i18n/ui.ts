@@ -353,6 +353,20 @@ const en = {
   next: "Next",
 
   // ── Footer ───────────────────────────────────────────────────────────────
+  // ── Common areas band ────────────────────────────────────────────────────
+  commonsEyebrow: "Beyond your apartment",
+  commonsTitle: "More than your four walls.",
+  commonsLede:
+    "A swim before breakfast. A shaded table after the beach. A proper workout, close to home — all of it downstairs, none of it extra.",
+  commonsFilterLabel: "Filter the photos by area",
+  kindAll: "Everything",
+  /* One function rather than four keys: the component is handed a `kind`
+     string from Sanity and should not carry a lookup table of its own. */
+  kindLabel: (kind: string) =>
+    ({ pool: "Pool", lounge: "Lounge", gym: "Gym", grounds: "Grounds" })[kind] ?? kind,
+  viewAllPhotos: (n: number) => `View all ${n} photos`,
+  openPhotoNamed: (title: string) => `Open photo: ${title}`,
+
   footerNote: "Book any dates · confirm rates on WhatsApp",
 };
 /*
@@ -654,6 +668,17 @@ const es: typeof en = {
   close: "Cerrar",
   previous: "Anterior",
   next: "Siguiente",
+
+  commonsEyebrow: "Más allá de tu apartamento",
+  commonsTitle: "Más que tus cuatro paredes.",
+  commonsLede:
+    "Un baño antes del desayuno. Una mesa con sombra después de la playa. Un entrenamiento de verdad, cerca de casa — todo abajo, nada aparte.",
+  commonsFilterLabel: "Filtrar las fotos por área",
+  kindAll: "Todo",
+  kindLabel: (kind: string) =>
+    ({ pool: "Piscina", lounge: "Sala", gym: "Gimnasio", grounds: "Exteriores" })[kind] ?? kind,
+  viewAllPhotos: (n: number) => `Ver las ${n} fotos`,
+  openPhotoNamed: (title: string) => `Abrir la foto: ${title}`,
 
   footerNote: "Reserva cualquier fecha · confirma las tarifas por WhatsApp",
 };

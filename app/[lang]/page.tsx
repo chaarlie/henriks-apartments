@@ -10,6 +10,7 @@ import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import Hero from "@/app/components/landing/Hero";
 import StayBar from "@/app/components/landing/StayBar";
+import CommonAreas from "@/app/components/landing/CommonAreas";
 import ApartmentCards from "@/app/components/landing/ApartmentCards";
 import ForSale from "@/app/components/landing/ForSale";
 import Inside from "@/app/components/landing/Inside";
@@ -45,6 +46,12 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
       <main>
         <Hero />
         <StayBar />
+        {/*
+          Directly under the stay bar, ahead of the apartments. The shared pool,
+          gym and grounds are the property's draw and they used to sit four
+          sections down, inside the amenities block.
+        */}
+        <CommonAreas />
         <ApartmentCards />
         <ForSale />
         <Inside />

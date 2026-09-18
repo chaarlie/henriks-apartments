@@ -171,6 +171,29 @@ export const siteSettings = defineType({
                 }),
               ],
             }),
+            /*
+              The captions only — no photo, no `kind`. The image is the same
+              image in every language, and `kind` drives the filter chips off
+              the source document, so a translated copy of either would be a
+              second thing to keep in step for no gain. Rows line up with
+              commonAreas by position (see mergeRows in lib/sanity.server.ts).
+            */
+            defineField({
+              name: 'commonAreas',
+              title: 'Common area captions',
+              type: 'array',
+              of: [
+                defineArrayMember({
+                  type: 'object',
+                  fields: [
+                    defineField({name: 'label', title: 'Area', type: 'string'}),
+                    defineField({name: 'title', title: 'Caption', type: 'string'}),
+                    defineField({name: 'alt', title: 'Alt text', type: 'string'}),
+                  ],
+                  preview: {select: {title: 'title', subtitle: 'label'}},
+                }),
+              ],
+            }),
             defineField({
               name: 'seo',
               title: 'SEO defaults',

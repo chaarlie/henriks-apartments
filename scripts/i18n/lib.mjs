@@ -52,9 +52,30 @@ function rebuildBlocks(field, blocks, t) {
 
 function rebuildRows(prefix, rows, fields, t) {
   return (rows ?? []).map((row) => {
-    const next = { ...row };
+    /*
+      `_key` and the listed fields, never a spread of the source row.
+
+      Anything not listed is untranslatable by definition — an icon name, an
+      image asset, a hotspot, a fixed `kind` — and copying it here parks a
+      second copy in the translations array that no translation schema
+      declares. The Studio then shows it as an unknown field, and because the
+      admin writer merges `...prior` (lib/admin/actions.ts), whatever lands
+      here stays for good. Eight Spanish amenity rows carried a stray `icon`
+      that way.
+
+      Same rule as galleryAlts below: translate the words, leave the thing
+      they describe on the source document.
+
+      A listed field with no translation still falls back to the source text,
+      rather than being dropped. /admin prefills its translation form straight
+      from this row and writes back whatever is in the box, so a dropped field
+      would come back as "" on the next save — and mergeRows would let that ""
+      overwrite the English instead of falling back to it.
+    */
+    const next = { _key: row?._key };
     for (const f of fields) {
-      const v = t[`${prefix}.${row?._key}.${f}`];
+      // ?? not ||: "" here is a real translation, not a missing one.
+      const v = t[`${prefix}.${row?._key}.${f}`] ?? row?.[f];
       if (v !== undefined) next[f] = v;
     }
     return next;
@@ -86,10 +107,10 @@ export function rebuildDoc(type, doc, t, locale, { sourceHash, sourceRev, machin
     if (doc[f]?.length) row[f] = rebuildBlocks(f, doc[f], t);
   }
 
+  // Tour translations own labels only; geometry and media stay on the source —
+  // which is now just what rebuildRows does for every row, so no special case.
   for (const [field, keys] of s.rows ?? []) {
     if (doc[field]?.length) row[field] = rebuildRows(field, doc[field], keys, t);
-    // Tour translations own labels only; geometry and media stay on the source.
-    if (field === "tour" && row[field]) row[field] = row[field].map(({ _key, name }) => ({ _key, name }));
   }
 
   for (const [obj, field, keys] of s.nested ?? []) {

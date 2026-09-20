@@ -935,7 +935,8 @@ function ApartmentEditor({
                     <input className="ctrl" value={d.spec.area} disabled={translating} onChange={(e) => setSpec("area", e.target.value)} />
                   </Field>
                   <Field label="Bathrooms">
-                    <input className="ctrl" value={d.spec.bath} disabled={translating} onChange={(e) => setSpec("bath", e.target.value)} />
+                    <input className="ctrl" type="text" inputMode="decimal" placeholder="e.g. 1.5" value={d.spec.bath} disabled={translating} onChange={(e) => setSpec("bath", e.target.value)} />
+                    <p className="hint">Use 1.5 for one full bathroom and one half bathroom.</p>
                   </Field>
                   <Field label="Sleeps">
                     <input className="ctrl" value={d.spec.sleeps} disabled={translating} onChange={(e) => setSpec("sleeps", e.target.value)} />

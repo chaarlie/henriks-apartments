@@ -16,6 +16,7 @@ import StayPickerDialog from "@/app/components/picker/StayPickerDialog";
 import BookingForm from "@/app/components/landing/BookingForm";
 import MediaViewer from "@/app/components/unit/MediaViewer";
 import UnitContent from "@/app/components/unit/UnitContent";
+import BookingListingLink from "@/app/components/BookingListingLink";
 import BookingCard from "@/app/components/unit/BookingCard";
 import UnitActionBar from "@/app/components/unit/UnitActionBar";
 
@@ -78,7 +79,14 @@ export default async function UnitPage({
 
   const t = ui(lang);
   // Facts come from this unit's own data — never a shared hardcoded list.
-  const facts = [...unitFacts(unit).map(([key, value]) => `${t[key]}: ${value}`), ...unitHighlights(unit)];
+  // The bed is appended here rather than inside unitFacts() on purpose: the
+  // three-up spec grids on the cards, the landing carousel and the booking card
+  // are all `grid-cols-3`, so a fourth entry would wrap and strand one cell.
+  const facts = [
+    ...unitFacts(unit).map(([key, value]) => `${t[key]}: ${value}`),
+    ...(unit.spec.beds ? [`${t.beds}: ${unit.spec.beds}`] : []),
+    ...unitHighlights(unit),
+  ];
 
   return (
     <BookingProvider content={content} unitSlug={unit.slug}>
@@ -113,6 +121,14 @@ export default async function UnitPage({
                 </li>
               ))}
             </ul>
+            {unit.bookingUrl && (
+              <BookingListingLink
+                href={unit.bookingUrl}
+                title={t.alsoOnBooking}
+                note={t.verifyOnBooking}
+                className="mt-4"
+              />
+            )}
           </div>
 
           <MediaViewer unit={unit} />

@@ -1,7 +1,7 @@
 import type { SiteContent, Unit } from "@/lib/content";
 import { absoluteUrl } from "@/lib/site";
 import { sized } from "@/lib/image-url";
-import { unitFacts } from "@/lib/unit";
+import { unitFact } from "@/lib/unit";
 
 /**
  * schema.org JSON-LD for the landing page (LodgingBusiness) and each unit page
@@ -67,10 +67,14 @@ export function businessJsonLd(content: SiteContent) {
 
 export function unitJsonLd(content: SiteContent, unit: Unit) {
   const url = absoluteUrl(`/apartments/${unit.slug}`);
-  const [[, area], [, baths], [, sleeps]] = unitFacts(unit);
-  const floor = firstNumber(area);
-  const bathCount = firstNumber(baths);
-  const occupancy = firstNumber(sleeps);
+  /*
+    By key, not by position: unitFacts() drops facts the apartment has no value
+    for, so a unit with no size would have shifted `baths` into the `size` slot
+    and published its bathroom count as floor area.
+  */
+  const floor = firstNumber(unitFact(unit, "size") ?? "");
+  const bathCount = firstNumber(unitFact(unit, "baths") ?? "");
+  const occupancy = firstNumber(unitFact(unit, "sleeps") ?? "");
   const amenities = [...unit.amenities.inside, ...unit.amenities.building].filter((a) => a.included);
   const images = [unit.image, ...unit.gallery]
     .map((i) => i.url)

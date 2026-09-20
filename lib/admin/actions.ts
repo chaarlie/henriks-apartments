@@ -228,6 +228,14 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
           .map((t) => ({ _key: key(), fromMonths: t.fromMonths, amountUsd: t.amountUsd })),
         availableFrom: input.availableFrom || undefined,
         spec: input.spec,
+        /*
+          Set only when there IS a link. `undefined` cannot clear a field:
+          .set() is serialised as JSON, which drops undefined keys entirely, so
+          it reads as "don't touch this" rather than "remove it". Emptying the
+          box is handled by the unset below — and "" is not an option either,
+          since Sanity's url type rejects it.
+        */
+        ...(input.bookingUrl.trim() ? { bookingUrl: input.bookingUrl.trim() } : {}),
         chips: input.chips,
         keywords: input.keywords,
         forSale: input.forSale,
@@ -280,6 +288,9 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
           links: s.links.map((l) => ({ _key: key(), to: l.to, yaw: l.yaw })),
         })),
       })
+      // Emptying the box removes the field. Without this the old link simply
+      // stayed, because the set above can only add or replace, never remove.
+      .unset(input.bookingUrl.trim() ? [] : ["bookingUrl"])
       .commit();
     revalidateSite();
     return { ok: true };
@@ -316,6 +327,19 @@ export async function saveUnitTranslation(
       ? input.terms.map((t) => ({ _key: key(), ...t }))
       : undefined,
     coverAlt: input.coverAlt || undefined,
+    /*
+      Only `beds` — the rest of `spec` is a number and a unit, the same fact in
+      every language, and lives on the apartment itself. Nested back into a
+      `spec` object because that is the shape the translation row stores and
+      lib/sanity.server.ts merges.
+
+      Sent even when empty, unlike the `|| undefined` fields above. Undefined
+      means "I am not the editor for this field" and writeTranslationRow drops
+      it, which made clearing the Spanish silently keep the old translation. An
+      empty string is a real answer — "there is no Spanish for this" — and the
+      public merge reads it as a fall back to the English.
+    */
+    spec: { beds: input.beds.trim() },
     /*
       Alt text only — never a second copy of the image asset, and keyed by the
       photo's own _key so reordering the gallery cannot move Spanish alt text
@@ -536,7 +560,46 @@ export async function saveHero(input: AdminHeroInput): Promise<ActionResult> {
 
     const client = getWriteClient();
     const current = await client.getDocument(HERO_ID);
-    const hasBackground = Boolean((current as RawDoc | undefined)?.background);
+    const currentBackground = (current as RawDoc | undefined)?.background as
+      | { asset?: { _ref?: string } }
+      | undefined;
+    const currentRef = currentBackground?.asset?._ref;
+    const nextRef = input.background?.ref;
+    const alt = input.backgroundAlt.trim() || undefined;
+
+    /*
+      A NEW photo replaces the whole object; the same photo patches the alt on
+      its own.
+
+      The difference matters: `background` carries the hotspot and crop, which
+      are set in Sanity Studio and are properties of that particular image. A
+      blanket `set({background})` on every save would silently discard them, and
+      a deep `background.alt` patch onto a document with no background at all
+      throws.
+    */
+    const replacingPhoto = Boolean(nextRef && nextRef !== currentRef);
+    const backgroundPatch = replacingPhoto
+      ? {
+          background: {
+            _type: "image",
+            asset: { _type: "reference", _ref: nextRef },
+            alt,
+          },
+        }
+      : currentRef && alt
+        ? { "background.alt": alt }
+        : {};
+
+    /*
+      Emptying the description removes it.
+
+      `{"background.alt": undefined}` cannot: .set() is serialised as JSON,
+      which drops undefined keys, so it reads as "leave this alone" and the old
+      description survives a deliberate clear. Same trap as bookingUrl in
+      saveUnit. Skipped while replacing the photo, since that branch writes a
+      whole new object which simply has no alt.
+    */
+    const clearAlt = !replacingPhoto && currentRef && !alt;
 
     await client
       .patch(HERO_ID)
@@ -548,10 +611,9 @@ export async function saveHero(input: AdminHeroInput): Promise<ActionResult> {
         stats: input.stats
           .filter((s) => s.value.trim() || s.label.trim())
           .map((s) => ({ _key: key(), value: s.value.trim(), label: s.label.trim() })),
-        // Only the alt text — the asset itself is managed where it was uploaded,
-        // and a deep patch onto a missing parent would throw.
-        ...(hasBackground ? { "background.alt": input.backgroundAlt.trim() || undefined } : {}),
+        ...backgroundPatch,
       })
+      .unset(clearAlt ? ["background.alt"] : [])
       .commit();
     revalidateSite();
     return { ok: true };

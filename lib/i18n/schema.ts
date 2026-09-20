@@ -18,9 +18,15 @@
   emit real code. Same rule, and the same reason, as lib/locales.ts.
 
   What is deliberately NOT here: unit names, codes, slugs, prices, deposits, dates,
-  spec, panorama assets, icons and image assets. Those are the same fact in every
+  panorama assets, icons and image assets. Those are the same fact in every
   language, and the moment a second copy exists one of them starts being wrong.
   The admin reads this table to decide what to grey out.
+
+  `spec` is the one partial exception, and only `spec.beds`. Area, baths and
+  sleeps are a number and a unit — "90 m²" reads the same in every language, and
+  translating them is how a 2 becomes a 3. `beds` is prose: Booking states it as
+  "1 king bed", which rendered on the Spanish page as "Cama: 1 king bed". So that
+  single subfield translates and the rest of the object stays locked.
 */
 
 /**
@@ -60,6 +66,9 @@ export const TYPES: Record<string, TranslatableSpec> = {
       ["amenitiesOverride", "inside", ["label"]],
       ["amenitiesOverride", "building", ["label"]],
     ],
+    // Only `beds` — see the note at the top of this file on why the rest of
+    // `spec` must not be translated.
+    objects: [["spec", ["beds"]]],
     imageAlt: { coverAlt: "coverImage" },
     galleryAlt: "gallery",
   },

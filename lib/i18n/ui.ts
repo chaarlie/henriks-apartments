@@ -145,6 +145,13 @@ const en = {
   size: "Size",
   baths: "Baths",
   sleeps: "Sleeps",
+  beds: "Bed",
+
+  // ── Booking.com listing ──────────────────────────────────────────────────
+  // A trust signal, not a booking route: it lets a guest check the apartment
+  // against a third party while the reserve CTA stays on WhatsApp.
+  alsoOnBooking: "Also listed on Booking.com",
+  verifyOnBooking: "Check this apartment against the listing",
 
   // ── For sale ─────────────────────────────────────────────────────────────
   alsoForSale: "Also for sale",
@@ -493,6 +500,10 @@ const es: typeof en = {
   size: "Tamaño",
   baths: "Baños",
   sleeps: "Capacidad",
+  beds: "Cama",
+
+  alsoOnBooking: "También publicado en Booking.com",
+  verifyOnBooking: "Compara este apartamento con el anuncio",
 
   alsoForSale: "También en venta",
   onTheMarketNow: "En venta ahora",

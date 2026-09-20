@@ -67,6 +67,9 @@ export function sanity({ write = false } = {}) {
 export const UNIT_PROJECTION = `
   _id, _rev, tagline, keywords, saleNote, chips, coverImage, gallery,
   about, space, termsOverride, amenitiesOverride, i18n,
+  // Only spec.beds is translatable (see lib/i18n/schema.ts), but the extractor
+  // reads the object, so the whole thing has to come across.
+  spec,
   "name": name,
   "slug": slug.current,
   "draftI18n": *[_id == "drafts." + ^._id][0].i18n

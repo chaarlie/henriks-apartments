@@ -104,6 +104,14 @@ export interface UnitTranslation extends TranslationMeta {
   coverAlt: string;
   /** Gallery alt text by image _key — never by position. */
   galleryAlts: Record<string, string>;
+  /**
+   * The bed configuration, e.g. "1 cama king".
+   *
+   * Flattened out of the row's `spec` object because it is the only subfield
+   * that translates — area, baths and sleeps are a number and a unit, identical
+   * in every language. See the note in lib/i18n/schema.ts.
+   */
+  beds: string;
 }
 
 /** The shared property prose. Mirrors TYPES.siteSettings. */
@@ -151,7 +159,9 @@ export interface AdminUnit extends Translatable<UnitTranslation> {
   /** refundable deposit by length of stay */
   deposits: DepositRow[];
   availableFrom: string;
-  spec: { area: string; bath: string; sleeps: string };
+  spec: { area: string; bath: string; sleeps: string; beds: string };
+  /** This apartment's room on the Booking.com listing, #RD… fragment included. */
+  bookingUrl: string;
   chips: string[];
   keywords: string;
   /** also on the market — badge on the card + the homepage For sale section */
@@ -217,7 +227,9 @@ export interface AdminUnitInput {
   priceNightlyUsd: number;
   deposits: DepositRow[];
   availableFrom: string;
-  spec: { area: string; bath: string; sleeps: string };
+  spec: { area: string; bath: string; sleeps: string; beds: string };
+  /** This apartment's room on the Booking.com listing, #RD… fragment included. */
+  bookingUrl: string;
   chips: string[];
   keywords: string;
   forSale: boolean;
@@ -255,6 +267,13 @@ export interface AdminHeroInput {
   sub: string;
   videoId: string;
   backgroundAlt: string;
+  /**
+   * The cover photo's asset ref, or null to leave whatever is there alone.
+   * Only a ref that DIFFERS from the stored one replaces the image — see
+   * saveHero, which otherwise patches the alt text alone so a hotspot or crop
+   * set in Sanity Studio survives an edit made here.
+   */
+  background: { ref: string } | null;
   stats: StatRow[];
 }
 

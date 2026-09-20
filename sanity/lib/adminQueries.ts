@@ -23,7 +23,7 @@ export const adminUnitsQuery = groq`
     "slug": slug.current,
     name, code, tagline, hidden,
     priceUsd, priceNightlyUsd, deposits, availableFrom,
-    spec, chips, keywords,
+    spec, bookingUrl, chips, keywords,
     forSale, salePriceUsd, saleNote,
     about, space,
     coverImage{alt, "ref": asset._ref},

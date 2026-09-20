@@ -8,15 +8,29 @@ export type UnitFactKey = "size" | "baths" | "sleeps";
  *
  * The first element is a STABLE key, not a label: the label depends on the
  * language, and looking it up as `t[key]` keeps this module free of locale
- * plumbing. lib/structured-data.ts destructures these positionally and ignores
- * the key entirely, so it is unaffected.
+ * plumbing.
+ *
+ * A fact with no value is DROPPED rather than rendered blank — an apartment
+ * whose size was never filled in should show two facts, not "Size:" trailing
+ * off into nothing.
+ *
+ * That makes positions unstable, so read a single fact with `unitFact()` and
+ * never by destructuring. lib/structured-data.ts used to take these
+ * positionally, which would have mislabelled a unit's occupancy as its bathroom
+ * count the moment any earlier fact went missing.
  */
 export function unitFacts(u: Unit): [UnitFactKey, string][] {
-  return [
-    ["size", u.spec.area],
-    ["baths", u.spec.bath.replace(/\s*(?:bath(?:room)?s?|baños?)$/i, "")],
-    ["sleeps", u.spec.sleeps.replace(/^sleeps\s*/i, "")],
+  const rows: [UnitFactKey, string][] = [
+    ["size", u.spec.area ?? ""],
+    ["baths", (u.spec.bath ?? "").replace(/\s*(?:bath(?:room)?s?|baños?)$/i, "")],
+    ["sleeps", (u.spec.sleeps ?? "").replace(/^sleeps\s*/i, "")],
   ];
+  return rows.filter(([, value]) => value.trim() !== "");
+}
+
+/** One fact by key, or undefined when this unit has no value for it. */
+export function unitFact(u: Unit, key: UnitFactKey): string | undefined {
+  return unitFacts(u).find(([k]) => k === key)?.[1];
 }
 
 /** Card highlights: the unit's chips, minus any that repeat the size or sleeps facts. */

@@ -119,6 +119,27 @@ function mapSphereCorrection(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+/**
+ * A complete `spec` whatever Sanity returned, so nothing downstream has to
+ * guard it. Normalising here rather than in each consumer is the point: the
+ * components, the JSON-LD builder and the share panel all read `unit.spec.*`
+ * directly, and every one of them would otherwise need the same check.
+ *
+ * Empty strings rather than a missing key — `unitFacts()` drops blanks, which
+ * renders the unit without that fact instead of showing "Size: " with nothing
+ * after it.
+ */
+function mapSpec(s: RawUnit["spec"]): Unit["spec"] {
+  return {
+    area: s?.area ?? "",
+    bath: s?.bath ?? "",
+    sleeps: s?.sleeps ?? "",
+    // Left undefined, not "": it is optional on Unit, and the bed pill keys off
+    // its presence.
+    beds: s?.beds || undefined,
+  };
+}
+
 function mapTour(tour: RawTourStop[] | undefined): TourNode[] {
   return (tour ?? []).map((stop) => ({
     _id: stop.stopId,
@@ -157,6 +178,8 @@ interface RawTranslation {
   space?: SpaceItem[];
   termsOverride?: Term[];
   amenitiesOverride?: { inside?: Amenity[]; building?: Amenity[] };
+  /** Only `beds` — the rest of `spec` is the same fact in every language. */
+  spec?: { beds?: string };
 }
 
 interface RawUnit {
@@ -168,7 +191,15 @@ interface RawUnit {
   priceNightlyUsd: number;
   deposits?: { fromMonths: number; amountUsd: number }[];
   availableFrom: string;
-  spec: { area: string; bath: string; sleeps: string };
+  /*
+    Optional because Sanity genuinely returns it that way: `spec` is an object
+    field with no required subfields, so an apartment saved before it was filled
+    in comes back as null, and each subfield can be missing on its own.
+    lib/admin/data.ts has always guarded it; these mappers did not, and
+    `unitFacts()` reads `u.spec.area` — so one such unit crashed its own page.
+  */
+  spec?: { area?: string; bath?: string; sleeps?: string; beds?: string };
+  bookingUrl?: string;
   chips: string[];
   keywords: string;
   forSale?: boolean;
@@ -223,6 +254,17 @@ function translated(u: RawUnit, locale: Locale): RawUnit {
     keywords: t.keywords ?? u.keywords,
     saleNote: t.saleNote ?? u.saleNote,
     chips: t.chips ?? u.chips,
+    /*
+      Merged, not replaced: the translation row carries only `beds`, so spreading
+      it wholesale would drop area, baths and sleeps on every non-English page.
+    */
+    /*
+      `||`, not `??`: an empty translated `beds` means the translator cleared
+      the box, and the right answer then is the English — not a blank "Cama:"
+      with nothing after it. Nullish coalescing would treat "" as a real value
+      and render exactly that.
+    */
+    spec: { ...u.spec, beds: t.spec?.beds || u.spec?.beds },
     about: t.about ?? u.about,
     space: (t.space ?? u.space)?.map((row) => ({ ...row, key: roomLabel(row.key, locale) })),
     tour: u.tour?.map((stop) => ({
@@ -324,7 +366,8 @@ function cardUnit(u: RawUnit): Unit {
     priceUsd: u.priceUsd,
     priceNightlyUsd: u.priceNightlyUsd,
     availableFrom: u.availableFrom,
-    spec: u.spec,
+    spec: mapSpec(u.spec),
+    bookingUrl: u.bookingUrl ?? "",
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
     deposits: u.deposits ?? [],
@@ -487,7 +530,8 @@ export async function getUnit(
     priceUsd: u.priceUsd,
     priceNightlyUsd: u.priceNightlyUsd,
     availableFrom: u.availableFrom,
-    spec: u.spec,
+    spec: mapSpec(u.spec),
+    bookingUrl: u.bookingUrl ?? "",
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
     deposits: u.deposits ?? [],

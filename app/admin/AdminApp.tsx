@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { panoramaUrl } from "@/lib/panorama";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 import { urlFor } from "@/sanity/lib/image";
@@ -585,6 +585,7 @@ function ApartmentEditor({
       desc: tr?.terms[i]?.desc ?? "",
     })),
     coverAlt: tr?.coverAlt ?? "",
+    beds: tr?.beds ?? "",
     galleryAlts: Object.fromEntries(
       unit.gallery
         .filter((g) => g.key)
@@ -610,6 +611,7 @@ function ApartmentEditor({
         tagline: t.tagline,
         keywords: t.keywords,
         saleNote: t.saleNote,
+        beds: t.beds,
         about: t.about,
         chips: t.chips,
         space: t.space,
@@ -648,6 +650,7 @@ function ApartmentEditor({
       deposits: d.deposits,
       availableFrom: d.availableFrom,
       spec: d.spec,
+      bookingUrl: d.bookingUrl,
       chips: d.chips,
       keywords: d.keywords,
       forSale: d.forSale,
@@ -821,7 +824,7 @@ function ApartmentEditor({
                         aria-label="Monthly rent in US dollars"
                         value={d.priceUsd}
                         disabled={translating}
-                        onChange={(e) => set("priceUsd", Number(e.target.value))}
+                        onChange={numberChange((v) => set("priceUsd", v))}
                       />
                     </div>
                   </Field>
@@ -833,7 +836,7 @@ function ApartmentEditor({
                         aria-label="Nightly rate in US dollars"
                         value={d.priceNightlyUsd}
                         disabled={translating}
-                        onChange={(e) => set("priceNightlyUsd", Number(e.target.value))}
+                        onChange={numberChange((v) => set("priceNightlyUsd", v))}
                       />
                     </div>
                   </Field>
@@ -859,9 +862,9 @@ function ApartmentEditor({
                           aria-label={`Deposit ${i + 1}: from months`}
                           value={row.fromMonths}
                           disabled={translating}
-                          onChange={(e) =>
-                            set("deposits", d.deposits.map((x, j) => (j === i ? { ...x, fromMonths: Number(e.target.value) } : x)))
-                          }
+                          onChange={numberChange((v) =>
+                            set("deposits", d.deposits.map((x, j) => (j === i ? { ...x, fromMonths: v } : x)))
+                          )}
                         />
                         <span className="after">months</span>
                       </div>
@@ -876,9 +879,9 @@ function ApartmentEditor({
                           aria-label={`Deposit ${i + 1}: amount in US dollars`}
                           value={row.amountUsd}
                           disabled={translating}
-                          onChange={(e) =>
-                            set("deposits", d.deposits.map((x, j) => (j === i ? { ...x, amountUsd: Number(e.target.value) } : x)))
-                          }
+                          onChange={numberChange((v) =>
+                            set("deposits", d.deposits.map((x, j) => (j === i ? { ...x, amountUsd: v } : x)))
+                          )}
                         />
                       </div>
                     </Field>
@@ -916,7 +919,12 @@ function ApartmentEditor({
 
               <div className="card">
                 <h3>Specs &amp; highlights</h3>
-                <p className="hint">Size, baths and sleeps show on the card and the page. Highlights show on the apartment card and page.</p>
+                <p className="hint">Size, baths, sleeps and beds show on the card and the page. Highlights show on the apartment card and page.</p>
+                {/*
+                  The three that never translate — a number and a unit, the same
+                  fact in every language. `.locked` greys the whole grid while
+                  translating, which is why Beds cannot live in here.
+                */}
                 <div className={`grid3 ${translating ? "locked" : ""}`}>
                   <Field label="Area">
                     <input className="ctrl" value={d.spec.area} disabled={translating} onChange={(e) => setSpec("area", e.target.value)} />
@@ -928,6 +936,48 @@ function ApartmentEditor({
                     <input className="ctrl" value={d.spec.sleeps} disabled={translating} onChange={(e) => setSpec("sleeps", e.target.value)} />
                   </Field>
                 </div>
+                {/*
+                  Beds is its own fact, not a rewording of Sleeps: the listing
+                  states the bed ("1 king bed") and never states an occupancy.
+
+                  It is also the one spec that DOES translate — prose, which read
+                  as English on the Spanish page until it did — so it sits
+                  outside the locked grid above and stays editable in every
+                  language. It must be editable in English too: saving an
+                  apartment replaces `spec` wholesale, so a field missing from
+                  this form would be deleted on the next save.
+                */}
+                <Field label="Beds">
+                  <input
+                    className="ctrl"
+                    value={translating ? t.beds : d.spec.beds}
+                    placeholder={translating ? "1 cama king" : "1 king bed"}
+                    onChange={(e) =>
+                      translating ? tset("beds", e.target.value) : setSpec("beds", e.target.value)
+                    }
+                  />
+                  {translating && <Ref value={unit.spec.beds} />}
+                </Field>
+                {/*
+                  Not a spec, so it sits outside that grid. Locked while
+                  translating: the URL is the same in every language, and the
+                  translation row carries no bookingUrl to write back.
+                */}
+                <Field label="Booking.com listing">
+                  <input
+                    className="ctrl"
+                    type="url"
+                    value={d.bookingUrl}
+                    disabled={translating}
+                    placeholder="https://www.booking.com/hotel/do/…#RD1724987401"
+                    onChange={(e) => set("bookingUrl", e.target.value)}
+                  />
+                  <p className="hint">
+                    Link to THIS apartment&apos;s room. Keep the <code>#RD…</code> on the end — that is what
+                    opens the right apartment — and drop Booking&apos;s <code>aid</code>/<code>label</code>/
+                    <code>sid</code> tracking. Empty hides the link on the page.
+                  </p>
+                </Field>
                 {translating ? (
                   /*
                     Highlights pair with the English by position — one box per
@@ -1014,7 +1064,7 @@ function ApartmentEditor({
                           aria-label="Asking price in US dollars"
                           value={d.salePriceUsd}
                           disabled={translating}
-                          onChange={(e) => set("salePriceUsd", Number(e.target.value))}
+                          onChange={numberChange((v) => set("salePriceUsd", v))}
                         />
                       </div>
                     </Field>
@@ -1274,6 +1324,29 @@ function ApartmentEditor({
       </div>
     </>
   );
+}
+
+/**
+ * onChange for a controlled `type="number"` field, without the leading zero.
+ *
+ * Typing "0" in front of 900 gives "0900", which parses back to 900 — the SAME
+ * number already in state. React bails out of the re-render on that equality,
+ * so it never writes the canonical "900" back and the raw text sits in the box.
+ * Rents were showing as "0900".
+ *
+ * Fixed by normalising the DOM value in the same tick, before handing the
+ * parsed number on. Kept as one helper rather than repeated at nine call sites,
+ * where it would have been fixed in some and not others.
+ *
+ * Only leading zeros that precede another DIGIT are stripped, so "0" stays "0"
+ * and "0.5" keeps the zero it needs; a leading "-" is preserved.
+ */
+function numberChange(commit: (value: number) => void) {
+  return (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleaned = e.target.value.replace(/^(-?)0+(?=\d)/, "$1");
+    if (cleaned !== e.target.value) e.target.value = cleaned;
+    commit(Number(cleaned));
+  };
 }
 
 function Field({
@@ -2684,7 +2757,7 @@ function PropertyView({
                   aria-label="Pesos per US dollar"
                   value={d.fxRate}
                   disabled={translating}
-                  onChange={(e) => set("fxRate", Number(e.target.value))}
+                  onChange={numberChange((v) => set("fxRate", v))}
                 />
                 <span className="after">per US$1</span>
               </div>
@@ -2702,7 +2775,7 @@ function PropertyView({
                   aria-label="Electricity estimate in US dollars per month"
                   value={d.powerBaseUsd}
                   disabled={translating}
-                  onChange={(e) => set("powerBaseUsd", Number(e.target.value))}
+                  onChange={numberChange((v) => set("powerBaseUsd", v))}
                 />
               </div>
               <p className="field-note">Added per month to long-stay estimates as “Electricity, metered estimate”.</p>
@@ -2725,7 +2798,7 @@ function PropertyView({
                     aria-label={`Discount ${i + 1}: minimum months`}
                     value={x.months}
                     disabled={translating}
-                    onChange={(e) => setDiscount(i, { months: Number(e.target.value) })}
+                    onChange={numberChange((v) => setDiscount(i, { months: v }))}
                   />
                   <span className="after">months</span>
                 </div>
@@ -2741,7 +2814,7 @@ function PropertyView({
                     aria-label={`Discount ${i + 1}: percent off`}
                     value={x.percent}
                     disabled={translating}
-                    onChange={(e) => setDiscount(i, { percent: Number(e.target.value) })}
+                    onChange={numberChange((v) => setDiscount(i, { percent: v }))}
                   />
                   <span className="after">% off</span>
                 </div>
@@ -2863,7 +2936,50 @@ function HeroView({
   const [saved, setSaved] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const dirty = !same(d, saved);
+
+  /*
+    The cover photo itself, held outside `d` because it is not translatable:
+    `d` is the per-language form, and the photo is the same in every language.
+    Its own state so the preview swaps the moment an upload finishes, rather
+    than waiting for the save to round-trip.
+  */
+  const [background, setBackground] = useState(hero.background);
+  const [bgBusy, setBgBusy] = useState(false);
+  const [bgErr, setBgErr] = useState<string | null>(null);
+  /** Which upload attempt is current — see pickBackground. */
+  const bgRun = useRef(0);
+  const bgChanged = background?.ref !== hero.background?.ref;
+  const dirty = !same(d, saved) || bgChanged;
+
+  async function pickBackground(file: File | undefined) {
+    if (!file) return;
+    /*
+      An upload is only allowed to land if it is still the one being awaited.
+
+      Discard bumps this counter, so a photo chosen and then discarded mid-flight
+      cannot arrive afterwards and quietly re-select itself — which a later Save
+      would then have published. The same check settles two uploads racing: the
+      newer one bumps the counter, so a slow first response can no longer
+      overwrite the photo the user actually ended on.
+    */
+    const run = ++bgRun.current;
+    setBgBusy(true);
+    setBgErr(null);
+    try {
+      // The shared path: shrink an oversized original, then POST to
+      // /admin/api/upload — the same helper the apartment galleries use.
+      const { image } = await uploadOne(file);
+      if (bgRun.current !== run) return;
+      setBackground(image);
+    } catch (e) {
+      if (bgRun.current !== run) return;
+      setBgErr(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      // Only the live attempt owns the spinner; a superseded one must not clear
+      // it out from under its replacement.
+      if (bgRun.current === run) setBgBusy(false);
+    }
+  }
 
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) =>
     setD((p) => ({ ...p, [k]: v }));
@@ -2887,6 +3003,7 @@ function HeroView({
           sub: d.sub,
           videoId: d.videoId,
           backgroundAlt: d.backgroundAlt,
+          background: background ? { ref: background.ref } : null,
           stats: d.stats,
         });
     setSaving(false);
@@ -2917,7 +3034,7 @@ function HeroView({
             sub: d.sub,
             stats: d.stats,
             videoId: d.videoId,
-            background: hero.background ? { ...hero.background, alt: d.backgroundAlt } : null,
+            background: background ? { ...background, alt: d.backgroundAlt } : null,
           },
     );
     setMsg("Saved · live on site within a minute");
@@ -2932,6 +3049,23 @@ function HeroView({
         onSave={save}
         onDiscard={() => {
           setD(saved);
+          /*
+            The photo is part of what Discard throws away.
+
+            It lives outside `d`, so resetting the text alone left a freshly
+            uploaded cover still selected and still counted as dirty — and the
+            next Save would have published a photo the user believed they had
+            discarded.
+          */
+          /*
+            Bumping the counter abandons any upload still in flight, so one
+            started before Discard cannot land afterwards and re-select the
+            photo the user just threw away.
+          */
+          bgRun.current++;
+          setBackground(hero.background);
+          setBgBusy(false);
+          setBgErr(null);
           setMsg(null);
         }}
       />
@@ -3000,6 +3134,36 @@ function HeroView({
           <p className="hint">
             The photo itself is the same in every language — only the description changes.
           </p>
+          {/*
+            Uploading is English-only, like every other photo in /admin: the
+            image is one fact shared by all languages, so offering it on the
+            Spanish screen would imply a Spanish cover exists.
+          */}
+          {!translating && (
+            <Field label="Photo" opt="(shown across the top of the homepage)">
+              <label
+                className="cover"
+                style={background ? { backgroundImage: `url(${background.url})` } : undefined}
+              >
+                {!background && <span className="ph">⤒ Tap to upload a photo</span>}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={bgBusy}
+                  onChange={(e) => pickBackground(e.target.files?.[0])}
+                />
+              </label>
+              <p className="hint">
+                {bgBusy
+                  ? "Uploading…"
+                  : bgChanged
+                    ? "New photo ready — press Save to publish it."
+                    : "Tap the photo to replace it. A wide, landscape shot works best."}
+              </p>
+              {bgErr && <p className="hint err">{bgErr}</p>}
+            </Field>
+          )}
           <Field label="Photo description" opt="(for screen readers and Google)">
             <input className="ctrl" aria-label="Background photo description" value={d.backgroundAlt} onChange={(e) => set("backgroundAlt", e.target.value)} />
             {translating && <Ref value={hero.background?.alt ?? ""} />}

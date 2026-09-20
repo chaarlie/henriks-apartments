@@ -69,7 +69,12 @@ export const unit = defineType({
       group: 'overview',
       fields: [
         defineField({name: 'area', title: 'Area', type: 'string'}),
-        defineField({name: 'bath', title: 'Bathrooms', type: 'string'}),
+        defineField({
+          name: 'bath',
+          title: 'Bathrooms',
+          type: 'string',
+          description: 'Half bathrooms are supported: enter 1.5 for one full bathroom and one half bathroom.',
+        }),
         defineField({name: 'sleeps', title: 'Sleeps', type: 'string'}),
         defineField({
           name: 'beds',

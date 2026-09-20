@@ -20,10 +20,19 @@ export type UnitFactKey = "size" | "baths" | "sleeps";
  * count the moment any earlier fact went missing.
  */
 export function unitFacts(u: Unit): [UnitFactKey, string][] {
+  /*
+    `u.spec?.` even though the type says it is always there.
+
+    That type is a promise about Sanity data, and Sanity breaks it: `spec` is an
+    object field with no required subfields, so an apartment saved before it was
+    filled in comes back null. mapSpec() now fixes that at the boundary, but
+    this is the function that crashed a live page, and one `?.` is cheaper than
+    trusting every future caller to have gone through that boundary.
+  */
   const rows: [UnitFactKey, string][] = [
-    ["size", u.spec.area ?? ""],
-    ["baths", (u.spec.bath ?? "").replace(/\s*(?:bath(?:room)?s?|baños?)$/i, "")],
-    ["sleeps", (u.spec.sleeps ?? "").replace(/^sleeps\s*/i, "")],
+    ["size", u.spec?.area ?? ""],
+    ["baths", (u.spec?.bath ?? "").replace(/\s*(?:bath(?:room)?s?|baños?)$/i, "")],
+    ["sleeps", (u.spec?.sleeps ?? "").replace(/^sleeps\s*/i, "")],
   ];
   return rows.filter(([, value]) => value.trim() !== "");
 }

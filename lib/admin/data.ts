@@ -3,6 +3,7 @@ import { getClient } from "@/sanity/lib/client";
 import { urlFor } from "@/sanity/lib/image";
 import { extractDoc, sourceHash, type RawDoc } from "@/lib/i18n/fingerprint";
 import { LOCALES, DEFAULT_LOCALE, type Locale } from "@/lib/locales";
+import { COMMON_AREA_KINDS, type CommonAreaKind } from "@/lib/content";
 import {
   adminUnitsQuery,
   adminBookingsQuery,
@@ -253,7 +254,9 @@ export async function getAdminBookings(): Promise<AdminBooking[]> {
 /** The shared property prose. Amenity tiles are merged positionally — index i is tile i. */
 function settingsTranslation(row: I18nRow): SettingsTranslation {
   const tiles = (row.propertyAmenities ?? []) as { title?: string; desc?: string }[];
+  const captions = (row.commonAreas ?? []) as { _key?: string; label?: string; title?: string; alt?: string }[];
   return {
+    commonAreas: captions.filter(c => c._key).map(c => ({ _key: c._key!, label: str(c.label), title: str(c.title), alt: str(c.alt) })),
     hostNote: str(row.hostNote),
     stayNote: str(row.stayNote),
     propertyAmenities: tiles.map((t) => ({ title: t.title ?? "", desc: t.desc ?? "" })),
@@ -281,6 +284,14 @@ export async function getAdminSettings(): Promise<AdminSettings> {
         powerBaseUsd?: number;
         discounts?: { months?: number; pct?: number }[];
         propertyAmenities?: { icon?: string; title?: string; desc?: string }[];
+        commonAreas?: {
+          _key?: string;
+          ref?: string;
+          label?: string;
+          title?: string;
+          kind?: string;
+          alt?: string;
+        }[];
         i18n?: I18nRow[];
       } & RawDoc)
     | null
@@ -309,6 +320,24 @@ export async function getAdminSettings(): Promise<AdminSettings> {
       title: a.title ?? "",
       desc: a.desc ?? "",
     })),
+    /*
+      Only rows that still have an asset. A photo deleted from the dataset
+      leaves the row behind, and a card with no picture is worse than no card —
+      the landing band would render an empty tile.
+    */
+    commonAreas: (s?.commonAreas ?? [])
+      .filter((c) => c.ref)
+      .map((c) => ({
+        key: c._key,
+        ref: c.ref as string,
+        url: urlFor(c.ref as string).width(480).height(320).fit("crop").url(),
+        label: c.label ?? "",
+        title: c.title ?? "",
+        alt: c.alt ?? "",
+        kind: (COMMON_AREA_KINDS as readonly string[]).includes(c.kind ?? "")
+          ? (c.kind as CommonAreaKind)
+          : "pool",
+      })),
     englishHash: s ? englishHashOf("siteSettings", s) : "",
     i18n: byLocale(s?.i18n, settingsTranslation),
   };

@@ -1,6 +1,8 @@
 // Shapes shared between the admin server (reads/actions) and the client UI.
 
+import type { AreaCaption } from "@/lib/common-area-captions";
 import type { Locale } from "@/lib/locales";
+import type { CommonAreaKind } from "@/lib/content";
 
 export interface AmenityRow {
   label: string;
@@ -116,6 +118,8 @@ export interface UnitTranslation extends TranslationMeta {
 
 /** The shared property prose. Mirrors TYPES.siteSettings. */
 export interface SettingsTranslation extends TranslationMeta {
+  /** Keyed by the source photo; omitted by editors that do not own captions. */
+  commonAreas?: AreaCaption[];
   hostNote: string;
   stayNote: string;
   /** Positional: index i is tile i of the English list. */
@@ -304,6 +308,28 @@ export interface DiscountRow {
 }
 
 /** The siteSettings singleton: property details + the homepage amenity tiles. */
+/** One shared-area photo: the picture, the two lines over it, and its filter chip. */
+export interface CommonAreaRow {
+  /**
+   * The photo's existing Sanity array key, carried through the editor so a save
+   * does not mint a new one. Empty for a photo just added in the browser, which
+   * the server then keys on write — the same rule as a unit's gallery.
+   */
+  key?: string;
+  /** Asset reference, e.g. "image-abc123-1600x1067-jpg". */
+  ref: string;
+  /** A thumbnail URL for the editor. Never written back. */
+  url: string;
+  /** Short area name over the photo, e.g. "Sun deck". */
+  label: string;
+  /** The line under it, e.g. "A spot in the sun". */
+  title: string;
+  /** What the photo shows, for screen readers and Google. */
+  alt: string;
+  /** Drives the filter chips on the homepage band. */
+  kind: CommonAreaKind;
+}
+
 export interface AdminSettings extends Translatable<SettingsTranslation> {
   propertyName: string;
   city: string;
@@ -323,6 +349,11 @@ export interface AdminSettings extends Translatable<SettingsTranslation> {
   checkOut: string;
   /** the friendly line under the times */
   stayNote: string;
+  /**
+   * The pool / lounge / gym / grounds photos, in the order the homepage band
+   * shows them.
+   */
+  commonAreas: CommonAreaRow[];
   fxRate: number;
   /** yyyy-mm-dd the exchange rate last changed */
   fxRateAsOf: string;

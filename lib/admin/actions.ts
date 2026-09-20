@@ -11,6 +11,7 @@ import type {
   AdminUnitInput,
   AdminBookingInput,
   AdminPropertyInput,
+  CommonAreaRow,
   AdminHeroInput,
   AdminLocationInput,
   PropertyAmenityRow,
@@ -454,12 +455,18 @@ export async function saveAmenities(rows: PropertyAmenityRow[]): Promise<ActionR
 }
 
 export type SavePropertyResult =
-  | { ok: true; fxRateAsOf: string }
+  | { ok: true; fxRateAsOf: string; commonAreas: CommonAreaRow[] }
   | { ok: false; error: string };
 
 export async function saveProperty(input: AdminPropertyInput): Promise<SavePropertyResult> {
   try {
     await requireAdmin();
+    const commonAreas = input.commonAreas.filter(c => c.ref).map(c => ({
+      ...c, key: c.key || key(), label: c.label.trim(), title: c.title.trim(), alt: c.alt.trim(),
+    }));
+    if (new Set(commonAreas.map(c => c.key)).size !== commonAreas.length) {
+      return { ok: false, error: "Each shared-area photo must have a unique key. Reload and try again." };
+    }
     const whatsapp = input.whatsappNumber.replace(/\D/g, "");
     if (!input.propertyName.trim()) return { ok: false, error: "Add the property name." };
     if (whatsapp.length < 8 || whatsapp.length > 15)
@@ -503,10 +510,26 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
         discounts: [...input.discounts]
           .sort((a, b) => a.months - b.months)
           .map((d) => ({ _key: key(), months: d.months, pct: d.percent / 100 })),
+        /*
+          Keep each photo's existing key, exactly as a unit's gallery does.
+          Translated captions are rebuilt against `_key`, so minting fresh ones
+          here would detach every language's wording from its picture on the
+          next save of the English — silently, because the site just falls back.
+        */
+        commonAreas: commonAreas
+          .map((c) => ({
+            _type: "image",
+            _key: c.key,
+            asset: { _type: "reference", _ref: c.ref },
+            label: c.label.trim() || undefined,
+            title: c.title.trim() || undefined,
+            alt: c.alt.trim() || undefined,
+            kind: c.kind,
+          })),
       })
       .commit();
     revalidateSite();
-    return { ok: true, fxRateAsOf };
+    return { ok: true, fxRateAsOf, commonAreas };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
   }
@@ -524,7 +547,14 @@ export async function saveSettingsTranslation(
   locale: Locale,
   input: SettingsTranslationInput,
 ): Promise<ActionResult> {
+  if (input.commonAreas && (
+    input.commonAreas.some(c => !c._key || !/^[a-zA-Z0-9_-]+$/.test(c._key)) ||
+    new Set(input.commonAreas.map(c => c._key)).size !== input.commonAreas.length
+  )) return { ok: false, error: "Photo captions need unique photo keys. Reload before saving." };
   return translationAction(SETTINGS_ID, "siteSettings", locale, {
+    commonAreas: input.commonAreas?.map(c => ({
+      _key: c._key, label: c.label?.trim() ?? "", title: c.title?.trim() ?? "", alt: c.alt?.trim() ?? "",
+    })),
     hostNote: input.hostNote || undefined,
     stayNote: input.stayNote || undefined,
     propertyAmenities: input.propertyAmenities.map((t) => ({

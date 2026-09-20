@@ -64,6 +64,9 @@ export const adminSettingsQuery = groq`
     checkIn, checkOut, stayNote,
     fxRate, "fxRateAsOf": coalesce(fxRateAsOf, _updatedAt),
     powerBaseUsd, discounts, propertyAmenities,
+    // _key rides along so a save keeps each photo's array key — translated
+    // captions are rebuilt against it.
+    commonAreas[]{_key, label, title, kind, alt, "ref": asset._ref},
     seo,
     i18n
   }

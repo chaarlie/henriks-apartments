@@ -1,4 +1,5 @@
 import "server-only";
+import { mergeAreaCaptions, type AreaCaption } from "@/lib/common-area-captions";
 import { roomLabel } from "@/lib/i18n/labels";
 import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 import { sanityFetch } from "@/sanity/lib/live";
@@ -307,6 +308,7 @@ interface RawSettings {
   discounts?: { months: number; pct: number }[];
   propertyAmenities?: { icon: string; title: string; desc: string }[];
   commonAreas?: (SanityImageObject & {
+    _key?: string;
     label?: string;
     title?: string;
     kind?: string;
@@ -320,7 +322,7 @@ interface RawSettings {
     stayNote?: string;
     propertyAmenities?: { title?: string; desc?: string }[];
     // Words only — the photo is the same in every language.
-    commonAreas?: { label?: string; title?: string; alt?: string }[];
+    commonAreas?: AreaCaption[];
     seo?: { title?: string; description?: string };
   } | null;
 }
@@ -476,7 +478,7 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
       "Everything" and nowhere else — visible enough to ship, quiet enough to
       miss. Rows whose asset went missing drop out on the url check.
     */
-    commonAreas: mergeRows(s.commonAreas, setTr?.commonAreas)
+    commonAreas: mergeAreaCaptions(s.commonAreas, setTr?.commonAreas)
       .map((a) => ({
         ...img(a, a.alt ?? ""),
         label: a.label ?? "",

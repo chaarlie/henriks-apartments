@@ -88,7 +88,8 @@ interface RawAdminUnit {
   priceNightlyUsd?: number;
   deposits?: { fromMonths?: number; amountUsd?: number }[];
   availableFrom?: string;
-  spec?: { area?: string; bath?: string; sleeps?: string };
+  spec?: { area?: string; bath?: string; sleeps?: string; beds?: string };
+  bookingUrl?: string;
   chips?: string[];
   keywords?: string;
   forSale?: boolean;
@@ -142,6 +143,8 @@ function unitTranslation(row: I18nRow): UnitTranslation {
     galleryAlts: Object.fromEntries(
       alts.filter((g) => g._key).map((g) => [g._key as string, g.alt ?? ""]),
     ),
+    // Flattened out of the row's `spec` — only `beds` translates.
+    beds: str((row.spec as { beds?: string } | undefined)?.beds),
     sourceHash: str(row.sourceHash),
     machine: row.machine === true,
   };
@@ -170,7 +173,9 @@ export async function getAdminUnits(): Promise<AdminUnit[]> {
       area: u.spec?.area ?? "",
       bath: u.spec?.bath ?? "",
       sleeps: u.spec?.sleeps ?? "",
+      beds: u.spec?.beds ?? "",
     },
+    bookingUrl: u.bookingUrl ?? "",
     chips: u.chips ?? [],
     keywords: u.keywords ?? "",
     forSale: u.forSale ?? false,

@@ -130,7 +130,19 @@ export interface Unit {
   deposits?: DepositTier[];
   /** first available day, ISO (yyyy-mm-dd) */
   availableFrom: string;
-  spec: { area: string; bath: string; sleeps: string };
+  /**
+   * `beds` is the bed configuration as the Booking.com listing states it
+   * ("1 king bed"). Optional because it arrived after the other three and not
+   * every unit has been filled in yet — and because `sleeps` is an occupancy we
+   * infer, while this is a fact the listing actually asserts.
+   */
+  spec: { area: string; bath: string; sleeps: string; beds?: string };
+  /**
+   * This apartment's room on the Booking.com listing, `#RD…` fragment included.
+   * Rendered as a "verify us against a third party" link, never as a booking
+   * route — the reserve CTA stays on WhatsApp. Empty hides the link.
+   */
+  bookingUrl?: string;
   /** short chips shown on the card */
   chips: string[];
   /** keyword blob for the landing search */

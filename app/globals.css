@@ -70,6 +70,31 @@ html:has(dialog[open]) {
   overflow: hidden;
 }
 
+/*
+  The hand cursor on anything clickable.
+
+  Tailwind v4's Preflight sets `button { cursor: default }` — a deliberate break
+  from v3, matching the bare browser default. The effect here was that almost
+  every control on the public site (the 360°/Photos toggle, the currency switch,
+  the lightbox arrows, the play button) looked unclickable, while /admin felt
+  right because admin.css carries its own `button{cursor:pointer}`.
+
+  In `@layer base` ON PURPOSE, not unlayered like the focus ring below:
+  utilities must still win. The date picker marks booked days with
+  `cursor-not-allowed` and out-of-range days with `cursor-default` on real
+  <button> elements — an unlayered rule would override those and tell people a
+  fully booked day is clickable. `aria-disabled` is excluded for the same
+  reason: those buttons stay enabled for screen readers and are not `:disabled`,
+  so nothing else here would have spared them.
+*/
+@layer base {
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  label:has(> input[type="file"]:not(:disabled)) {
+    cursor: pointer;
+  }
+}
+
 /* Large display type uses tight negative tracking; helper for headlines. */
 .text-balance-pretty {
   text-wrap: pretty;

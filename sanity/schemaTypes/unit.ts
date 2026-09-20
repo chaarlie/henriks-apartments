@@ -71,7 +71,22 @@ export const unit = defineType({
         defineField({name: 'area', title: 'Area', type: 'string'}),
         defineField({name: 'bath', title: 'Bathrooms', type: 'string'}),
         defineField({name: 'sleeps', title: 'Sleeps', type: 'string'}),
+        defineField({
+          name: 'beds',
+          title: 'Beds',
+          type: 'string',
+          description:
+            'Bed configuration exactly as the Booking.com listing states it, e.g. "1 king bed". Unlike Sleeps, this is a fact the listing asserts rather than an occupancy we infer.',
+        }),
       ],
+    }),
+    defineField({
+      name: 'bookingUrl',
+      title: 'Booking.com listing',
+      type: 'url',
+      group: 'overview',
+      description:
+        "Link to THIS apartment's room on the listing — keep the #RD… fragment, which is what selects the room, and drop Booking's aid/label/sid tracking params. Shown as a link guests can verify against; it is not a booking route. Leave empty to hide it.",
     }),
     // Also on the market — drives the "For sale" badge and the landing section.
     defineField({name: 'forSale', title: 'Also for sale', type: 'boolean', group: 'overview', initialValue: false}),
@@ -217,6 +232,14 @@ export const unit = defineType({
             }),
             defineField({name: 'tagline', title: 'Tagline', type: 'string'}),
             defineField({name: 'keywords', title: 'Search keywords', type: 'text', rows: 2}),
+            defineField({
+              name: 'spec',
+              title: 'Specs',
+              type: 'object',
+              description:
+                'Only the bed configuration translates. Area, baths and sleeps are a number and a unit — the same fact in every language — and live on the apartment itself.',
+              fields: [defineField({name: 'beds', title: 'Beds', type: 'string'})],
+            }),
             defineField({name: 'saleNote', title: 'For-sale note', type: 'text', rows: 2}),
             defineField({name: 'chips', title: 'Card chips', type: 'array', of: [defineArrayMember({type: 'string'})], options: {layout: 'tags'}}),
             defineField({name: 'coverAlt', title: 'Cover image alt text', type: 'string'}),

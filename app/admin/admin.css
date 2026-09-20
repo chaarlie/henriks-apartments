@@ -360,3 +360,7 @@ textarea.ctrl.short{min-height:76px;}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
 }
+
+/* Shared-area photo in the Property details editor. Fixed aspect so a portrait
+   upload cannot stretch the row, and the same rounding as the cover picker. */
+.common-thumb{width:100%;max-width:280px;aspect-ratio:3/2;object-fit:cover;border-radius:10px;border:1px solid var(--line);margin:0 0 12px;display:block;}

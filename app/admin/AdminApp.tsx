@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { UploadGeneration } from "@/lib/upload-generation";
 import { panoramaUrl } from "@/lib/panorama";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 import { urlFor } from "@/sanity/lib/image";
@@ -33,6 +34,7 @@ import type {
   DepositRow,
   UnitOption,
   AmenityRow,
+  CommonAreaRow,
   SpaceRow,
   TermRow,
   StatRow,
@@ -490,6 +492,9 @@ export default function AdminApp({
             key={lang}
             initial={settings}
             lang={lang}
+            onTranslationSaved={translation => setSettings(current => ({
+              ...current, i18n: { ...current.i18n, [lang]: translation },
+            }))}
             onSaved={(saved) => setSettings((s) => ({ ...s, ...saved }))}
           />
         )}
@@ -2275,12 +2280,14 @@ function SaveBar({
   title,
   dirty,
   saving,
+  saveDisabled = false,
   onSave,
   onDiscard,
 }: {
   title: string;
   dirty: boolean;
   saving: boolean;
+  saveDisabled?: boolean;
   onSave: () => void;
   onDiscard: () => void;
 }) {
@@ -2297,7 +2304,7 @@ function SaveBar({
             Discard
           </button>
         )}
-        <button type="button" className="btn primary" onClick={onSave} disabled={saving || !dirty}>
+        <button type="button" className="btn primary" onClick={onSave} disabled={saving || saveDisabled || !dirty}>
           {saving ? "Saving…" : "Save"}
         </button>
       </div>
@@ -2511,6 +2518,200 @@ function AmenitiesView({
   );
 }
 
+/** The four filter chips the homepage band offers, in the order it shows them. */
+const AREA_KINDS: { value: CommonAreaRow["kind"]; label: string }[] = [
+  { value: "pool", label: "Pool" },
+  { value: "lounge", label: "Lounge" },
+  { value: "gym", label: "Gym" },
+  { value: "grounds", label: "Grounds" },
+];
+
+/** Shared photos keep stable keys; captions are edited independently per language. */
+function CommonAreasCard({
+  rows,
+  onChange,
+  translating,
+  sourceRows,
+  onBusyChange,
+  disabled,
+  generation,
+}: {
+  rows: CommonAreaRow[];
+  onChange: (update: (rows: CommonAreaRow[]) => CommonAreaRow[]) => void;
+  sourceRows: CommonAreaRow[];
+  onBusyChange: (busy: boolean) => void;
+  disabled: boolean;
+  generation: UploadGeneration;
+  translating: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    return () => generation.cancel();
+  }, [generation]);
+  const [err, setErr] = useState<string | null>(null);
+
+  const upd = (i: number, patch: Partial<CommonAreaRow>) =>
+    onChange(current => current.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  const move = (i: number, by: number) => {
+    onChange(current => {
+      const next = [...current];
+      const [row] = next.splice(i, 1);
+      next.splice(i + by, 0, row);
+      return next;
+    });
+  };
+
+  async function add(files: FileList | null) {
+    if (!files?.length) return;
+    const run = generation.begin();
+    setBusy(true);
+    onBusyChange(true);
+    setErr(null);
+    try {
+      const { uploaded, failed } = await uploadMany(Array.from(files), () => {});
+      if (!generation.accepts(run)) return;
+      if (failed.length) setErr(`${failed.length} photo(s) could not be uploaded.`);
+      const added = uploaded.map(image => ({ key: crypto.randomUUID(), image }));
+      onChange(current => [
+        ...current,
+        ...added.map(({ key, image }) => ({
+          key,
+          ref: image.ref,
+          url: image.url,
+          label: "",
+          title: "",
+          alt: image.alt ?? "",
+          kind: "pool" as CommonAreaRow["kind"],
+        })),
+      ]);
+    } catch (e) {
+      if (!generation.accepts(run)) return;
+      setErr(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      if (generation.accepts(run)) {
+        setBusy(false);
+        onBusyChange(false);
+      }
+    }
+  }
+
+  return (
+    <fieldset className="card" disabled={disabled}>
+      <h3>
+        Shared areas <span className="opt">({rows.length})</span>
+      </h3>
+      <p className="hint">
+        {translating
+          ? "The words over each photo, in this language. The photos and their order are the same everywhere — change those in English."
+          : "The pool, lounge, gym and grounds photos on the homepage, in this order. An area with no photos is hidden from the site entirely."}
+      </p>
+      {rows.map((row, i) => (
+        <div className="arr-item tile-item" key={row.key}>
+          <div className="tile-head">
+            <span className="num">Photo {i + 1}</span>
+            {!translating && (
+              <>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`Move ${row.label || `photo ${i + 1}`} up`}
+                  disabled={i === 0}
+                  onClick={() => move(i, -1)}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`Move ${row.label || `photo ${i + 1}`} down`}
+                  disabled={i === rows.length - 1}
+                  onClick={() => move(i, 1)}
+                >
+                  ↓
+                </button>
+                <button type="button" className="del" onClick={() => onChange(current => current.filter((_, j) => j !== i))}>
+                  Remove
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={row.url} alt="" className="common-thumb" />
+
+          <div className="grid2">
+            <Field label="Area">
+              <input
+                className="ctrl"
+                aria-label={`Area name for photo ${i + 1}`}
+                placeholder="Sun deck"
+                value={row.label}
+                onChange={(e) => upd(i, { label: e.target.value })}
+              />
+              {translating && <Ref value={sourceRows.find(r => r.key === row.key)?.label ?? ""} />}
+            </Field>
+            <Field label="Caption">
+              <input
+                className="ctrl"
+                aria-label={`Caption for photo ${i + 1}`}
+                placeholder="A spot in the sun"
+                value={row.title}
+                onChange={(e) => upd(i, { title: e.target.value })}
+              />
+              {translating && <Ref value={sourceRows.find(r => r.key === row.key)?.title ?? ""} />}
+            </Field>
+          </div>
+          <div className="grid2">
+            <Field label="Kind" opt="(the filter chip it sits under)">
+              <select
+                className="ctrl"
+                aria-label={`Kind for photo ${i + 1}`}
+                value={row.kind}
+                disabled={translating}
+                onChange={(e) => upd(i, { kind: e.target.value as CommonAreaRow["kind"] })}
+              >
+                {AREA_KINDS.map((k) => (
+                  <option key={k.value} value={k.value}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Photo description" opt="(for screen readers and Google)">
+              <input
+                className="ctrl"
+                aria-label={`Photo description for photo ${i + 1}`}
+                value={row.alt}
+                onChange={(e) => upd(i, { alt: e.target.value })}
+              />
+              {translating && <Ref value={sourceRows.find(r => r.key === row.key)?.alt ?? ""} />}
+            </Field>
+          </div>
+        </div>
+      ))}
+
+      {!translating && (
+        <label className="addrow" style={{ cursor: busy ? "progress" : "pointer" }}>
+          {busy ? "Uploading…" : "＋ Add photos"}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            disabled={busy}
+            onChange={(e) => {
+              void add(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      )}
+      {err && <p className="hint err">{err}</p>}
+    </fieldset>
+  );
+}
+
 const propertyFields = (s: AdminSettings): AdminPropertyInput => ({
   propertyName: s.propertyName,
   city: s.city,
@@ -2526,6 +2727,7 @@ const propertyFields = (s: AdminSettings): AdminPropertyInput => ({
   fxRate: s.fxRate,
   powerBaseUsd: s.powerBaseUsd,
   discounts: s.discounts,
+  commonAreas: s.commonAreas,
 });
 
 function prettyDate(iso: string) {
@@ -2536,8 +2738,10 @@ function PropertyView({
   initial,
   lang,
   onSaved,
+  onTranslationSaved,
 }: {
   initial: AdminSettings;
+  onTranslationSaved: (translation: SettingsTranslation) => void;
   lang: Locale;
   onSaved: (saved: AdminPropertyInput & { fxRateAsOf: string }) => void;
 }) {
@@ -2545,19 +2749,20 @@ function PropertyView({
   const tr: SettingsTranslation | undefined = initial.i18n[lang];
   const status = transStatus(initial.englishHash, tr?.sourceHash, tr?.machine);
 
-  /*
-    Only the two paragraphs translate — lib/i18n/schema.ts lists hostNote and
-    stayNote and nothing else here. The rest is one fact in every language: a
-    second copy of the WhatsApp number or the exchange rate is just a second
-    thing to keep in step, and the first one to fall out of it is the one
-    nobody is looking at. They stay on screen, disabled, so the translator can
-    see what they are describing.
-  */
+  // Photos remain shared; translated captions are matched by their photo key.
   const seed = (): AdminPropertyInput =>
     translating
-      ? { ...propertyFields(initial), hostNote: tr?.hostNote ?? "", stayNote: tr?.stayNote ?? "" }
+      ? { ...propertyFields(initial), hostNote: tr?.hostNote ?? "", stayNote: tr?.stayNote ?? "",
+          commonAreas: initial.commonAreas.map(photo => {
+            const caption = tr?.commonAreas?.find(c => c._key === photo.key);
+            return { ...photo, label: caption?.label ?? "", title: caption?.title ?? "", alt: caption?.alt ?? "" };
+          }),
+        }
       : propertyFields(initial);
 
+  const [areaUploads] = useState(() => new UploadGeneration());
+  const [areasEpoch, setAreasEpoch] = useState(0);
+  const [areasBusy, setAreasBusy] = useState(false);
   const [d, setD] = useState(seed);
   const [saved, setSaved] = useState(seed);
   // Languages are typed as one comma-separated line but stored as a list.
@@ -2574,6 +2779,7 @@ function PropertyView({
     set("discounts", d.discounts.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   async function save() {
+    if (areasBusy || saving) return;
     setSaving(true);
     setMsg(null);
 
@@ -2584,6 +2790,7 @@ function PropertyView({
         rather than writing them, so this save cannot blank them.
       */
       const res = await saveSettingsTranslation(lang, {
+        commonAreas: d.commonAreas.map(c => ({ _key: c.key!, label: c.label, title: c.title, alt: c.alt })),
         hostNote: d.hostNote,
         stayNote: d.stayNote,
         propertyAmenities: tr?.propertyAmenities ?? [],
@@ -2594,6 +2801,12 @@ function PropertyView({
         return;
       }
       setSaved(d);
+      onTranslationSaved({
+        ...tr, hostNote: d.hostNote, stayNote: d.stayNote,
+        propertyAmenities: tr?.propertyAmenities ?? [],
+        commonAreas: d.commonAreas.map(c => ({ _key: c.key!, label: c.label, title: c.title, alt: c.alt })),
+        sourceHash: initial.englishHash, machine: false,
+      });
       setMsg("Saved · live on site within a minute");
       return;
     }
@@ -2607,6 +2820,7 @@ function PropertyView({
     // Mirror what the server stored so the form reads as saved.
     const stored: AdminPropertyInput = {
       ...d,
+      commonAreas: res.commonAreas,
       propertyName: d.propertyName.trim(),
       city: d.city.trim(),
       region: d.region.trim(),
@@ -2626,10 +2840,14 @@ function PropertyView({
     <>
       <SaveBar
         title={translating ? `Property details · ${LANGUAGE_NAME[lang]}` : "Property details"}
-        dirty={dirty}
+        dirty={dirty || areasBusy}
+        saveDisabled={areasBusy}
         saving={saving}
         onSave={save}
         onDiscard={() => {
+          areaUploads.cancel();
+          setAreasEpoch(epoch => epoch + 1);
+          setAreasBusy(false);
           setD(saved);
           setLangText(saved.languages.join(", "));
           setMsg(null);
@@ -2640,7 +2858,7 @@ function PropertyView({
           <h2>Property details</h2>
           <p className="sub">
             {translating
-              ? `The two paragraphs guests read, in ${LANGUAGE_NAME[lang]}. The numbers and contact details below are the same in every language.`
+              ? `The property descriptions and photo captions, in ${LANGUAGE_NAME[lang]}. The numbers and contact details below are the same in every language.`
               : "Contact details and the numbers behind every price and estimate on the site."}
           </p>
         </div>
@@ -2741,6 +2959,17 @@ function PropertyView({
             {translating && <Ref value={initial.stayNote} />}
           </Field>
         </div>
+
+        <CommonAreasCard
+          key={areasEpoch}
+          generation={areaUploads}
+          rows={d.commonAreas}
+          sourceRows={initial.commonAreas}
+          onChange={update => setD(current => ({ ...current, commonAreas: update(current.commonAreas) }))}
+          onBusyChange={setAreasBusy}
+          disabled={saving}
+          translating={translating}
+        />
 
         <div className={`card ${translating ? "locked" : ""}`}>
           <h3>Prices &amp; estimates</h3>

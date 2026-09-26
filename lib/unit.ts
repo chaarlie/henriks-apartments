@@ -42,7 +42,31 @@ export function unitFact(u: Unit, key: UnitFactKey): string | undefined {
   return unitFacts(u).find(([k]) => k === key)?.[1];
 }
 
-/** Card highlights: the unit's chips, minus any that repeat the size or sleeps facts. */
+/**
+ * Card highlights: the unit's chips, minus any that repeat the size or sleeps
+ * facts, and minus blanks and duplicates.
+ *
+ * Blank and repeated chips are dropped for the same reason unitFacts drops an
+ * empty fact — but here it is not only cosmetic. Both callers render these with
+ * `key={chip}`, so two blanks are two children with the same key `""`, which
+ * React refuses to guarantee the behaviour of.
+ *
+ * They are not hypothetical. A locale's `chips` array REPLACES the English
+ * wholesale rather than merging, and the translation editor seeds it to the
+ * English length with empty strings for the entries nobody has filled in — so
+ * translating three of eleven chips and saving stored eight "" entries, and the
+ * Spanish page rendered eight ticks with no text beside them.
+ *
+ * Fixed at the save as well (saveUnitTranslation drops blanks now). This stays
+ * because it is the guard that makes every caller safe, including whatever reads
+ * chips next, and because data already in the dataset predates that fix.
+ */
 export function unitHighlights(u: Unit): string[] {
-  return u.chips.filter((c) => !/sleeps|m²/i.test(c));
+  const seen = new Set<string>();
+  return u.chips.filter((c) => {
+    const chip = c?.trim();
+    if (!chip || /sleeps|m²/i.test(chip) || seen.has(chip)) return false;
+    seen.add(chip);
+    return true;
+  });
 }

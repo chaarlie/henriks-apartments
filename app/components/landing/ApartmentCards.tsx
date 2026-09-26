@@ -213,7 +213,7 @@ export default function ApartmentCards() {
                   </button>
                 </>
               ) : (
-                <span>{t.rentIncludesNote}</span>
+                <span>{t.rentIncludesNote(content.internetMbps)}</span>
               )}
               {scope !== "any" && (
                 <button type="button" onClick={() => setScope("any")} className={LINK}>

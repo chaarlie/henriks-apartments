@@ -355,6 +355,7 @@ export interface AdminSettings extends Translatable<SettingsTranslation> {
    */
   commonAreas: CommonAreaRow[];
   fxRate: number;
+  internetMbps: number;
   /** yyyy-mm-dd the exchange rate last changed */
   fxRateAsOf: string;
   powerBaseUsd: number;

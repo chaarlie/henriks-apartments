@@ -94,6 +94,27 @@ describe("the facts under an apartment's name", () => {
     // is noise.
     expect(unitHighlights(u)).toEqual(["Ground floor", "Patio"]);
   });
+
+  /*
+    This shipped. A locale's chips replace the English wholesale, and the
+    translation editor seeds the array to the English length with "" for every
+    chip nobody filled in — so one unit's Spanish chips were
+    ["Balcón y terraza","Último piso","Vista a la piscina","","","","","","","",""].
+    The Spanish homepage rendered eight ticks with no text, and because both
+    callers use `key={chip}`, React had eight children keyed "" and warned that it
+    may duplicate or omit them.
+  */
+  it("drops blank chips, so a half-translated list cannot render empty rows", () => {
+    const u = unit({ chips: ["Balcón y terraza", "", "  ", "Vista a la piscina", ""] });
+    expect(unitHighlights(u)).toEqual(["Balcón y terraza", "Vista a la piscina"]);
+  });
+
+  it("drops duplicate chips, because the render keys on the chip itself", () => {
+    const u = unit({ chips: ["Pool view", "Pool view", " Pool view ", "Top floor"] });
+    const out = unitHighlights(u);
+    expect(out).toEqual(["Pool view", "Top floor"]);
+    expect(new Set(out).size).toBe(out.length);
+  });
 });
 
 describe("what Google is told about the apartment", () => {

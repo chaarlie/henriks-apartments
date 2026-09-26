@@ -67,6 +67,11 @@ function youtubeId(input: string | undefined): string | undefined {
   return m ? m[1] : undefined;
 }
 
+/** Chips as they should be stored: trimmed, no blanks, no repeats. */
+function cleanChips(chips: string[]): string[] {
+  return [...new Set(chips.map((c) => c.trim()).filter(Boolean))];
+}
+
 function textToBlocks(text: string) {
   return text
     .split(/\n{2,}/)
@@ -261,7 +266,7 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
           since Sanity's url type rejects it.
         */
         ...(input.bookingUrl.trim() ? { bookingUrl: input.bookingUrl.trim() } : {}),
-        chips: input.chips,
+        chips: cleanChips(input.chips),
         keywords: input.keywords,
         forSale: input.forSale,
         salePriceUsd: input.salePriceUsd || undefined,
@@ -341,7 +346,18 @@ export async function saveUnitTranslation(
     tagline: input.tagline || undefined,
     keywords: input.keywords || undefined,
     saleNote: input.saleNote || undefined,
-    chips: input.chips.length ? input.chips : undefined,
+    /*
+      Blanks are dropped, not stored.
+
+      The editor seeds this array to the ENGLISH length with "" for every chip
+      nobody has translated yet (see AdminApp), which is the right thing for an
+      editor — an empty box to type into. Storing those blanks is not: a locale's
+      chips replace the English wholesale, so saving three of eleven used to put
+      eight empty strings on the Spanish page, rendering eight ticks with no text
+      and giving React two children keyed "".
+    */
+    chips: cleanChips(input.chips).length ? cleanChips(input.chips) : undefined,
+
     about: input.about.trim() ? textToBlocks(input.about) : undefined,
     space: input.space.length ? input.space.map((s) => ({ _key: key(), ...s })) : undefined,
     amenitiesOverride: {
@@ -500,6 +516,10 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
       };
     if (!(input.fxRate > 0 && input.fxRate < 1000))
       return { ok: false, error: "Enter the exchange rate as pesos per US dollar — for example 61." };
+    // Printed straight into guest-facing copy ("50 Mbps fibre"), so a 0 or a
+    // fraction would read as a broken promise rather than a blank field.
+    if (!(Number.isInteger(input.internetMbps) && input.internetMbps > 0))
+      return { ok: false, error: "Enter the internet speed in Mbps as a whole number — for example 50." };
     if (!(input.powerBaseUsd >= 0))
       return { ok: false, error: "The power estimate can’t be negative." };
     if (!input.checkIn.trim() || !input.checkOut.trim())
@@ -529,6 +549,7 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
         checkOut: input.checkOut.trim(),
         stayNote: input.stayNote.trim(),
         fxRate: input.fxRate,
+        internetMbps: input.internetMbps,
         fxRateAsOf,
         powerBaseUsd: input.powerBaseUsd,
         discounts: [...input.discounts]

@@ -77,7 +77,7 @@ export default function BookingCard({ unit }: { unit: Unit }) {
           ))}
         </dl>
       </div>
-      <p className="mt-3 text-[15px] leading-[1.55] text-copy">{t.monthlyIncludesNote}</p>
+      <p className="mt-3 text-[15px] leading-[1.55] text-copy">{t.monthlyIncludesNote(content.internetMbps)}</p>
 
       {/* Dates */}
       <p className="mb-2 mt-5 font-mono text-xs uppercase tracking-[0.1em] text-muted">{t.yourDates}</p>

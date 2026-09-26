@@ -231,8 +231,8 @@ const en = {
   nightsLine: (nights: number, price: string) =>
     `${nights} night${nights === 1 ? "" : "s"} × ${price}`,
   electricityMetered: "Electricity, metered estimate",
-  waterGarbageFibre: "Water, garbage, 200 Mbps fibre",
-  powerWaterFibre: "Power, water & 200 Mbps fibre",
+  waterGarbageFibre: (mbps: number) => `Water, garbage, ${mbps} Mbps fibre`,
+  powerWaterFibre: (mbps: number) => `Power, water & ${mbps} Mbps fibre`,
   included: "Included",
   depositRefundable: "Deposit (refundable)",
   longStayDiscount: (months: number) => `Long-stay discount, ${months} mo+`,
@@ -310,7 +310,8 @@ const en = {
   waysToStay: (word: string) => `${word.charAt(0).toUpperCase()}${word.slice(1)} ways to stay`,
   showingPricesFor: "Showing prices and availability for",
   changeDates: "Change dates",
-  rentIncludesNote: "Water, garbage and 200 Mbps fibre are in the rent. Power is metered.",
+  rentIncludesNote: (mbps: number) =>
+    `Water, garbage and ${mbps} Mbps fibre are in the rent. Power is metered.`,
   showAllApartments: (n: number) => `Show all ${n} apartments`,
 
   // ── For sale band ────────────────────────────────────────────────────────
@@ -343,8 +344,8 @@ const en = {
   showLabel: "Show",
 
   // ── Unit booking card and action bar ─────────────────────────────────────
-  monthlyIncludesNote:
-    "Monthly: water, garbage and 200 Mbps fibre included, power metered. Nightly stays include everything.",
+  monthlyIncludesNote: (mbps: number) =>
+    `Monthly: water, garbage and ${mbps} Mbps fibre included, power metered. Nightly stays include everything.`,
   yourDates: "Your dates",
   seeTheBreakdown: "See the breakdown",
   pickDatesForTotal: "Pick your dates to see the exact total.",
@@ -579,8 +580,8 @@ const es: typeof en = {
   nightsLine: (nights: number, price: string) =>
     `${nights} noche${nights === 1 ? "" : "s"} × ${price}`,
   electricityMetered: "Electricidad, estimado con medidor",
-  waterGarbageFibre: "Agua, basura y fibra de 200 Mbps",
-  powerWaterFibre: "Electricidad, agua y fibra de 200 Mbps",
+  waterGarbageFibre: (mbps: number) => `Agua, basura y fibra de ${mbps} Mbps`,
+  powerWaterFibre: (mbps: number) => `Electricidad, agua y fibra de ${mbps} Mbps`,
   included: "Incluido",
   depositRefundable: "Depósito (reembolsable)",
   longStayDiscount: (months: number) => `Descuento por estadía larga, ${months} meses o más`,
@@ -636,8 +637,8 @@ const es: typeof en = {
   waysToStay: (word: string) => `${word.charAt(0).toUpperCase()}${word.slice(1)} formas de quedarte`,
   showingPricesFor: "Mostrando precios y disponibilidad para",
   changeDates: "Cambiar las fechas",
-  rentIncludesNote:
-    "El agua, la basura y la fibra de 200 Mbps están incluidas en el alquiler. La electricidad se mide con contador.",
+  rentIncludesNote: (mbps: number) =>
+    `El agua, la basura y la fibra de ${mbps} Mbps están incluidas en el alquiler. La electricidad se mide con contador.`,
   showAllApartments: (n: number) => `Ver los ${n} apartamentos`,
 
   stayAWhile: "Quédate un tiempo — o quédate para siempre",
@@ -665,8 +666,8 @@ const es: typeof en = {
   useArrows: "Usa las flechas para pasar las fotos.",
   showLabel: "Ver",
 
-  monthlyIncludesNote:
-    "Mensual: agua, basura y fibra de 200 Mbps incluidas, electricidad con contador. Las estadías por noche lo incluyen todo.",
+  monthlyIncludesNote: (mbps: number) =>
+    `Mensual: agua, basura y fibra de ${mbps} Mbps incluidas, electricidad con contador. Las estadías por noche lo incluyen todo.`,
   yourDates: "Tus fechas",
   seeTheBreakdown: "Ver el desglose",
   pickDatesForTotal: "Elige tus fechas para ver el total exacto.",

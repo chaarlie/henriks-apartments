@@ -280,6 +280,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
         checkOut?: string;
         stayNote?: string;
         fxRate?: number;
+        internetMbps?: number;
         fxRateAsOf?: string;
         powerBaseUsd?: number;
         discounts?: { months?: number; pct?: number }[];
@@ -309,6 +310,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     checkOut: s?.checkOut ?? "",
     stayNote: s?.stayNote ?? "",
     fxRate: s?.fxRate ?? 0,
+    internetMbps: s?.internetMbps ?? 50,
     fxRateAsOf: s?.fxRateAsOf?.slice(0, 10) ?? "",
     powerBaseUsd: s?.powerBaseUsd ?? 0,
     discounts: (s?.discounts ?? []).map((d) => ({

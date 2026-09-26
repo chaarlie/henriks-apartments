@@ -17,18 +17,39 @@ import { Lightbox, useLightboxControls, useLightboxPhoto } from "@/app/component
  * only by clicking dots. The property's biggest draw was its least visible
  * asset. So: full-bleed, dark, and every photo on screen at once.
  *
+ * The mockup this implements is `mockups/redesign-v5-common-areas.html`. Named
+ * here because `mockups/` is gitignored and v4 — the rejected carousel — sits
+ * beside it: a review has already measured this component against v4 and
+ * reported it as having drifted from the design, when v4 IS the drift.
+ *
  * The full-screen viewer is Lightbox, shared with a unit page's gallery. This
  * page composes it with an area name over the caption; that one composes the
  * same parts with alt text. Neither passes the other a flag.
  */
 
-/** Mosaic shape. Index-driven so it survives Henrik adding or reordering
- *  photos in the Studio — the first is the hero, the fourth runs wide, and
- *  anything else is a square. */
-function slotClass(i: number): string {
-  if (i === 0) return "col-span-2 row-span-2 min-h-[240px] sm:min-h-[392px]";
-  if (i === 3) return "col-span-2";
-  return "";
+/**
+ * Mosaic shape AND the rendition each shape needs. Index-driven so it survives
+ * Henrik adding or reordering photos in the Studio — the first is the hero, the
+ * fourth runs wide, and anything else is a square.
+ *
+ * One function returning both on purpose. A tile's width decides its grid span
+ * and which image the CDN should send, and those were written in two places: the
+ * hero spanned two columns and two rows while asking for a one-column image, so
+ * the largest photo in the band — the one everybody looks at first — arrived at
+ * roughly half the resolution it was displayed at. Same fact, one home.
+ *
+ * The widths: the container is max-w-[1200px] inside px-7, so 1144px of content;
+ * four columns with 12px gaps make a column (1144 − 36) / 4 ≈ 277px, and a
+ * two-column tile 277 × 2 + 12 ≈ 566px. Below lg the grid is two columns, so a
+ * square is half the viewport and a wide tile is all of it.
+ */
+function slot(i: number): { className: string; sizes: string } {
+  const wideSizes = "(min-width:1024px) 566px, 100vw";
+  // The hero: two columns AND two rows, so it is the tallest thing here too.
+  if (i === 0)
+    return { className: "col-span-2 row-span-2 min-h-[240px] sm:min-h-[392px]", sizes: wideSizes };
+  if (i === 3) return { className: "col-span-2", sizes: wideSizes };
+  return { className: "", sizes: "(min-width:1024px) 277px, 50vw" };
 }
 
 export default function CommonAreas() {
@@ -116,10 +137,26 @@ function Band({ areas }: { areas: CommonArea[] }) {
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {areas.map((a, i) => {
             const dim = kind !== "all" && a.kind !== kind;
+            const { className: slotCn, sizes } = slot(i);
             return (
               <motion.button
                 key={a.url}
                 type="button"
+                /*
+                  Actually disabled, not just unclickable.
+
+                  `pointer-events-none` alone stopped the mouse and nothing else:
+                  a filtered-out tile stayed in the tab order and still opened on
+                  Enter, and it announced its ordinary label with no hint it had
+                  been filtered — so the keyboard and screen-reader paths ignored
+                  the filter the mouse obeyed. `disabled` takes it out of the tab
+                  order, blocks activation and exposes the state.
+
+                  The tiles are dimmed rather than removed because slot() keys off
+                  the index: dropping one would reshuffle which photo is the hero
+                  every time the filter changed.
+                */
+                disabled={dim}
                 onClick={() => open(i)}
                 onPointerEnter={() => warm(a.url)}
                 onFocus={() => warm(a.url)}
@@ -131,7 +168,7 @@ function Band({ areas }: { areas: CommonArea[] }) {
                 whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-8%" }}
                 transition={{ duration: 0.4, ease: "easeOut", delay: Math.min(i, 7) * 0.05 }}
-                className={`group relative min-h-[150px] overflow-hidden rounded-[14px] text-left transition-[box-shadow,transform] duration-200 sm:min-h-[190px] ${slotClass(i)} ${
+                className={`group relative min-h-[150px] overflow-hidden rounded-[14px] text-left transition-[box-shadow,transform] duration-200 sm:min-h-[190px] ${slotCn} ${
                   dim
                     ? "pointer-events-none"
                     : "hover:-translate-y-[3px] hover:shadow-[0_22px_44px_-26px_rgba(0,0,0,0.9)]"
@@ -162,7 +199,8 @@ function Band({ areas }: { areas: CommonArea[] }) {
                     // page. The unit gallery, where the photos are the point,
                     // loads eagerly instead.
                     loading="lazy"
-                    sizes="(min-width:1024px) 300px, 50vw"
+                    // From slot(), so it always matches the span above it.
+                    sizes={sizes}
                     placeholder={a.blurDataURL ? "blur" : "empty"}
                     blurDataURL={a.blurDataURL}
                     className="object-cover transition-transform duration-500 group-hover:scale-105"

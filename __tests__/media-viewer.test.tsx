@@ -65,28 +65,44 @@ const withTour = () =>
 const toggle = () => screen.getByRole("group", { name: "View" });
 
 describe("an apartment with a 360° tour", () => {
-  it("opens on the tour, because it is the thing worth seeing", () => {
+  /*
+    Opens on the PHOTOS, even though the tour exists. Someone who clicked into an
+    apartment wants to see the apartment, and a panorama has to be operated before
+    it shows anything. It is also what makes the hero image's `priority` count —
+    the gallery branch is unmounted on first paint when the tour leads.
+  */
+  it("opens on the photos, not the tour", () => {
     render(<MediaViewer unit={withTour()} />);
 
-    expect(screen.getByTestId("tour")).toBeInTheDocument();
-    expect(within(toggle()).getByRole("button", { name: "360° tour" })).toHaveAttribute(
+    expect(screen.queryByTestId("tour")).not.toBeInTheDocument();
+    expect(within(toggle()).getByRole("button", { name: /Photos/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText("Drag to look around")).toBeInTheDocument();
+    expect(screen.getByText("Photo 1 of 3")).toBeInTheDocument();
   });
 
-  it("switches to the photos and back", async () => {
+  it("offers the photos before the tour in the toggle", () => {
+    render(<MediaViewer unit={withTour()} />);
+
+    const labels = within(toggle())
+      .getAllByRole("button")
+      .map((b) => b.textContent);
+    expect(labels).toEqual(["Photos · 3", "360° tour"]);
+  });
+
+  it("switches to the tour and back", async () => {
     const user = userEvent.setup();
     render(<MediaViewer unit={withTour()} />);
 
-    await user.click(within(toggle()).getByRole("button", { name: /Photos/ }));
+    await user.click(within(toggle()).getByRole("button", { name: "360° tour" }));
 
+    expect(screen.getByTestId("tour")).toBeInTheDocument();
+    expect(screen.getByText("Drag to look around")).toBeInTheDocument();
+
+    await user.click(within(toggle()).getByRole("button", { name: /Photos/ }));
     expect(screen.queryByTestId("tour")).not.toBeInTheDocument();
     expect(screen.getByText("Photo 1 of 3")).toBeInTheDocument();
-
-    await user.click(within(toggle()).getByRole("button", { name: "360° tour" }));
-    expect(screen.getByTestId("tour")).toBeInTheDocument();
   });
 
   it("counts the photos on the toggle so the guest knows what is there", () => {

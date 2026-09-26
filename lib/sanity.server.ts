@@ -302,6 +302,7 @@ interface RawSettings {
   checkOut?: string;
   stayNote?: string;
   fxRate: number;
+  internetMbps?: number;
   /** when the rate last changed (falls back to the document's last save) */
   fxRateUpdatedAt?: string;
   powerBaseUsd: number;
@@ -469,6 +470,8 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
       note: setTr?.stayNote || s.stayNote || DEFAULT_STAY.note,
     },
     fxRate: s.fxRate,
+    // 50 matches the fallback in lib/content.ts — an unset field must not print "0 Mbps fibre".
+    internetMbps: s.internetMbps ?? 50,
     fxRateAsOf: s.fxRateUpdatedAt?.slice(0, 10) ?? "",
     units: landing.units.map((u) => cardUnit(translated(u, locale))),
     amenities: mergeRows(s.propertyAmenities, setTr?.propertyAmenities),

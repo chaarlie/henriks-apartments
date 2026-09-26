@@ -2741,6 +2741,7 @@ const propertyFields = (s: AdminSettings): AdminPropertyInput => ({
   checkOut: s.checkOut,
   stayNote: s.stayNote,
   fxRate: s.fxRate,
+  internetMbps: s.internetMbps,
   powerBaseUsd: s.powerBaseUsd,
   discounts: s.discounts,
   commonAreas: s.commonAreas,
@@ -3008,6 +3009,25 @@ function PropertyView({
               </div>
               <p className="field-note">
                 {asOf ? `Rate as of ${prettyDate(asOf)}.` : "No date yet."} The date updates when you change the rate.
+              </p>
+            </Field>
+            <Field label="Internet speed" req>
+              <div className="prefix">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step="1"
+                  min="1"
+                  aria-label="Internet speed in Mbps"
+                  value={d.internetMbps}
+                  disabled={translating}
+                  onChange={numberChange((v) => set("internetMbps", v))}
+                />
+                <span className="after">Mbps</span>
+              </div>
+              <p className="field-note">
+                Printed in the “what’s included” lines and the cost breakdown, in both languages.
+                Change it here and it changes everywhere.
               </p>
             </Field>
             <Field label="Electricity estimate" opt="(per month)">

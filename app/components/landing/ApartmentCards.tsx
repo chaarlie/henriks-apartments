@@ -62,7 +62,15 @@ function Card({ unit }: { unit: Unit }) {
     );
 
   return (
-    <article className="border-gradient flex flex-col rounded-[18px] p-2.5 transition-[box-shadow,translate] hover:-translate-y-[3px] hover:shadow-[0_22px_44px_-30px_rgba(6,43,68,0.6)]">
+    /*
+      `relative` anchors the stretched link below. The card LOOKS like one
+      clickable object — it lifts and shadows on hover — so it has to behave like
+      one: crossing it used to change the cursor five times (hand on the photo,
+      hand on the title, an I-beam over the tagline, an arrow over the price
+      panel, hand again on the button), which reads as the card flickering
+      between clickable and not.
+    */
+    <article className="border-gradient relative flex flex-col rounded-[18px] p-2.5 transition-[box-shadow,translate] hover:-translate-y-[3px] hover:shadow-[0_22px_44px_-30px_rgba(6,43,68,0.6)]">
       <Link href={href} tabIndex={-1} aria-hidden className="relative block aspect-[4/3] overflow-hidden rounded-[11px] bg-ink">
         <Image
           src={unit.image.url}
@@ -83,7 +91,17 @@ function Card({ unit }: { unit: Unit }) {
       <div className="flex flex-1 flex-col gap-3.5 px-2 pb-1.5 pt-4">
         <div>
           <h3 className="text-[21px] font-extrabold leading-tight tracking-[-0.02em]">
-            <Link href={href} className="text-ink hover:text-lagoon">
+            {/*
+              The card's stretched link: `after:absolute after:inset-0` grows this
+              one anchor's hit area over the whole <article>, so the pointer is a
+              hand anywhere on the card and a click lands on the apartment — which
+              is where the photo, the title and the primary button all already
+              went. One real link, so the accessibility tree is unchanged.
+            */}
+            <Link
+              href={href}
+              className="text-ink after:absolute after:inset-0 after:rounded-[18px] hover:text-lagoon"
+            >
               {unit.name}
             </Link>
           </h3>
@@ -147,7 +165,11 @@ function Card({ unit }: { unit: Unit }) {
           </p>
         )}
 
-        <div className="mt-auto grid gap-2">
+        {/*
+          Above the stretched link, or it would swallow them. "Check dates" opens
+          the picker and "Ask" opens WhatsApp — neither goes where the card goes.
+        */}
+        <div className="relative z-10 mt-auto grid gap-2">
           <Link
             href={href}
             className="flex min-h-[50px] items-center justify-center gap-2 rounded-[11px] bg-ink text-base font-extrabold text-white transition-colors hover:bg-ink-hover"

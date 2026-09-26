@@ -10,9 +10,18 @@ import { Lightbox, useLightboxControls, useLightboxPhoto } from "@/app/component
 type Mode = "gallery" | "tour";
 
 /**
- * Reusable unit media panel: a toggle that switches the panel between the 360°
- * tour and the photo gallery. The tour is the page's one unique asset, so it
- * opens first whenever the unit has one.
+ * Reusable unit media panel: a toggle that switches the panel between the photo
+ * gallery and the 360° tour.
+ *
+ * The GALLERY opens first. The tour used to, on the grounds that it is the page's
+ * one unique asset — but someone landing on an apartment page wants to see the
+ * apartment, and a panorama viewer is a thing you have to operate before it shows
+ * you anything. The photos answer "what does it look like" immediately; the tour
+ * is one click away for whoever wants it.
+ *
+ * It also fixes the LCP: the gallery's hero <Image> carries `priority`, which did
+ * nothing while the tour was default, because the whole gallery branch was
+ * unmounted on first paint.
  *
  * The full-screen viewer is Lightbox, shared with the landing page's common
  * areas. It replaced a hand-rolled one here that re-implemented Escape, had no
@@ -35,7 +44,7 @@ function Panel({ unit, photos }: { unit: Unit; photos: ImageRef[] }) {
   const t = useUi();
   const { open, warm } = useLightboxControls();
   const hasTour = unit.tour.length > 0;
-  const [mode, setMode] = useState<Mode>(hasTour ? "tour" : "gallery");
+  const [mode, setMode] = useState<Mode>("gallery");
   const [active, setActive] = useState(0);
 
   const seg = (m: Mode, label: string) => (
@@ -56,8 +65,8 @@ function Panel({ unit, photos }: { unit: Unit; photos: ImageRef[] }) {
       {/* Controls on top */}
       <div className="mb-3.5 flex flex-wrap items-center gap-3">
         <div className="inline-flex gap-[3px] rounded-xl bg-sand p-1" role="group" aria-label={t.viewLabel}>
-          {hasTour && seg("tour", t.tour360)}
           {seg("gallery", t.photosCount(photos.length))}
+          {hasTour && seg("tour", t.tour360)}
         </div>
         <span className="ml-auto hidden font-mono text-xs uppercase tracking-[0.12em] text-copy sm:inline">
           {mode === "tour" ? t.dragToLookAround : t.photoOf(active + 1, photos.length)}

@@ -1,8 +1,13 @@
 import { ui } from "@/lib/i18n/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getSiteContent, getUnit, getUnitSlugs } from "@/lib/sanity.server";
+import { notFound, permanentRedirect } from "next/navigation";
+import {
+  getCurrentSlugForFormer,
+  getSiteContent,
+  getUnit,
+  getUnitSlugs,
+} from "@/lib/sanity.server";
 import { BookingProvider } from "@/lib/booking";
 import { unitJsonLd } from "@/lib/structured-data";
 import { ogImage } from "@/lib/image-url";
@@ -75,7 +80,25 @@ export default async function UnitPage({
   if (!isLocale(lang)) notFound();
 
   const [unit, content] = await Promise.all([getUnit(slug, lang), getSiteContent(lang)]);
-  if (!unit) notFound();
+  /*
+    Nothing at this address today — but an apartment may have moved away from it.
+    A renamed apartment keeps its old slugs in `previousSlugs`, and each one
+    permanently redirects here rather than 404ing.
+
+    This is the reason slugs are safe to change at all. The last rename shipped
+    without it and left /apartments/one-bed, /studio, /two-bed and /loft dead.
+
+    Done here rather than in next.config.ts on purpose: the redirect map lives in
+    Sanity, so a slug Henrik edits in /admin takes effect on the next request
+    instead of waiting for a redeploy. 308 rather than 307 — the move is
+    permanent, and that is what tells a search engine to transfer the old URL's
+    standing to the new one.
+  */
+  if (!unit) {
+    const moved = await getCurrentSlugForFormer(slug);
+    if (moved) permanentRedirect(localePath(lang, `/apartments/${moved}`));
+    notFound();
+  }
 
   const t = ui(lang);
   // Facts come from this unit's own data — never a shared hardcoded list.

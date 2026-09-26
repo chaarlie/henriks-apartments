@@ -804,6 +804,21 @@ function ApartmentEditor({
                           ? `Saves as /apartments/${toSlug(d.slug) || toSlug(d.name)} — no spaces or capitals.`
                           : "Needs letters or numbers."}
                     </p>
+                    {/*
+                      Changing a live address is safe but not free, so say so
+                      before the save rather than after. The old link keeps
+                      working (saveUnit files it under previousSlugs and the
+                      apartment page redirects it), but anything printed or
+                      pasted into a listing now takes an extra hop.
+                    */}
+                    {!translating &&
+                      unit.slug &&
+                      (toSlug(d.slug) || toSlug(d.name)) !== unit.slug && (
+                        <p className="field-note warn">
+                          This moves the page from /apartments/{unit.slug}. The old link will keep
+                          working — it redirects here.
+                        </p>
+                      )}
                   </Field>
                   <Field label="Available from">
                     <input

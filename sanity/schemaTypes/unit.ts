@@ -1,10 +1,34 @@
-import {defineType, defineField, defineArrayMember} from 'sanity'
+import {defineType, defineField, defineArrayMember, type SlugValidationContext} from 'sanity'
+import {apiVersion} from '../env'
 
 const galleryImage = defineArrayMember({
   type: 'image',
   options: {hotspot: true},
   fields: [defineField({name: 'alt', title: 'Alt text', type: 'string'})],
 })
+
+/**
+ * A page address is free if no OTHER apartment uses it — as its current address
+ * or as one it used to have.
+ *
+ * Former addresses count because they still resolve: each one permanently
+ * redirects to whichever apartment owns it. Handing the same string to a second
+ * apartment would make one URL mean two pages, and which one wins would come
+ * down to query order.
+ *
+ * The document is checked in both its draft and published form, since a slug
+ * being typed in Studio lives on the draft while the address the public sees is
+ * on the published document.
+ */
+async function isSlugUnique(slug: string, context: SlugValidationContext) {
+  const {document, getClient} = context
+  const id = document?._id.replace(/^drafts\./, '')
+  const taken = await getClient({apiVersion}).fetch<boolean>(
+    `defined(*[_type == "unit" && !(_id in [$draft, $published]) && (slug.current == $slug || $slug in previousSlugs)][0]._id)`,
+    {draft: `drafts.${id}`, published: id, slug},
+  )
+  return !taken
+}
 
 /**
  * Unit — one apartment. Holds ONLY what differs between apartments. Shared info
@@ -34,8 +58,27 @@ export const unit = defineType({
       title: 'Slug',
       type: 'slug',
       group: 'overview',
-      options: {source: 'name', maxLength: 64},
+      /*
+        Generated from the name, which is the intent: nobody should have to think
+        up a URL. But it is STORED, not derived on read — two apartments on the
+        same floor attract near-identical names, and a slug recomputed on every
+        read would move the page every time the copy is tightened.
+
+        `isUnique` is what /admin already enforces in saveUnit; without it here,
+        Studio would happily save the clash that the editor refuses.
+      */
+      options: {source: 'name', maxLength: 64, isUnique: isSlugUnique},
       validation: (r) => r.required(),
+    }),
+    defineField({
+      name: 'previousSlugs',
+      title: 'Former page addresses',
+      type: 'array',
+      group: 'overview',
+      of: [defineArrayMember({type: 'string'})],
+      readOnly: true,
+      description:
+        'Every address this apartment used to live at. Maintained automatically on save — each one redirects to the current address, so changing a slug never strands a link someone already shared. Do not edit by hand.',
     }),
     defineField({name: 'tagline', title: 'Tagline', type: 'string', group: 'overview'}),
     defineField({name: 'priceUsd', title: 'Monthly rent (USD)', type: 'number', group: 'overview', validation: (r) => r.required().positive()}),

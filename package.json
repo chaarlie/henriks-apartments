@@ -11,6 +11,7 @@
     "studio:deploy": "sanity deploy",
     "typegen": "sanity schema extract --enforce-required-fields --path=./sanity/extract.json && sanity typegen generate",
     "admin:password": "node scripts/admin-password.mjs",
+    "units:backfill-slugs": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/backfill-former-slugs.mjs",
     "i18n:status": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/status.mjs",
     "i18n:extract": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/extract.mjs",
     "i18n:translate": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/translate.mjs",

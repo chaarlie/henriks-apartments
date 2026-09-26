@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getWriteClient } from "@/sanity/lib/writeClient";
 import { requireAdmin } from "@/lib/admin/session";
-import { toSlug } from "@/lib/slug";
+import { formerSlugs, toSlug } from "@/lib/slug";
 import { extractDoc, sourceHash, type RawDoc } from "@/lib/i18n/fingerprint";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/locales";
 import type {
@@ -184,11 +184,34 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
     const slug = toSlug(input.slug) || toSlug(input.name);
     if (!slug)
       return { ok: false, error: "Give the apartment a page address (letters and numbers)." };
-    const clash = await getWriteClient().fetch<string | null>(
-      `*[_type == "unit" && _id != $id && slug.current == $slug][0]._id`,
+    /*
+      One round trip for two questions: is this address free, and what address is
+      this apartment moving away from.
+
+      The clash check counts another apartment's FORMER addresses as taken, the
+      same way the Studio slug field does. They still resolve — each one
+      permanently redirects to whichever apartment owns it — so handing the same
+      string to a second apartment would make one URL mean two pages.
+    */
+    const current = await getWriteClient().fetch<{
+      clash: string | null;
+      slug: string | null;
+      previousSlugs: string[] | null;
+    }>(
+      `{
+        "clash": *[_type == "unit" && _id != $id && ($slug in previousSlugs || slug.current == $slug)][0]._id,
+        "slug": *[_id == $id][0].slug.current,
+        "previousSlugs": *[_id == $id][0].previousSlugs
+      }`,
       { id: input._id, slug },
     );
-    if (clash) return { ok: false, error: `Another apartment already uses the page address “${slug}”.` };
+    if (current.clash)
+      return { ok: false, error: `Another apartment already uses the page address “${slug}”.` };
+
+    // The address it is leaving joins the list, so the link Henrik already sent
+    // someone keeps working — see formerSlugs() for the rules and the redirect in
+    // the apartment page for what consumes it.
+    const previousSlugs = formerSlugs(current.slug, current.previousSlugs, slug);
 
     const badDeposit = input.deposits.some(
       (t) => !Number.isInteger(t.fromMonths) || t.fromMonths < 0 || !(t.amountUsd >= 0),
@@ -221,6 +244,7 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
         code: input.code,
         tagline: input.tagline,
         slug: { _type: "slug", current: slug },
+        previousSlugs,
         hidden: input.hidden,
         priceUsd: input.priceUsd,
         priceNightlyUsd: input.priceNightlyUsd,

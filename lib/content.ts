@@ -430,7 +430,7 @@ const buildingAmenities: Amenity[] = [
   { label: "Shared pool & sun deck", included: true },
   { label: "Gated entry with parking", included: true },
   { label: "Weekly cleaning (optional)", included: true },
-  { label: "No elevator — walk-up", included: false },
+  { label: "Elevator to all floors", included: true },
 ];
 const houseRules: Term[] = [
   {

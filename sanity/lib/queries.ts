@@ -59,6 +59,18 @@ export const unitQuery = groq`
 `
 
 /**
+ * FORMER ADDRESS — the current slug of whichever apartment used to live at $slug.
+ *
+ * Asked only after unitQuery has already come back empty, so it costs nothing on
+ * the path that matters. `hidden` is deliberately NOT filtered: a hidden
+ * apartment still owns its old addresses, and redirecting to a page that then
+ * 404s is a clearer answer than 404ing on a URL that does have an owner.
+ */
+export const formerSlugQuery = groq`
+  *[_type == "unit" && $slug in previousSlugs][0].slug.current
+`
+
+/**
  * LANDING — unit cards (no heavy fields) + shared hero/location/settings.
  *
  * Each shared document carries its translation row for $locale as `tr`; the

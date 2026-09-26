@@ -5,7 +5,7 @@ import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 import { sanityFetch } from "@/sanity/lib/live";
 import { urlFor } from "@/sanity/lib/image";
 import { panoramaUrl } from "@/lib/panorama";
-import { landingQuery, unitQuery, availabilityQuery } from "@/sanity/lib/queries";
+import { landingQuery, unitQuery, availabilityQuery, formerSlugQuery } from "@/sanity/lib/queries";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/locales";
 import { COMMON_AREA_KINDS } from "@/lib/content";
 import type {
@@ -548,6 +548,20 @@ export async function getUnit(
     gallery: (u.gallery ?? []).map((g) => img(g, u.name)),
     tour: mapTour(u.tour),
   };
+}
+
+/**
+ * The address an old one moved to, or null if nothing ever lived there.
+ *
+ * Called only once getUnit() has returned null, which keeps it off the hot path
+ * entirely — an apartment that still lives at its own slug never triggers it.
+ */
+export async function getCurrentSlugForFormer(slug: string): Promise<string | null> {
+  const { data } = await sanityFetch<string | null>({
+    query: formerSlugQuery,
+    params: { slug },
+  });
+  return data ?? null;
 }
 
 /** Slugs for generateStaticParams. */

@@ -57,14 +57,22 @@ Do not assert these on the site without confirming with Henrik:
 - **No occupancy beyond 1 bed.** Every unit lists one king and nothing else. A
   sofa is present, but "sleeps 4" is not supported by the listing.
 
-## Contradiction to resolve
+## Contradiction — RESOLVED 2026-09-25
 
 201, 301 and 302 each carry **both** of Booking's access lines at once:
 
 > Se puede acceder a las plantas superiores en ascensor
 > Las plantas superiores solo son accesibles por escaleras
 
-Elevator and stairs-only cannot both be true. `lib/content.ts` currently lists
-"No elevator — walk-up" as a *not included* amenity, which agrees with one line
-and contradicts the other. Ask Henrik whether the building has a working
-elevator — it matters to exactly the guests who will ask.
+**Henrik confirmed the elevator works.** The first line is the true one; the
+stairs-only line on the listing is wrong and should be corrected there too.
+
+So `stayDefaults.amenities.building` now reads "Elevator to all floors"
+(*included*), in both languages, and so does the `buildingAmenities` fallback in
+`lib/content.ts`. Before this it said "No elevator — walk-up" and marked it *not
+included* — the site was denying a feature it has, to exactly the long-stay
+guests who ask first. Do not reintroduce it from the listing.
+
+The unit-level claims are gone: the elevator was a per-unit chip on all four
+(including the ground-floor 101, which needs no lift) and was asserted in the
+prose. A lift is a property fact, so it belongs in the shared list only.

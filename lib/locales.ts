@@ -79,6 +79,32 @@ export const HREFLANG: Record<Locale, string> = {
 };
 
 /**
+ * Is this href the one URL a client-side navigation cannot reach?
+ *
+ * `/` has no route file — next.config.ts rewrites it to `/${DEFAULT_LOCALE}`.
+ * A full page load follows that rewrite and works. A client-side navigation does
+ * not: Next asks for the same path with an `RSC` header and expects a flight
+ * payload, and in production the rewrite hands it the HTML of `/en` instead
+ * (`x-matched-path: /en`, `content-type: text/html`, where `/es` correctly gets
+ * `/es.rsc` and `text/x-component`). The router cannot parse HTML as a payload,
+ * so clicking a <Link href="/"> lands on a 404.
+ *
+ * Only the ROOT is affected. `/apartments/:slug` survives by accident: the `.rsc`
+ * suffix is captured by `:slug` and passed through to the destination, so that
+ * rewrite resolves to `/en/apartments/x.rsc`. `/` has no parameter to carry it.
+ *
+ * It does not reproduce under `next start` — there the RSC request 307s to
+ * `/?_rsc` and comes back as `text/x-component` correctly — so this is a
+ * production-only behaviour of the hosted rewrite, and local testing will not
+ * show it.
+ *
+ * The hash is ignored: `/#units` is the same navigation as `/`.
+ */
+export function isUnroutableRoot(href: string): boolean {
+  return href === "/" || href.startsWith("/#");
+}
+
+/**
  * A language's own name, for the switcher.
  *
  * The endonym, always — someone looking for their language recognises it

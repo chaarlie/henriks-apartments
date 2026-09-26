@@ -1,6 +1,6 @@
 import { ui } from "@/lib/i18n/ui";
 import type { Metadata } from "next";
-import Link from "next/link";
+import SiteLink from "@/app/components/SiteLink";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
   getCurrentSlugForFormer,
@@ -119,12 +119,12 @@ export default async function UnitPage({
         <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
           {/* Title */}
           <nav aria-label={t.breadcrumb} className="pt-6 text-[15px] text-copy">
-            <Link
+            <SiteLink
               href={localePath(lang, "/#units")}
               className="font-semibold text-lagoon underline underline-offset-[3px]"
             >
               {t.navApartments}
-            </Link>
+            </SiteLink>
             <span aria-hidden className="mx-2">/</span>
             <span aria-current="page">{unit.name}</span>
           </nav>

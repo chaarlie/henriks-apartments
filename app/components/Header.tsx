@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import SiteLink from "@/app/components/SiteLink";
 import { usePathname } from "next/navigation";
 import { type Unit } from "@/lib/content";
 import { localePath, splitLocale } from "@/lib/locales";
@@ -80,10 +80,12 @@ export default function Header({
       {/* Header row */}
       <header className="border-b border-hair bg-page/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-3 sm:gap-5 sm:px-7">
-          <Link href={home} className="flex items-center gap-2.5 whitespace-nowrap text-ink">
+          {/* SiteLink, not Link: `home` is "/" in English, which a client-side
+              navigation cannot reach under the locale rewrite. */}
+          <SiteLink href={home} className="flex items-center gap-2.5 whitespace-nowrap text-ink">
             <span className="h-6 w-6 rounded-[7px] bg-deep" aria-hidden />
             <span className="text-lg font-bold tracking-[-0.015em] sm:text-xl">{content.property.name}</span>
-          </Link>
+          </SiteLink>
           <nav className="ml-auto flex items-center gap-2 md:gap-[22px]">
             {links.map((l) => (
               <a

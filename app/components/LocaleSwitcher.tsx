@@ -1,7 +1,7 @@
 "use client";
 
 import { ui } from "@/lib/i18n/ui";
-import Link from "next/link";
+import SiteLink from "@/app/components/SiteLink";
 import { usePathname } from "next/navigation";
 import { LANGUAGE_NAME, LOCALES, localePath, splitLocale } from "@/lib/locales";
 
@@ -33,7 +33,7 @@ export default function LocaleSwitcher() {
       {LOCALES.map((l) => {
         const current = l === locale;
         return (
-          <Link
+          <SiteLink
             key={l}
             href={localePath(l, path)}
             hrefLang={l}
@@ -45,7 +45,7 @@ export default function LocaleSwitcher() {
             {l}
             {/* The chip says "ES"; a screen reader should hear the language. */}
             <span className="sr-only"> — {LANGUAGE_NAME[l]}</span>
-          </Link>
+          </SiteLink>
         );
       })}
     </div>

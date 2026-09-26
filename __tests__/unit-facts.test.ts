@@ -15,7 +15,7 @@
  * Neither failure is visible in the UI until it is far too late, which is
  * exactly why they are pinned here.
  */
-import { unitFacts, unitFact, unitHighlights } from "@/lib/unit";
+import { unitFacts, unitFact, unitHighlights, unitLabel } from "@/lib/unit";
 import { unitJsonLd } from "@/lib/structured-data";
 import type { SiteContent, Unit } from "@/lib/content";
 
@@ -107,6 +107,23 @@ describe("the facts under an apartment's name", () => {
   it("drops blank chips, so a half-translated list cannot render empty rows", () => {
     const u = unit({ chips: ["Balcón y terraza", "", "  ", "Vista a la piscina", ""] });
     expect(unitHighlights(u)).toEqual(["Balcón y terraza", "Vista a la piscina"]);
+  });
+
+  /*
+    The name shipped as a descriptive title for SEO — "Apartment 302 — 48 m², top
+    floor, balcony" — and eleven sentence templates were still wrapping it in an
+    article, because they were written when the name WAS the code. The landing
+    page's CTA became "See the Apartment 302 — 48 m², top floor, balcony", which
+    wrapped onto three lines and stopped looking like a button.
+  */
+  it("gives sentences a short label, not the descriptive title", () => {
+    const u = unit({ name: "Apartment 302 — 48 m², top floor, balcony", code: "Unit 302" });
+    expect(unitLabel(u)).toBe("302");
+  });
+
+  it("falls back to the code, then the name, when there is no number", () => {
+    expect(unitLabel(unit({ code: "Penthouse", name: "The penthouse" }))).toBe("Penthouse");
+    expect(unitLabel(unit({ code: "", name: "The penthouse" }))).toBe("The penthouse");
   });
 
   it("drops duplicate chips, because the render keys on the chip itself", () => {

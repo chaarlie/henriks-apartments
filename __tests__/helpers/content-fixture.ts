@@ -14,12 +14,22 @@ import type { SiteContent, Unit } from "@/lib/content";
  */
 
 export function makeUnit(over: Partial<Unit> = {}): Unit {
+  const name = over.name ?? "101";
   return {
     _id: "unit-101",
     _type: "unit",
     slug: "apartment-1",
-    code: "Unit 101",
-    name: "101",
+    /*
+      Derived from `name`, because production keeps the two in step — "Apartment
+      302 — 48 m², top floor, balcony" alongside code "Unit 302" — and
+      unitLabel() reads the number off `code` to put inside a sentence.
+
+      A flat "Unit 101" here meant a test overriding only `name: "102"` got two
+      apartments that both labelled as "101", so "Switch to the 102" never
+      appeared and the failure looked like a bug in the component.
+    */
+    code: `Unit ${name}`,
+    name,
     tagline: "El Batey · ground floor & patio",
     priceUsd: 1000,
     priceNightlyUsd: 100,

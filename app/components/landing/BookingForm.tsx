@@ -11,6 +11,7 @@ import { availableForDates, freeUnits } from "@/lib/availability";
 import { requestHold } from "@/lib/actions/booking";
 import { useBooking, useContent } from "@/lib/booking";
 import { ChatIcon, CheckIcon } from "@/app/components/icons";
+import { unitLabel } from "@/lib/unit";
 
 function Step({ n, children, className = "" }: { n: number; children: ReactNode; className?: string }) {
   return (
@@ -93,7 +94,7 @@ export default function BookingForm() {
       <div className="mx-auto max-w-[1200px] px-4 sm:px-7">
         <p className="font-mono text-xs uppercase tracking-[0.14em] text-lagoon">{t.reserve}</p>
         <h2 className="mt-2.5 text-[clamp(30px,4vw,44px)] font-bold leading-[1.1] tracking-[-0.025em]">
-          {scopeFixed ? t.holdUnit(unit.name) : t.holdYourDates}
+          {scopeFixed ? t.holdUnit(unitLabel(unit)) : t.holdYourDates}
         </h2>
         <p className="mt-3 max-w-[40em] text-[17px] text-copy">
           {t.holdIntro}
@@ -154,7 +155,7 @@ export default function BookingForm() {
 
             {hasDates && !unitFree && (
               <div role="status" className="mt-2.5 rounded-xl bg-sand-soft px-3.5 py-3 text-[15px] text-ink">
-                {t.unitBooked(unit.name)}
+                {t.unitBooked(unitLabel(unit))}
                 {alternatives.length > 0 ? (
                   <>
                     {" "}{t.freeAlternatives}
@@ -166,7 +167,7 @@ export default function BookingForm() {
                           onClick={() => setSelected(a.slug)}
                           className="min-h-10 rounded-full border-[1.5px] border-line-card bg-surface px-3.5 text-sm font-bold transition-colors hover:border-ink"
                         >
-                          {t.switchUnit(a.name)}
+                          {t.switchUnit(unitLabel(a))}
                         </button>
                       ))}
                     </span>
@@ -214,7 +215,7 @@ export default function BookingForm() {
                 </span>
                 <h3 className="text-2xl font-extrabold">{t.datesHeld}</h3>
                 <p className="text-base leading-[1.6] text-copy">
-                  {t.holdConfirmation(unit.name, dateLabel)}
+                  {t.holdConfirmation(unitLabel(unit), dateLabel)}
                 </p>
                 <a
                   href={whatsappHref(content, { unit, note: waNote })}
@@ -267,7 +268,7 @@ export default function BookingForm() {
                         ? scopeFixed
                           ? t.chooseOtherDates
                           : t.chooseFreeApartment
-                        : t.requestUnit(unit.name)}
+                        : t.requestUnit(unitLabel(unit))}
                 </button>
                 <p className="text-sm leading-[1.5] text-copy">
                   {t.contactUseNote}

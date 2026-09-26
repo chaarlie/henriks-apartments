@@ -9,7 +9,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Tour from "@/app/components/tour/Tour";
 import { ArrowIcon, CalendarIcon, ChevronIcon } from "@/app/components/icons";
 import { display } from "@/lib/money";
-import { unitFacts } from "@/lib/unit";
+import { unitFacts, unitLabel } from "@/lib/unit";
 import { useBooking, useContent } from "@/lib/booking";
 import { useUi } from "@/lib/i18n/client";
 
@@ -89,7 +89,7 @@ export default function Inside() {
               {effectiveMode === "tour" ? t.walkthrough360 : t.photoWalkthrough}
             </p>
             <h2 className="mt-2.5 text-[clamp(30px,4vw,44px)] font-bold leading-[1.1] tracking-[-0.025em]">
-              {effectiveMode === "tour" ? t.seeBeforeYouFly(unit.name) : t.insideThe(unit.name)}
+              {effectiveMode === "tour" ? t.seeBeforeYouFly(unitLabel(unit)) : t.insideThe(unitLabel(unit))}
             </h2>
             <p className="mt-3 max-w-[40em] text-[17px] text-white/[0.78]">
               {t.everyRoomShot} {hasTour ? t.dragOrSwitch : t.useArrows}
@@ -222,7 +222,7 @@ export default function Inside() {
                 href={localePath(locale, `/apartments/${unit.slug}`)}
                 className="flex min-h-12 items-center justify-center gap-2 rounded-[11px] bg-white text-base font-extrabold text-ink transition-colors hover:bg-sand"
               >
-                {t.seeThe(unit.name)} <ArrowIcon />
+                {t.seeThe(unitLabel(unit))} <ArrowIcon />
               </Link>
               <button
                 type="button"

@@ -11,7 +11,7 @@ import { useDates } from "@/lib/i18n/dates";
 import { useUi } from "@/lib/i18n/client";
 import { availableFrom } from "@/lib/filter";
 import { availableForDates, freeAgainFrom, scopeUnits } from "@/lib/availability";
-import { unitFacts, unitHighlights } from "@/lib/unit";
+import { unitFacts, unitHighlights, unitLabel } from "@/lib/unit";
 import { useBooking, useContent } from "@/lib/booking";
 import { ArrowIcon, CalendarIcon, ChatIcon, CheckIcon, InfoIcon } from "@/app/components/icons";
 
@@ -170,7 +170,7 @@ function Card({ unit }: { unit: Unit }) {
               href={whatsappHref(content, { unit })}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={t.askAboutOnWhatsapp(unit.name)}
+              aria-label={t.askAboutOnWhatsapp(unitLabel(unit))}
               className={LINE_BTN}
             >
               <ChatIcon className="h-4 w-4 text-deep" />

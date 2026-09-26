@@ -37,6 +37,36 @@ export function unitFacts(u: Unit): [UnitFactKey, string][] {
   return rows.filter(([, value]) => value.trim() !== "");
 }
 
+/**
+ * The short name a SENTENCE can carry — "302", not the full title.
+ *
+ * `name` does two jobs and cannot do both. As the <h1> and the <title> it wants
+ * to be descriptive, which is what earns the search result: "Apartment 302 —
+ * 48 m², top floor, balcony". Inside a sentence it wants to be a label, because
+ * every one of these templates wraps it in an article:
+ *
+ *     See the {name}          Hold the {name} — free, nothing to pay
+ *     Inside the {name}       The {name} is booked during these dates.
+ *     Switch to the {name}    Ask about the {name} on WhatsApp
+ *
+ * They were written when `name` WAS the code — ui.ts still says «"See the 201" is
+ * "Ver el 201"» — so making the name descriptive turned the landing page's CTA
+ * into "See the Apartment 302 — 48 m², top floor, balcony", which wrapped onto
+ * three lines and stopped looking like a button at all.
+ *
+ * Spanish is the reason this must stay short rather than be reworded per string:
+ * those templates carry a gendered article ("el 302"), and a phrase beginning
+ * with "Apartment" does not fit behind it either.
+ *
+ * Taken from `code` ("Unit 302"), which is where the number already lives. Falls
+ * back to the whole code, then to the name, so a unit Henrik has not given a code
+ * still reads as something rather than nothing.
+ */
+export function unitLabel(u: Unit): string {
+  const code = (u.code ?? "").trim();
+  return code.match(/\d{2,4}/)?.[0] || code || u.name;
+}
+
 /** One fact by key, or undefined when this unit has no value for it. */
 export function unitFact(u: Unit, key: UnitFactKey): string | undefined {
   return unitFacts(u).find(([k]) => k === key)?.[1];

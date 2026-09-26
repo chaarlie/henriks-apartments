@@ -12,6 +12,7 @@ import { useUi } from "@/lib/i18n/client";
 import type { Currency } from "@/lib/money";
 import type { SiteContent } from "@/lib/content";
 import { blockedForScope, freeUnits } from "@/lib/availability";
+import { unitLabel } from "@/lib/unit";
 
 interface BookingState {
   currency: Currency;
@@ -115,7 +116,8 @@ export function BookingProvider({
         setNotice(null);
         return;
       }
-      const name = content.units.find((u) => u.slug === next)?.name ?? "that apartment";
+      const found = content.units.find((u) => u.slug === next);
+      const name = found ? unitLabel(found) : "that apartment";
       setRangeState({ start: null, end: null });
       setNotice(t.scopeCleared(name));
     },

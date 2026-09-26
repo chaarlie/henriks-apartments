@@ -16,6 +16,7 @@ import { blockedForScope, freeUnits, lastLeaveDay } from "@/lib/availability";
 import { DAY, addMonths, nights, today, utc } from "@/lib/dates";
 import { useDates } from "@/lib/i18n/dates";
 import { ChevronIcon, CloseIcon, InfoIcon } from "@/app/components/icons";
+import { unitLabel } from "@/lib/unit";
 
 /**
  * The site's one date picker. Guests pick an apartment, tap the day they arrive,
@@ -127,7 +128,12 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
   }, [blocked]);
 
   const step = start === null ? 1 : end === null ? 2 : 3;
-  const unitName = content.units.find((u) => u.slug === scope)?.name;
+  // The short label, not the title: these all land inside a sentence
+  // ("Dates for the 302"). See unitLabel().
+  const unitName = (() => {
+    const u = content.units.find((x) => x.slug === scope);
+    return u ? unitLabel(u) : undefined;
+  })();
 
   const selectable = (t: number) =>
     start !== null && end === null && last !== null ? t > start && t <= last : !blocked(t);
@@ -402,7 +408,7 @@ export default function StayPicker({ variant }: { variant: "inline" | "dialog" }
               <h3 className={heading}>{t.yourStay}: {t.nightsCount(n)}</h3>
               <p className={lede}>
                 {dayLabel(start)} → {dayLabel(end)}, {billingLabel(n)}.
-                {scope === "any" && ` ${t.freeNames(free.map((u) => u.name).join(", "))}`} {t.changeLengthNote}
+                {scope === "any" && ` ${t.freeNames(free.map(unitLabel).join(", "))}`} {t.changeLengthNote}
               </p>
             </>
           )}

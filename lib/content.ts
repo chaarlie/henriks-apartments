@@ -263,6 +263,17 @@ export interface SiteContent {
   /** ISO yyyy-mm-dd the rate was last confirmed; "" when unknown */
   fxRateAsOf: string;
   /**
+   * Download speed of the building's fibre, in Mbps.
+   *
+   * A field rather than a number typed into copy. The speed used to be spelled
+   * out in four `ui.ts` strings and three places here — ten in all, counting
+   * both languages — so correcting it meant a code change and a deploy, and the
+   * unit amenity lists had already drifted to three different figures (100, 200
+   * and the real one). It is a fact about the building, so Henrik owns it in
+   * /admin like the exchange rate.
+   */
+  internetMbps: number;
+  /**
    * The meta title and description Google and WhatsApp read.
    *
    * Translated like any other copy — which is the point. These were hardcoded
@@ -425,7 +436,7 @@ const insideAmenities: Amenity[] = [
   { label: "Fresh linens & towels", included: true },
 ];
 const buildingAmenities: Amenity[] = [
-  { label: "200 Mbps fibre + Wi-Fi", included: true },
+  { label: "50 Mbps fibre + Wi-Fi", included: true },
   { label: "Inverter + generator backup, 24/7", included: true },
   { label: "Shared pool & sun deck", included: true },
   { label: "Gated entry with parking", included: true },
@@ -500,6 +511,7 @@ export const content: SiteContent = {
 
   fxRate: 61, // 1 USD = 61 DOP (PLACEHOLDER)
   fxRateAsOf: "",
+  internetMbps: 50,
   seo: { title: "", description: "" },
 
   units: [
@@ -514,7 +526,7 @@ export const content: SiteContent = {
       priceNightlyUsd: 58,
       availableFrom: "2026-09-05",
       spec: { area: "34 m²", bath: "1 bath", sleeps: "Sleeps 2" },
-      chips: ["Sleeps 2", "Split AC", "200 Mbps"],
+      chips: ["Sleeps 2", "Split AC", "50 Mbps"],
       keywords: "pool balcony ac kitchen courtyard studio",
       image: photo("16.jpg", "Studio living area with a pool-view balcony"),
       about: [
@@ -675,7 +687,7 @@ export const content: SiteContent = {
     },
     {
       icon: ICON.wifi,
-      title: "200 Mbps fibre",
+      title: "50 Mbps fibre",
       desc: "Wi-Fi throughout, fast enough to work and stream from home.",
     },
     {

@@ -143,7 +143,7 @@ export function computeEstimate(
     const deposit = depositFor(unit, 0);
     const lines: EstimateLine[] = [
       { key: "rent", label: t.nightsLine(n, d(unit.priceNightlyUsd)), value: d(rent) },
-      { key: "utilities", label: t.powerWaterFibre, value: t.included, teal: true },
+      { key: "utilities", label: t.powerWaterFibre(content.internetMbps), value: t.included, teal: true },
     ];
     if (deposit > 0) lines.push({ key: "deposit", label: t.depositRefundable, value: d(deposit) });
     const total = rent + deposit;
@@ -165,7 +165,7 @@ export function computeEstimate(
   const lines: EstimateLine[] = [
     { key: "rent", label: t.rentLine(months, d(unit.priceUsd)), value: d(rent) },
     { key: "power", label: t.electricityMetered, value: d(power) },
-    { key: "utilities", label: t.waterGarbageFibre, value: t.included, teal: true },
+    { key: "utilities", label: t.waterGarbageFibre(content.internetMbps), value: t.included, teal: true },
   ];
   if (deposit > 0) lines.push({ key: "deposit", label: t.depositRefundable, value: d(deposit) });
   if (tier && discount > 0) {

@@ -500,6 +500,10 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
       };
     if (!(input.fxRate > 0 && input.fxRate < 1000))
       return { ok: false, error: "Enter the exchange rate as pesos per US dollar — for example 61." };
+    // Printed straight into guest-facing copy ("50 Mbps fibre"), so a 0 or a
+    // fraction would read as a broken promise rather than a blank field.
+    if (!(Number.isInteger(input.internetMbps) && input.internetMbps > 0))
+      return { ok: false, error: "Enter the internet speed in Mbps as a whole number — for example 50." };
     if (!(input.powerBaseUsd >= 0))
       return { ok: false, error: "The power estimate can’t be negative." };
     if (!input.checkIn.trim() || !input.checkOut.trim())
@@ -529,6 +533,7 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
         checkOut: input.checkOut.trim(),
         stayNote: input.stayNote.trim(),
         fxRate: input.fxRate,
+        internetMbps: input.internetMbps,
         fxRateAsOf,
         powerBaseUsd: input.powerBaseUsd,
         discounts: [...input.discounts]

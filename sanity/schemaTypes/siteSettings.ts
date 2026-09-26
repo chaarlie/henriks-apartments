@@ -32,6 +32,15 @@ export const siteSettings = defineType({
 
     defineField({name: 'fxRate', title: 'DOP per 1 USD', type: 'number', group: 'pricing'}),
     defineField({
+      name: 'internetMbps',
+      title: 'Internet speed (Mbps)',
+      type: 'number',
+      group: 'pricing',
+      description:
+        'The building fibre’s download speed. Printed in the rent-includes lines and the cost breakdown, in both languages — one number, so the figure cannot drift between the homepage and an apartment page the way it had.',
+      validation: (r) => r.positive().integer(),
+    }),
+    defineField({
       name: 'fxRateAsOf',
       title: 'Rate checked on',
       type: 'date',

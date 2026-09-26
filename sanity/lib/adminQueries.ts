@@ -62,7 +62,7 @@ export const adminSettingsQuery = groq`
     propertyName, city, region, whatsappNumber,
     languages, ownerSince, replyTime, hostNote,
     checkIn, checkOut, stayNote,
-    fxRate, "fxRateAsOf": coalesce(fxRateAsOf, _updatedAt),
+    fxRate, internetMbps, "fxRateAsOf": coalesce(fxRateAsOf, _updatedAt),
     powerBaseUsd, discounts, propertyAmenities,
     // _key rides along so a save keeps each photo's array key — translated
     // captions are rebuilt against it.

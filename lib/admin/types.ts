@@ -199,6 +199,9 @@ export interface AdminHero extends Translatable<HeroTranslation> {
 export interface AdminLocation extends Translatable<LocationTranslation> {
   heading: string;
   addressLine: string;
+  /** Map pin, decimal degrees. Same in every language, so not translatable. */
+  lat: number;
+  lng: number;
   distances: DistanceRow[];
 }
 
@@ -285,6 +288,8 @@ export interface AdminHeroInput {
 export interface AdminLocationInput {
   heading: string;
   addressLine: string;
+  lat: number;
+  lng: number;
   distances: DistanceRow[];
 }
 

@@ -713,11 +713,22 @@ export async function saveHeroTranslation(
 export async function saveLocation(input: AdminLocationInput): Promise<ActionResult> {
   try {
     await requireAdmin();
+    /*
+      Checked, because a bad pin fails quietly: the map still renders, just
+      somewhere else. 0,0 in particular is what an empty box coerces to, and it
+      is a real place in the Gulf of Guinea.
+    */
+    if (!Number.isFinite(input.lat) || input.lat < -90 || input.lat > 90)
+      return { ok: false, error: "Latitude has to be a number between -90 and 90 — for example 19.7684." };
+    if (!Number.isFinite(input.lng) || input.lng < -180 || input.lng > 180)
+      return { ok: false, error: "Longitude has to be a number between -180 and 180 — for example -70.5118." };
     await getWriteClient()
       .patch(LOCATION_ID)
       .set({
         heading: input.heading.trim() || undefined,
         addressLine: input.addressLine.trim() || undefined,
+        lat: input.lat,
+        lng: input.lng,
         distances: input.distances
           .filter((d) => d.label.trim() || d.value.trim())
           .map((d) => ({ _key: key(), label: d.label.trim(), value: d.value.trim() })),

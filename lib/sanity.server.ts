@@ -411,6 +411,8 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
       location: {
         heading: string;
         addressLine: string;
+        lat?: number;
+        lng?: number;
         distances?: { label: string; value: string }[];
         tr?: {
           heading?: string;
@@ -505,6 +507,13 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
     location: {
       heading: locTr?.heading ?? landing.location?.heading ?? "",
       addressLine: locTr?.addressLine ?? landing.location?.addressLine ?? "",
+      /*
+        Not translated — a coordinate is the same in every language. The
+        fallbacks match lib/content.ts so an unset pin lands on the building
+        rather than at 0,0 in the Gulf of Guinea.
+      */
+      lat: landing.location?.lat ?? 19.7683675,
+      lng: landing.location?.lng ?? -70.5117769,
       distances: mergeRows(landing.location?.distances, locTr?.distances),
     },
   };

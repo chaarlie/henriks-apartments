@@ -407,6 +407,8 @@ export async function getAdminLocation(): Promise<AdminLocation> {
     | ({
         heading?: string;
         addressLine?: string;
+        lat?: number;
+        lng?: number;
         distances?: DistanceRow[];
         i18n?: I18nRow[];
       } & RawDoc)
@@ -415,6 +417,9 @@ export async function getAdminLocation(): Promise<AdminLocation> {
   return {
     heading: l?.heading ?? "",
     addressLine: l?.addressLine ?? "",
+    // Defaults match lib/content.ts, so an unset pin is the building and not 0,0.
+    lat: l?.lat ?? 19.7683675,
+    lng: l?.lng ?? -70.5117769,
     distances: (l?.distances ?? []).map((d) => ({
       label: d.label ?? "",
       value: d.value ?? "",

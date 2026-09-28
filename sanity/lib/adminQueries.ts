@@ -85,7 +85,7 @@ export const adminHeroQuery = groq`
 /** "Getting around" — the shared address and the distances under it. */
 export const adminLocationQuery = groq`
   *[_id == "location"][0]{
-    heading, addressLine, distances,
+    heading, addressLine, lat, lng, distances,
     i18n
   }
 `;

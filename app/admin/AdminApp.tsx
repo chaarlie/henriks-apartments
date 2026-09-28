@@ -3475,10 +3475,16 @@ function LocationView({
         heading: tr?.heading ?? "",
         addressLine: tr?.addressLine ?? "",
         distances: location.distances.map((_, i) => tr?.distances[i] ?? { label: "", value: "" }),
+        // Carried, not translated: one state shape keeps both save paths typed,
+        // and the pin is the same coordinate in every language.
+        lat: location.lat,
+        lng: location.lng,
       }
     : {
         heading: location.heading,
         addressLine: location.addressLine,
+        lat: location.lat,
+        lng: location.lng,
         distances: location.distances,
       };
 
@@ -3553,6 +3559,48 @@ function LocationView({
             <input className="ctrl" aria-label="Address line" value={d.addressLine} onChange={(e) => set("addressLine", e.target.value)} />
             {translating && <Ref value={location.addressLine} />}
           </Field>
+          {/* English only — a coordinate is the same fact in every language. */}
+          {!translating && (
+            <>
+              <p className="hint">
+                Where the map pin sits, and the coordinates Google is given. In Google Maps,
+                right-click the building and click the two numbers to copy them.
+              </p>
+              <div className="grid2">
+                <Field label="Latitude" req>
+                  <input
+                    className="ctrl"
+                    type="number"
+                    step="any"
+                    inputMode="decimal"
+                    aria-label="Latitude"
+                    value={d.lat}
+                    onChange={numberChange((v) => set("lat", v))}
+                  />
+                </Field>
+                <Field label="Longitude" req>
+                  <input
+                    className="ctrl"
+                    type="number"
+                    step="any"
+                    inputMode="decimal"
+                    aria-label="Longitude"
+                    value={d.lng}
+                    onChange={numberChange((v) => set("lng", v))}
+                  />
+                </Field>
+              </div>
+              <p className="field-note">
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${d.lat}&mlon=${d.lng}#map=17/${d.lat}/${d.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Check this pin on a map ↗
+                </a>
+              </p>
+            </>
+          )}
         </div>
 
         <div className="card">

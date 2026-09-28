@@ -303,6 +303,9 @@ export interface SiteContent {
   location: {
     heading: string;
     addressLine: string;
+    /** Map pin, decimal degrees. Drives the embedded map AND the JSON-LD geo. */
+    lat: number;
+    lng: number;
     distances: Distance[];
   };
 }
@@ -742,7 +745,10 @@ export const content: SiteContent = {
 
   location: {
     heading: "Getting around",
-    addressLine: "Calle Dr. Rosen, El Batey",
+    addressLine: "Calle Minerva Mirabal, El Batey",
+    // Calle Minerva Mirabal, El Batey, Sosúa — geocoded, not guessed.
+    lat: 19.7683675,
+    lng: -70.5117769,
     distances: [
       { label: "Playa Sosúa", value: "4 min walk" },
       { label: "Pedro Clisante", value: "6 min walk" },

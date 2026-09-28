@@ -9,8 +9,19 @@ import { unitFact } from "@/lib/unit";
  * JSON.stringify, so missing data never emits empty properties.
  */
 
-/** The pin used by the site's embedded map. */
-const GEO = { "@type": "GeoCoordinates", latitude: 19.753, longitude: -70.5085 };
+/**
+ * The pin, read from the same field the embedded map uses.
+ *
+ * It was a constant here and a second copy inside the map's iframe URL, and both
+ * pointed about 1.7 km from the building. Telling Google one location while
+ * showing a visitor another is the kind of disagreement nobody notices until a
+ * guest does.
+ */
+const geo = (content: SiteContent) => ({
+  "@type": "GeoCoordinates",
+  latitude: content.location.lat,
+  longitude: content.location.lng,
+});
 const BUSINESS_ID = absoluteUrl("/#business");
 
 /** "3:00 PM" → "15:00" for schema.org; undefined when it isn't a clock time. */
@@ -51,7 +62,7 @@ export function businessJsonLd(content: SiteContent) {
     url: absoluteUrl("/"),
     image: content.hero.background.url ? sized(content.hero.background.url, { width: 1600 }) : undefined,
     address: address(content),
-    geo: GEO,
+    geo: geo(content),
     knowsLanguage: content.host.languages.length ? content.host.languages : undefined,
     checkinTime: time24(content.stay.checkIn),
     checkoutTime: time24(content.stay.checkOut),
@@ -99,7 +110,7 @@ export function unitJsonLd(content: SiteContent, unit: Unit) {
           ? amenities.map((a) => ({ "@type": "LocationFeatureSpecification", name: a.label, value: true }))
           : undefined,
         address: address(content),
-        geo: GEO,
+        geo: geo(content),
         containedInPlace: { "@id": BUSINESS_ID },
       },
       {

@@ -53,7 +53,7 @@ export const unitQuery = groq`
     "sharedTr": *[_type == "stayDefaults"][0].i18n[locale == $locale][0]{amenities, houseRules},
 
     // shared, edited once
-    "location": *[_type == "location"][0]{heading, addressLine, distances},
+    "location": *[_type == "location"][0]{heading, addressLine, lat, lng, distances},
     "settings": *[_type == "siteSettings"][0]{propertyName, whatsappNumber, fxRate, internetMbps, powerBaseUsd, discounts}
   }
 `
@@ -81,7 +81,7 @@ export const formerSlugQuery = groq`
  */
 export const landingQuery = groq`{
   "hero":     *[_type == "hero"][0]{..., "tr": i18n[locale == $locale][0]},
-  "location": *[_type == "location"][0]{heading, addressLine, distances, "tr": i18n[locale == $locale][0]},
+  "location": *[_type == "location"][0]{heading, addressLine, lat, lng, distances, "tr": i18n[locale == $locale][0]},
   "settings": *[_type == "siteSettings"][0]{propertyName, city, region, whatsappNumber, languages, ownerSince, replyTime, hostNote, checkIn, checkOut, stayNote, fxRate, internetMbps, "fxRateUpdatedAt": coalesce(fxRateAsOf, _updatedAt), powerBaseUsd, discounts, propertyAmenities, "commonAreas": commonAreas[]{..., "lqip": asset->metadata.lqip}, seo, "tr": i18n[locale == $locale][0]},
   "units":    *[_type == "unit" && hidden != true] | order(priceUsd asc){
     "slug": slug.current, name, code, tagline, priceUsd, priceNightlyUsd, deposits, availableFrom, spec, bookingUrl, chips, keywords,

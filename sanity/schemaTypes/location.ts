@@ -11,6 +11,29 @@ export const location = defineType({
   fields: [
     defineField({name: 'heading', title: 'Eyebrow', type: 'string', initialValue: 'Getting around'}),
     defineField({name: 'addressLine', title: 'Address line', type: 'string'}),
+    /*
+      The map pin. Not translatable — a coordinate is the same fact in every
+      language, like the WhatsApp number.
+
+      A field rather than numbers in the code: the pin was hardcoded twice, in
+      the map iframe and in the JSON-LD geo, and it sat about 1.7 km from the
+      building for as long as both said so. Moving it used to mean a code change
+      and a deploy.
+    */
+    defineField({
+      name: 'lat',
+      title: 'Map pin — latitude',
+      type: 'number',
+      description: 'Decimal degrees, e.g. 19.7683675. From Google Maps: right-click the building → the first number.',
+      validation: (r) => r.min(-90).max(90),
+    }),
+    defineField({
+      name: 'lng',
+      title: 'Map pin — longitude',
+      type: 'number',
+      description: 'Decimal degrees, e.g. -70.5117769. The second number, negative in the Dominican Republic.',
+      validation: (r) => r.min(-180).max(180),
+    }),
     defineField({
       name: 'distances',
       title: 'Nearby places',

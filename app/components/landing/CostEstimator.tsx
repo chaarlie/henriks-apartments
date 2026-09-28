@@ -4,6 +4,7 @@ import { whatsappHref } from "@/lib/money";
 import { useDates } from "@/lib/i18n/dates";
 import { useBooking, useContent } from "@/lib/booking";
 import { useUi } from "@/lib/i18n/client";
+import { mapSrc } from "@/lib/map";
 
 /**
  * Landing closing band, deep blue and two columns: "What a stay costs" and
@@ -92,7 +93,7 @@ export default function CostEstimator() {
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               className="h-full w-full"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=-70.5250%2C19.7450%2C-70.4920%2C19.7620&layer=mapnik&marker=19.7530%2C-70.5085"
+              src={mapSrc(location.lat, location.lng)}
             />
           </div>
           <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">

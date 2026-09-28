@@ -86,7 +86,10 @@ const en = {
   holding: "Holding…",
   clearDates: "Clear dates",
   changeArrival: "Change arrival day",
-  decidingAmenities: "The two that actually decide it",
+  /* Count-free on purpose: it said "The two" and a third card made it a lie.
+     Which tiles get promoted is keyword-driven, so any number baked into this
+     heading is one /admin edit away from being wrong again. */
+  decidingAmenities: "What actually decides it",
   onSite: "What’s on site",
   // ── Header and navigation ────────────────────────────────────────────────
   navApartments: "Apartments",
@@ -452,7 +455,7 @@ const es: typeof en = {
   holding: "Reservando…",
   clearDates: "Borrar fechas",
   changeArrival: "Cambiar el día de llegada",
-  decidingAmenities: "Las dos comodidades que marcan la diferencia",
+  decidingAmenities: "Lo que de verdad marca la diferencia",
   onSite: "En la propiedad",
   navApartments: "Apartamentos",
   navInside: "Por dentro",

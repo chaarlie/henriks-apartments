@@ -320,6 +320,8 @@ const ICON = {
   money: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
   house: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
   noSmoke: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM4.9 4.9l14.2 14.2",
+  // A dumbbell: two end weights and the bar between them.
+  gym: "M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8",
 };
 
 // ── Shared Apartment 1 assets (real capture) ──────────────────────────────────
@@ -694,6 +696,11 @@ export const content: SiteContent = {
       icon: ICON.bolt,
       title: "Power that never quits",
       desc: "Inverter plus a generator keep the lights on, 24/7.",
+    },
+    {
+      icon: ICON.gym,
+      title: "24/7 gym",
+      desc: "A gym in the building, open at any hour — no membership, no bus ride.",
     },
     {
       icon: ICON.gate,

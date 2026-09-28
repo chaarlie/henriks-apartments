@@ -16,6 +16,7 @@
     "units:fix-elevator": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/fix-elevator.mjs",
     "units:fix-internet": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/fix-internet-speed.mjs",
     "units:clean-chips": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/clean-chips.mjs",
+    "units:add-gym": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/add-gym-amenity.mjs",
     "i18n:status": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/status.mjs",
     "i18n:extract": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/extract.mjs",
     "i18n:translate": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/translate.mjs",

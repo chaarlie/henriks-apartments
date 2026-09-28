@@ -4,7 +4,8 @@ import { whatsappHref } from "@/lib/money";
 import { useDates } from "@/lib/i18n/dates";
 import { useBooking, useContent } from "@/lib/booking";
 import { useUi } from "@/lib/i18n/client";
-import { mapSrc } from "@/lib/map";
+import { useState } from "react";
+import { directionsHref, fullAddress, mapSrc } from "@/lib/map";
 
 /**
  * Landing closing band, deep blue and two columns: "What a stay costs" and
@@ -21,6 +22,33 @@ export default function CostEstimator() {
   const { location } = content;
   const unit = content.units.find((u) => u.slug === selectedSlug) ?? content.units[0];
   const est = computeEstimate(unit, start, end, currency, content);
+
+  /*
+    One line, built from the parts each of which is edited in its own place: the
+    street in Getting around, the city and region in Property details.
+  */
+  const address = fullAddress({
+    addressLine: location.addressLine,
+    city: content.property.city,
+    region: content.property.region,
+  });
+
+  const [copied, setCopied] = useState(false);
+  async function copyAddress() {
+    try {
+      await navigator.clipboard.writeText(address);
+    } catch {
+      /*
+        Clipboard access is refused without a secure context or a gesture the
+        browser trusts. The address is `select-all`, so a tap already selects the
+        whole line — say nothing and let the guest copy it themselves rather than
+        claim a copy that did not happen.
+      */
+      return;
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2200);
+  }
 
   const term = est.mode === "nightly" ? t.nightsCount(est.nights) : t.monthsCount(est.months);
   const note =
@@ -87,6 +115,47 @@ export default function CostEstimator() {
           <h2 id="location-title" className="mt-4 text-[clamp(26px,3.2vw,32px)] font-semibold tracking-[-0.02em]">
             {location.addressLine}
           </h2>
+
+          {/*
+            For guests arriving by car.
+
+            The full address is a real <address> element, on its own line, in a
+            panel of its own — not folded into the heading — because somebody
+            halfway from Puerto Plata needs to read it out or paste it, not admire
+            it. `select-all` makes one tap select the whole thing on a phone, which
+            is the fallback when the clipboard API is unavailable.
+
+            Directions go to the COORDINATES rather than this text; see
+            directionsHref() for why that matters on a street with patchy
+            numbering.
+          */}
+          <div className="mt-6 rounded-xl border border-hairblue bg-white/[0.06] p-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-page/60">
+              {t.fullAddressLabel}
+            </p>
+            <address className="mt-2 select-all text-[19px] font-semibold not-italic leading-[1.45] text-page">
+              {address}
+            </address>
+            <div className="mt-4 flex flex-wrap gap-2.5">
+              <button
+                type="button"
+                onClick={copyAddress}
+                className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-white px-[18px] text-[15px] font-extrabold text-ink transition-colors hover:bg-sand"
+              >
+                {copied ? t.addressCopied : t.copyAddress}
+              </button>
+              <a
+                href={directionsHref(location.lat, location.lng)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center gap-2 rounded-[10px] border-[1.5px] border-page/30 px-[18px] text-[15px] font-bold text-page transition-colors hover:border-page"
+              >
+                {t.getDirections}
+              </a>
+            </div>
+            <p className="mt-3 text-[14px] leading-[1.5] text-page/70">{t.drivingNote}</p>
+          </div>
+
           <div className="mt-6 h-[210px] overflow-hidden rounded-xl border border-hairblue">
             <iframe
               title={t.mapTitle}

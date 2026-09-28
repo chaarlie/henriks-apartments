@@ -11,7 +11,7 @@
  * eye: that the marker is the pin exactly, and that the box around it is not
  * stretched sideways.
  */
-import { mapSrc } from "@/lib/map";
+import { directionsHref, fullAddress, mapSrc, regionOnly } from "@/lib/map";
 
 /** Rizz Suites — Calle Minerva Mirabal, El Batey, Sosúa. */
 const LAT = 19.7683675;
@@ -55,5 +55,65 @@ describe("mapSrc", () => {
     expect(north).toBeGreaterThan(south);
     expect(east).toBeGreaterThan(west);
     expect(layer).toBe("mapnik");
+  });
+});
+
+describe("the address a driver pastes", () => {
+  it("joins the parts each of which is edited somewhere else", () => {
+    expect(
+      fullAddress({
+        addressLine: "Calle Minerva Mirabal, El Batey",
+        city: "Sosúa",
+        region: "Puerto Plata",
+      }),
+    ).toBe("Calle Minerva Mirabal, El Batey, Sosúa, Puerto Plata, Dominican Republic");
+  });
+
+  it("drops blank parts rather than leaving a stray comma", () => {
+    // An unfilled region must not produce "…, , Dominican Republic" in something
+    // a guest is about to paste into a maps app.
+    expect(fullAddress({ addressLine: "Calle X", city: "Sosúa", region: "  " })).toBe(
+      "Calle X, Sosúa, Dominican Republic",
+    );
+  });
+});
+
+describe("directionsHref", () => {
+  it("routes to the coordinates, not the street name", () => {
+    // A street with patchy numbering: a text search can land anywhere along it,
+    // which is no use to someone already in the car.
+    const url = new URL(directionsHref(LAT, LNG));
+    expect(url.searchParams.get("destination")).toBe(`${LAT},${LNG}`);
+    expect(url.searchParams.get("api")).toBe("1");
+    expect(url.host).toBe("www.google.com");
+  });
+});
+
+describe("regionOnly", () => {
+  it("strips a country the region should not be carrying", () => {
+    // What was actually stored. It produced "…, Puerto Plata, DR, Dominican
+    // Republic" in the pasteable address and a malformed schema.org
+    // addressRegion beside its own addressCountry.
+    expect(regionOnly("Puerto Plata, DR")).toBe("Puerto Plata");
+    expect(regionOnly("Puerto Plata, Dominican Republic")).toBe("Puerto Plata");
+    expect(regionOnly("Puerto Plata, República Dominicana")).toBe("Puerto Plata");
+  });
+
+  it("leaves a clean region alone", () => {
+    expect(regionOnly("Puerto Plata")).toBe("Puerto Plata");
+    expect(regionOnly("")).toBe("");
+    expect(regionOnly(undefined)).toBe("");
+  });
+
+  it("does not eat a region that merely contains those letters", () => {
+    // Anchored at the end and on a word boundary, so "Andorra" keeps its "do".
+    expect(regionOnly("Andorra")).toBe("Andorra");
+    expect(regionOnly("Drenthe")).toBe("Drenthe");
+  });
+
+  it("keeps the country out of the pasteable address exactly once", () => {
+    expect(
+      fullAddress({ addressLine: "Calle X", city: "Sosúa", region: "Puerto Plata, DR" }),
+    ).toBe("Calle X, Sosúa, Puerto Plata, Dominican Republic");
   });
 });

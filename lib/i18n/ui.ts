@@ -337,6 +337,14 @@ const en = {
   // Sent as the WhatsApp body, so it has to be in the reader's language too.
   sixMonthMessage: "I’d like to ask about 6-month terms",
   mapTitle: "Map of El Batey, Sosúa",
+  /* Arriving by car. The address is selectable text AND copyable, because a
+     guest halfway from the airport is on a phone and cannot retype a street
+     name they have never seen. */
+  fullAddressLabel: "The address",
+  copyAddress: "Copy address",
+  addressCopied: "Copied",
+  getDirections: "Directions in Google Maps",
+  drivingNote: "Tap the address to copy it, or open directions straight to the gate.",
 
   // ── Inside band ──────────────────────────────────────────────────────────
   seeBeforeYouFly: (name: string) => `See the ${name} before you fly.`,
@@ -661,6 +669,11 @@ const es: typeof en = {
   askAboutSixMonths: "Preguntar por contratos de 6 meses",
   sixMonthMessage: "Quisiera preguntar por contratos de 6 meses",
   mapTitle: "Mapa de El Batey, Sosúa",
+  fullAddressLabel: "La dirección",
+  copyAddress: "Copiar la dirección",
+  addressCopied: "Copiada",
+  getDirections: "Cómo llegar en Google Maps",
+  drivingNote: "Toca la dirección para copiarla, o abre la ruta directo al portón.",
 
   seeBeforeYouFly: (name: string) => `Conoce el ${name} antes de viajar.`,
   insideThe: (name: string) => `Por dentro del ${name}`,

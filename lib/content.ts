@@ -477,7 +477,9 @@ export const content: SiteContent = {
     name: "Henrik Sosúa",
     addressLine: "Calle Dr. Rosen, El Batey",
     city: "Sosúa",
-    region: "Puerto Plata, DR",
+    // The region alone — the country is a separate field in the JSON-LD, and
+    // gluing it on here duplicated it in the pasteable address. See regionOnly().
+    region: "Puerto Plata",
     whatsappNumber: "18095550142", // PLACEHOLDER — confirm real number
     whatsappMessage:
       "Hi Henrik — I'm interested in one of your Sosúa apartments. Is it available for my dates?",

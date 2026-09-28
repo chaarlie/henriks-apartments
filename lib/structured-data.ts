@@ -2,6 +2,7 @@ import type { SiteContent, Unit } from "@/lib/content";
 import { absoluteUrl } from "@/lib/site";
 import { sized } from "@/lib/image-url";
 import { unitFact } from "@/lib/unit";
+import { regionOnly } from "@/lib/map";
 
 /**
  * schema.org JSON-LD for the landing page (LodgingBusiness) and each unit page
@@ -46,7 +47,8 @@ function address(content: SiteContent) {
     "@type": "PostalAddress",
     streetAddress: content.location.addressLine || content.property.addressLine || undefined,
     addressLocality: content.property.city || undefined,
-    addressRegion: content.property.region || undefined,
+    // Without any country glued on — `addressCountry` below is the country.
+    addressRegion: regionOnly(content.property.region) || undefined,
     addressCountry: "DO",
   };
 }

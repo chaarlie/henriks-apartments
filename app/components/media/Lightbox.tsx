@@ -43,6 +43,16 @@ export interface LightboxPhoto {
   url: string;
   alt: string;
   blurDataURL?: string;
+  /**
+   * The asset's own pixel dimensions, which the stage uses to take the photo's
+   * shape instead of letterboxing it into a fixed one.
+   *
+   * Optional because this interface is the contract, not ImageRef: every caller
+   * today passes an ImageRef and has them, but a caller that does not should get
+   * a sensible 3:2 stage rather than a type error.
+   */
+  width?: number;
+  height?: number;
 }
 
 interface LightboxValue {
@@ -248,8 +258,33 @@ function Stage({ children }: { children?: ReactNode }) {
   } = useLightbox();
   if (!current) return null;
 
+  /*
+    The stage takes the PHOTO's shape, rather than the photo being letterboxed
+    into a fixed one.
+
+    It was locked to `aspect-[3/2]` with `object-contain`, so anything shaped
+    differently showed the dark panel behind it: the two 16:9 photos in every
+    apartment lost a band top and bottom, and the portrait shot in 201 and 301 sat
+    between two wide blue margins.
+
+    Sized from the HEIGHT — `height: 72vh` with the photo's aspect ratio — because
+    an aspect ratio alone does not fix the portrait case. With a fixed width, a tall
+    photo hits max-height, the box keeps its width, and the side margins come
+    straight back. Deriving width from height lets the box narrow instead, so it
+    hugs the photo whichever way round it is. `max-w-full` then clamps anything
+    wider than the dialog, and the aspect ratio shrinks the height to match.
+
+    Dimensions come from the asset, and fall back to 3:2 rather than producing an
+    invalid `aspect-ratio` if one is ever missing.
+  */
+  const ratio =
+    current.width && current.height ? `${current.width} / ${current.height}` : "3 / 2";
+
   return (
-    <div className="relative aspect-[3/2] max-h-[72vh] overflow-hidden bg-[#04121E]">
+    <div
+      className="relative mx-auto max-h-[72vh] max-w-full overflow-hidden bg-[#04121E]"
+      style={{ aspectRatio: ratio, height: "72vh", width: "auto" }}
+    >
       {/*
         Both frames sit on the stage for a moment, so stepping through a set
         never flashes the backdrop between photos.

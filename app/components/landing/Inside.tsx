@@ -193,7 +193,14 @@ export default function Inside() {
               className="flex flex-col gap-3"
             >
               <div className="rounded-2xl border border-white/[0.18] bg-white/[0.06] p-5">
-                <h3 className="text-[22px] font-extrabold tracking-[-0.02em]">{unit.name}</h3>
+                {/*
+                  A <p>, not an <h3>. The apartment's name is already the <h3> on
+                  its card higher up the page, and repeating it verbatim as a
+                  second heading gave the page two identical entries in its
+                  outline — which is what a screen reader navigates by. The <h2>
+                  above this panel already names the apartment.
+                */}
+                <p className="text-[22px] font-extrabold tracking-[-0.02em]">{unit.name}</p>
                 <p className="mt-0.5 text-[15px] text-white/75">{unit.tagline}</p>
                 <dl className="mt-4 grid grid-cols-3 gap-2.5 border-t border-white/[0.16] pt-3.5">
                   {unitFacts(unit).map(([k, v]) => (

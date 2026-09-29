@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 import { DEFAULT_LOCALE } from "./lib/locales";
 
 const nextConfig: NextConfig = {
+  // Nothing gains from telling every client which framework serves this.
+  poweredByHeader: false,
   /*
     English has no prefix; every other language does.
 
@@ -17,6 +19,33 @@ const nextConfig: NextConfig = {
     Done here rather than in proxy.ts on purpose — that file is the /admin auth
     gate, and locale routing has no business sharing a matcher with it.
   */
+  /*
+    www → apex, permanently.
+
+    Both hostnames served 200, so every page existed at two addresses — the
+    duplicate-content case an auditor flags first, and it splits whatever link
+    equity the site earns. The canonical tag already pointed at the apex from
+    both, but a canonical is a hint and a redirect is a directive.
+
+    Done here rather than in the host's dashboard so it lives in version control
+    and cannot be undone by someone clicking around. Redirects run BEFORE the
+    rewrites below, and the destination host differs from the matched one, so
+    there is no loop.
+
+    The host is hardcoded rather than read from SITE_URL because `has` matches a
+    literal — and getting it wrong fails loudly (www stops resolving) rather than
+    quietly.
+  */
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.sosuastudios.com" }],
+        destination: "https://sosuastudios.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       { source: "/", destination: `/${DEFAULT_LOCALE}` },

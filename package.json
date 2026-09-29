@@ -18,6 +18,7 @@
     "units:clean-chips": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/clean-chips.mjs",
     "units:add-gym": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/add-gym-amenity.mjs",
     "units:set-location": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/set-location.mjs",
+    "units:reorder-gallery": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/reorder-gallery.mjs",
     "i18n:status": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/status.mjs",
     "i18n:extract": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/extract.mjs",
     "i18n:translate": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/translate.mjs",

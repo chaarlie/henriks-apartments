@@ -7,7 +7,7 @@
  * the old photo from the site entirely, with nothing in the UI to say so. It is an
  * exchange instead: the outgoing cover takes the incoming photo's place.
  */
-import { promoteToCover } from "@/lib/admin/gallery";
+import { promoteToCover, pruneStaleAlts, type AltRow } from "@/lib/admin/gallery";
 import type { MediaImage } from "@/lib/admin/types";
 
 const img = (n: number): MediaImage => ({
@@ -64,5 +64,68 @@ describe("promoteToCover", () => {
       expect(next.cover).toBe(cover);
       expect(next.gallery).toBe(gallery);
     }
+  });
+});
+
+/*
+  The sharp edge in this data model: translated alt text is matched to a gallery
+  photo by `_key`, but the COVER's translation is a single `coverAlt` string
+  meaning "whatever the cover is". So changing the cover hands the new photo the
+  old photo's Spanish caption — the Spanish page captions the wrong picture, and
+  nothing falls back because a value is present.
+
+  Real data at the time of writing: Unit 201 had 14 filled Spanish gallery alts
+  and a Spanish coverAlt describing a "Loft de jardín" that no longer exists.
+*/
+describe("pruneStaleAlts", () => {
+  const row = (over: Partial<AltRow> = {}): AltRow => ({
+    _key: "es",
+    locale: "es",
+    coverAlt: "La portada anterior",
+    galleryAlts: [{ _key: "k1", alt: "Uno" }, { _key: "k2", alt: "Dos" }],
+    ...over,
+  });
+  const keys = (...k: string[]) => new Set(k);
+
+  it("clears the cover caption when the cover photo changed", () => {
+    const out = pruneStaleAlts([row()], { coverChanged: true, galleryKeys: keys("k1", "k2") });
+    expect(out).not.toBeNull();
+    expect(out![0].coverAlt).toBeUndefined();
+    // The gallery captions are untouched — only the cover moved.
+    expect(out![0].galleryAlts).toHaveLength(2);
+  });
+
+  it("drops a caption whose photo has left the gallery", () => {
+    const out = pruneStaleAlts([row()], { coverChanged: false, galleryKeys: keys("k1") });
+    expect(out![0].galleryAlts).toEqual([{ _key: "k1", alt: "Uno" }]);
+    expect(out![0].coverAlt).toBe("La portada anterior");
+  });
+
+  it("leaves an ordinary save completely alone", () => {
+    // null means "write nothing", so reordering photos does not touch translations.
+    expect(pruneStaleAlts([row()], { coverChanged: false, galleryKeys: keys("k1", "k2") })).toBeNull();
+  });
+
+  it("is null when there are no translations at all", () => {
+    expect(pruneStaleAlts([], { coverChanged: true, galleryKeys: keys() })).toBeNull();
+  });
+
+  it("keeps every other field on the row", () => {
+    const out = pruneStaleAlts([row({ tagline: "Hola", sourceHash: "abc" })], {
+      coverChanged: true,
+      galleryKeys: keys("k1", "k2"),
+    });
+    expect(out![0].tagline).toBe("Hola");
+    expect(out![0].sourceHash).toBe("abc");
+    expect(out![0].locale).toBe("es");
+  });
+
+  it("handles a row with no galleryAlts and a row with unkeyed entries", () => {
+    const out = pruneStaleAlts(
+      [row({ galleryAlts: undefined }), row({ galleryAlts: [{ alt: "sin clave" } as { _key?: string }] })],
+      { coverChanged: false, galleryKeys: keys("k1") },
+    );
+    // The unkeyed entry can describe nothing, so it goes.
+    expect(out![1].galleryAlts).toEqual([]);
   });
 });

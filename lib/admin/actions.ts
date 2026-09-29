@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getWriteClient } from "@/sanity/lib/writeClient";
 import { requireAdmin } from "@/lib/admin/session";
 import { formerSlugs, toSlug } from "@/lib/slug";
+import { pruneStaleAlts, type AltRow } from "@/lib/admin/gallery";
 import { extractDoc, sourceHash, type RawDoc } from "@/lib/i18n/fingerprint";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/locales";
 import type {
@@ -65,6 +66,47 @@ function youtubeId(input: string | undefined): string | undefined {
     /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtube-nocookie\.com\/embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})/,
   );
   return m ? m[1] : undefined;
+}
+
+/**
+ * Drop translated alt text that no longer describes the photo it is attached to.
+ *
+ * Two ways that happens, and BOTH leave the Spanish page captioning the wrong
+ * picture rather than merely missing one — which is worse, because nothing falls
+ * back and nothing looks broken:
+ *
+ *   1. The cover changes. `coverAlt` is a single string meaning "whatever the
+ *      cover is", so a new cover inherits the previous photo's caption. This
+ *      predates the Make cover button — replacing the cover photo has always done
+ *      it — the button just makes it easy to hit.
+ *   2. A photo leaves the gallery. Its `galleryAlts` entry is keyed by a `_key`
+ *      no longer present, so it lingers as a row describing nothing. Harmless on
+ *      its own, but it is also how a key that gets reused later picks up a
+ *      stranger's caption.
+ *
+ * Clearing is deliberately the fix rather than moving the text: the English editor
+ * and the translation editor are separate saves, and a photo promoted from the
+ * gallery to the cover moves between two different stores (`galleryAlts[key]` and
+ * `coverAlt`). Falling back to the English alt is honest; carrying the wrong
+ * Spanish sentence across is not.
+ *
+ * Returns the rewritten i18n array, or null when nothing needed changing — so the
+ * common save touches nothing.
+ */
+async function staleAltFixes(
+  client: ReturnType<typeof getWriteClient>,
+  unitId: string,
+  coverRef: string | undefined,
+  gallery: { _key: string }[],
+): Promise<AltRow[] | null> {
+  const doc = await client.fetch<{ coverRef?: string; i18n?: AltRow[] } | null>(
+    `*[_id == $id][0]{"coverRef": coverImage.asset._ref, i18n}`,
+    { id: unitId },
+  );
+  return pruneStaleAlts(doc?.i18n ?? [], {
+    coverChanged: (doc?.coverRef ?? "") !== (coverRef ?? ""),
+    galleryKeys: new Set(gallery.map((g) => g._key)),
+  });
 }
 
 /** Chips as they should be stored: trimmed, no blanks, no repeats. */
@@ -242,12 +284,32 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
           };
       }
     }
-    await getWriteClient()
+    /*
+      Keep each photo's existing key. Translated alt text is matched to a photo by
+      _key (see lib/sanity.server.ts), so minting fresh keys here would detach
+      every language's alt text from its picture on the next save of the English —
+      silently, because the site just falls back.
+
+      Built before the patch because the prune below has to agree with exactly the
+      keys being written, not a recomputed set.
+    */
+    const gallery = input.gallery.map((g) => ({
+      _type: "image" as const,
+      _key: g.key || key(),
+      asset: { _type: "reference" as const, _ref: g.ref },
+      alt: g.alt || undefined,
+    }));
+
+    const client = getWriteClient();
+    const i18n = await staleAltFixes(client, input._id, input.cover?.ref, gallery);
+
+    await client
       .patch(input._id)
       .set({
         name: input.name,
         code: input.code,
         tagline: input.tagline,
+        ...(i18n ? { i18n } : {}),
         slug: { _type: "slug", current: slug },
         previousSlugs,
         hidden: input.hidden,
@@ -293,18 +355,7 @@ export async function saveUnit(input: AdminUnitInput): Promise<ActionResult> {
               alt: input.cover.alt || undefined,
             }
           : undefined,
-        /*
-          Keep each photo's existing key. Translated alt text is matched to a
-          photo by _key (see lib/sanity.server.ts), so minting fresh keys here
-          would detach every language's alt text from its picture on the next
-          save of the English — silently, because the site just falls back.
-        */
-        gallery: input.gallery.map((g) => ({
-          _type: "image",
-          _key: g.key || key(),
-          asset: { _type: "reference", _ref: g.ref },
-          alt: g.alt || undefined,
-        })),
+        gallery,
         tour: input.tour.map((s) => ({
           _key: key(),
           stopId: s.stopId,

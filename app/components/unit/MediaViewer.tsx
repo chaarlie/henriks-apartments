@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { type ImageRef, type Unit } from "@/lib/content";
 import Tour from "@/app/components/tour/Tour";
@@ -29,7 +29,32 @@ type Mode = "gallery" | "tour";
  * of empty screen per click.
  */
 export default function MediaViewer({ unit }: { unit: Unit }) {
-  const photos = unit.gallery.length ? unit.gallery : [unit.image];
+  /*
+    The cover leads, and it used to be missing entirely.
+    
+    `coverImage` is its own field, not a gallery entry — no unit has its cover in
+    its gallery — and this list used to read
+    `unit.gallery.length ? unit.gallery : [unit.image]`, which used the cover only
+    as a fallback for an empty gallery. So Henrik picked the photo that fronts the
+    card and the shared link, clicked through, and that photo was nowhere on the
+    page. It leads the strip now, which is also what someone arriving from the card
+    expects to see first.
+
+    Deduplicated by url, so adding the cover to the gallery later shows it once
+    rather than twice. Memoised because Lightbox.Provider keys its context on this
+    array; a fresh one every render would invalidate that memo every render.
+  */
+  const photos = useMemo(() => {
+    const seen = new Set<string>();
+    const list = [unit.image, ...unit.gallery].filter((p) => {
+      if (!p?.url || seen.has(p.url)) return false;
+      seen.add(p.url);
+      return true;
+    });
+    // An apartment with neither a cover nor photos still needs one entry, or the
+    // panel below indexes into an empty array.
+    return list.length ? list : [unit.image];
+  }, [unit.image, unit.gallery]);
   return (
     // Eager: someone on an apartment page came to look at the photos, so the
     // strip should be there when they reach for it rather than loading under

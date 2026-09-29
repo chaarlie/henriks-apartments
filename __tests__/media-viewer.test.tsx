@@ -59,8 +59,18 @@ const photo = (n: number): ImageRef => ({
 const stop = (id: string): TourNode =>
   ({ _id: id, _type: "tourNode", name: id, caption: "", panorama: `${id}.jpg`, links: [] }) as TourNode;
 
+/*
+  Cover + three gallery photos = FOUR in the strip, cover first.
+
+  The cover is spelled out rather than left to the fixture default because it
+  counts: `coverImage` is its own field, and the strip leads with it.
+*/
 const withTour = () =>
-  makeUnit({ gallery: [photo(1), photo(2), photo(3)], tour: [stop("living"), stop("kitchen")] });
+  makeUnit({
+    image: photo(0),
+    gallery: [photo(1), photo(2), photo(3)],
+    tour: [stop("living"), stop("kitchen")],
+  });
 
 const toggle = () => screen.getByRole("group", { name: "View" });
 
@@ -79,7 +89,7 @@ describe("an apartment with a 360° tour", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText("Photo 1 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Photo 1 of 4")).toBeInTheDocument();
   });
 
   it("offers the photos before the tour in the toggle", () => {
@@ -88,7 +98,7 @@ describe("an apartment with a 360° tour", () => {
     const labels = within(toggle())
       .getAllByRole("button")
       .map((b) => b.textContent);
-    expect(labels).toEqual(["Photos · 3", "360° tour"]);
+    expect(labels).toEqual(["Photos · 4", "360° tour"]);
   });
 
   it("switches to the tour and back", async () => {
@@ -102,23 +112,61 @@ describe("an apartment with a 360° tour", () => {
 
     await user.click(within(toggle()).getByRole("button", { name: /Photos/ }));
     expect(screen.queryByTestId("tour")).not.toBeInTheDocument();
-    expect(screen.getByText("Photo 1 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Photo 1 of 4")).toBeInTheDocument();
   });
 
   it("counts the photos on the toggle so the guest knows what is there", () => {
     render(<MediaViewer unit={withTour()} />);
+    // Cover + 3 gallery photos.
+    expect(within(toggle()).getByRole("button", { name: "Photos · 4" })).toBeInTheDocument();
+  });
+});
+
+describe("the cover photo", () => {
+  /*
+    `coverImage` is its own field and no unit has it in its gallery, so the old
+    `gallery.length ? gallery : [cover]` meant the cover appeared on the card and
+    the shared link and then nowhere on the apartment page itself.
+  */
+  it("leads the strip, so the photo from the card is the first one shown", () => {
+    const u = makeUnit({
+      image: photo(9),
+      gallery: [photo(1), photo(2)],
+      tour: [],
+    });
+    render(<MediaViewer unit={u} />);
+
+    expect(screen.getByText("Photo 1 of 3")).toBeInTheDocument();
     expect(within(toggle()).getByRole("button", { name: "Photos · 3" })).toBeInTheDocument();
+    // The hero <img> is the cover, not gallery photo 1.
+    expect(screen.getByAltText("Photo 9 of the apartment")).toBeInTheDocument();
+  });
+
+  it("is not shown twice when it is also in the gallery", () => {
+    const cover = photo(1);
+    const u = makeUnit({ image: cover, gallery: [cover, photo(2)], tour: [] });
+    render(<MediaViewer unit={u} />);
+
+    expect(within(toggle()).getByRole("button", { name: "Photos · 2" })).toBeInTheDocument();
+  });
+
+  it("still renders for an apartment with no gallery at all", () => {
+    const u = makeUnit({ image: photo(5), gallery: [], tour: [] });
+    render(<MediaViewer unit={u} />);
+
+    expect(screen.getByText("Photo 1 of 1")).toBeInTheDocument();
   });
 });
 
 describe("an apartment with no tour", () => {
-  const noTour = () => makeUnit({ gallery: [photo(1), photo(2)], tour: [] });
+  // Cover + two gallery photos.
+  const noTour = () => makeUnit({ image: photo(0), gallery: [photo(1), photo(2)], tour: [] });
 
   it("opens on the photos instead of an empty panel", () => {
     render(<MediaViewer unit={noTour()} />);
 
     expect(screen.queryByTestId("tour")).not.toBeInTheDocument();
-    expect(screen.getByText("Photo 1 of 2")).toBeInTheDocument();
+    expect(screen.getByText("Photo 1 of 3")).toBeInTheDocument();
   });
 
   it("offers no tour button at all, rather than a dead one", () => {
@@ -130,14 +178,19 @@ describe("an apartment with no tour", () => {
 describe("the photo strip", () => {
   it("changes the main photo when a thumbnail is chosen", async () => {
     const user = userEvent.setup();
-    render(<MediaViewer unit={makeUnit({ gallery: [photo(1), photo(2), photo(3)], tour: [] })} />);
+    render(
+      <MediaViewer
+        unit={makeUnit({ image: photo(0), gallery: [photo(1), photo(2), photo(3)], tour: [] })}
+      />,
+    );
 
-    expect(screen.getByText("Photo 1 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Photo 1 of 4")).toBeInTheDocument();
 
-    // Thumbnails are labelled by their alt text.
+    // Thumbnails are labelled by their alt text. Gallery photo 3 is the FOURTH
+    // in the strip, because the cover leads.
     await user.click(screen.getByRole("button", { name: "Photo 3 of the apartment" }));
 
-    expect(screen.getByText("Photo 3 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Photo 4 of 4")).toBeInTheDocument();
   });
 
   it("falls back to the cover photo when the gallery is empty", () => {

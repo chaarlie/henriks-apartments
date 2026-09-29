@@ -1,7 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type UniqueIdentifier,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { UploadGeneration } from "@/lib/upload-generation";
+import { promoteToCover } from "@/lib/admin/gallery";
 import { panoramaUrl } from "@/lib/panorama";
 import { SITE_URL, absoluteUrl } from "@/lib/site";
 import { urlFor } from "@/sanity/lib/image";
@@ -88,7 +107,16 @@ async function uploadImage(file: File): Promise<MediaImage> {
     throw new Error(named ?? `Upload failed (${res.status})`);
   }
   if (!payload || !("ref" in payload)) throw new Error("The server didn’t return the photo details.");
-  return payload;
+  /*
+    Key it here, in the browser, rather than leaving it to the server on save.
+
+    Two things need a photo to have an identity the moment it is added: the
+    drag-to-reorder grid, whose items must have stable unique ids (`ref` will not
+    do — the same photo can be uploaded twice), and translated alt text, which is
+    matched to a photo by this key. saveUnit keeps whatever key it is given
+    (`_key: g.key || key()`), so this simply moves the decision earlier.
+  */
+  return { ...payload, key: payload.key || crypto.randomUUID().replace(/-/g, "").slice(0, 12) };
 }
 
 /**
@@ -1560,6 +1588,59 @@ function SharePanel({ unit }: { unit: AdminUnit }) {
 /** Translated alt text: the cover's, and each gallery photo's by its array key. */
 type AltEdits = { cover: string; gallery: Record<string, string> };
 
+/**
+ * A photo's identity in the reorder grid.
+ *
+ * The Sanity array key, which uploads are now given in the browser. Falls back to
+ * the asset ref only for a photo stored before that, so an old gallery still
+ * drags — two copies of one asset would share an id, which dnd-kit would refuse,
+ * and that is rarer than a gallery saved last week.
+ */
+const idOf = (g: MediaImage): UniqueIdentifier => g.key || g.ref;
+
+/** One draggable photo tile. */
+function SortablePhoto({
+  id,
+  photo,
+  index,
+  onRemove,
+  onMakeCover,
+}: {
+  id: UniqueIdentifier;
+  photo: MediaImage;
+  index: number;
+  onRemove: () => void;
+  onMakeCover: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`g${isDragging ? " dragging" : ""}`}
+      style={{
+        backgroundImage: `url(${photo.url})`,
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+    >
+      {/*
+        The tile itself is the drag handle, which is what makes a 31-photo grid
+        bearable — but the two buttons sit outside the listeners, or pressing them
+        would start a drag instead.
+      */}
+      <div className="grab" {...attributes} {...listeners} aria-label={`Reorder photo ${index + 1}`} />
+      <span className="num" aria-hidden>{index + 1}</span>
+      <button type="button" className="cov" onClick={onMakeCover} title="Use as the cover photo">
+        Make cover
+      </button>
+      <button type="button" className="x" aria-label={`Remove photo ${index + 1}`} onClick={onRemove}>
+        ×
+      </button>
+    </div>
+  );
+}
+
 function MediaCard({
   cover,
   gallery,
@@ -1587,6 +1668,39 @@ function MediaCard({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [failed, setFailed] = useState<{ file: File; reason: string }[]>([]);
   const [resized, setResized] = useState(0);
+
+  /*
+    Pointer for the mouse, keyboard so the grid is not mouse-only. The 6px
+    activation distance is what keeps a click on "Make cover" or "×" from being
+    swallowed as the start of a drag.
+  */
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  /** "photo 4", for the drag announcements a screen reader hears. */
+  const photoNumber = (id: UniqueIdentifier) =>
+    gallery.findIndex((g) => idOf(g) === id) + 1 || "?";
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const from = gallery.findIndex((g) => idOf(g) === active.id);
+    const to = gallery.findIndex((g) => idOf(g) === over.id);
+    if (from < 0 || to < 0) return;
+    onGallery(arrayMove(gallery, from, to));
+  }
+
+  /*
+    The cover now leads the apartment page's photo strip, so this is how Henrik
+    says "show this one first". The swap rule — and why it is a swap — lives in
+    promoteToCover().
+  */
+  function makeCover(i: number) {
+    const next = promoteToCover(gallery, cover, i);
+    onCover(next.cover);
+    onGallery(next.gallery);
+  }
 
   async function handleCover(file: File | undefined) {
     if (!file) return;
@@ -1742,18 +1856,41 @@ function MediaCard({
           </>
         ) : (
           <div className="gal">
-            {gallery.map((g, i) => (
-              <div className="g" key={g.ref + i} style={{ backgroundImage: `url(${g.url})` }}>
-                <button
-                  type="button"
-                  className="x"
-                  aria-label="Remove photo"
-                  onClick={() => onGallery(gallery.filter((_, j) => j !== i))}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={onDragEnd}
+              accessibility={{
+                announcements: {
+                  onDragStart: ({ active }) => `Picked up photo ${photoNumber(active.id)}.`,
+                  onDragOver: ({ active, over }) =>
+                    over ? `Photo ${photoNumber(active.id)} over position ${photoNumber(over.id)}.` : "",
+                  onDragEnd: ({ active, over }) =>
+                    over
+                      ? `Photo ${photoNumber(active.id)} dropped at position ${photoNumber(over.id)}.`
+                      : "Photo returned to where it was.",
+                  onDragCancel: ({ active }) => `Photo ${photoNumber(active.id)} returned.`,
+                },
+              }}
+            >
+              {/*
+                `items` are the photo keys, which is why uploads are keyed in the
+                browser: `ref` is not unique (the same photo can be uploaded
+                twice) and an index is not stable mid-drag.
+              */}
+              <SortableContext items={gallery.map(idOf)} strategy={rectSortingStrategy}>
+                {gallery.map((g, i) => (
+                  <SortablePhoto
+                    key={idOf(g)}
+                    id={idOf(g)}
+                    photo={g}
+                    index={i}
+                    onRemove={() => onGallery(gallery.filter((_, j) => j !== i))}
+                    onMakeCover={() => makeCover(i)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
             <label className="add">
               ＋<span>Add photos</span>
               <input

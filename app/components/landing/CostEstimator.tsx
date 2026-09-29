@@ -28,6 +28,7 @@ export default function CostEstimator() {
     street in Getting around, the city and region in Property details.
   */
   const address = fullAddress({
+    building: content.property.buildingName,
     addressLine: location.addressLine,
     city: content.property.city,
     region: content.property.region,

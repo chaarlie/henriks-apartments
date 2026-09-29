@@ -50,8 +50,11 @@ Do not assert these on the site without confirming with Henrik:
 
 - **No fridge is listed** on any of the four. `lib/content.ts` currently claims
   one in the shared amenities.
-- **No Wi-Fi speed.** The listing says only "WiFi gratis"; the site's
-  "200 Mbps fibre" is not sourced from here.
+- **No Wi-Fi speed.** The listing says only "WiFi gratis". The site used to say
+  "200 Mbps fibre" — sourced from nowhere, and wrong: Henrik confirmed **50 Mbps**
+  on 2026-09-25. It is one editable field now (`siteSettings.internetMbps`), not a
+  number typed into four `ui.ts` strings. Before that correction two apartments
+  advertised 100 and two advertised 200, all on one listing.
 - **No induction.** Booking says `placa de cocina` — a stovetop, type unstated.
   The site currently says "induction hob".
 - **No occupancy beyond 1 bed.** Every unit lists one king and nothing else. A

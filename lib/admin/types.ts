@@ -337,6 +337,8 @@ export interface CommonAreaRow {
 
 export interface AdminSettings extends Translatable<SettingsTranslation> {
   propertyName: string;
+  /** The building the apartments sit in, when it has a name. May be empty. */
+  buildingName: string;
   city: string;
   region: string;
   whatsappNumber: string;

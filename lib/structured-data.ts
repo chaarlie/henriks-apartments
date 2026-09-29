@@ -65,6 +65,15 @@ export function businessJsonLd(content: SiteContent) {
     image: content.hero.background.url ? sized(content.hero.background.url, { width: 1600 }) : undefined,
     address: address(content),
     geo: geo(content),
+    /*
+      The building these apartments are in — a PLACE, not another name for this
+      business. Other operators let units in the same building, so `alternateName`
+      would be both inaccurate and a claim on someone else's brand.
+      `containedInPlace` says only what is true: we are inside it.
+    */
+    ...(content.property.buildingName
+      ? { containedInPlace: { "@type": "Place", name: content.property.buildingName } }
+      : {}),
     knowsLanguage: content.host.languages.length ? content.host.languages : undefined,
     checkinTime: time24(content.stay.checkIn),
     checkoutTime: time24(content.stay.checkOut),

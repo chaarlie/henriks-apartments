@@ -291,6 +291,7 @@ function translated(u: RawUnit, locale: Locale): RawUnit {
 }
 interface RawSettings {
   propertyName: string;
+  buildingName?: string;
   city: string;
   region: string;
   whatsappNumber: string;
@@ -440,6 +441,7 @@ export async function getSiteContent(locale: Locale = DEFAULT_LOCALE): Promise<S
     locale,
     property: {
       name: s.propertyName,
+      buildingName: s.buildingName ?? "",
       addressLine: landing.location?.addressLine ?? "",
       city: s.city,
       region: s.region,

@@ -589,6 +589,8 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
       .patch(SETTINGS_ID)
       .set({
         propertyName: input.propertyName.trim(),
+        // Emptying the box removes the claim entirely — see the unset below.
+        buildingName: input.buildingName.trim() || undefined,
         city: input.city.trim(),
         region: input.region.trim(),
         whatsappNumber: whatsapp,
@@ -623,6 +625,13 @@ export async function saveProperty(input: AdminPropertyInput): Promise<SavePrope
             kind: c.kind,
           })),
       })
+      /*
+        Emptying the box removes the field. `.set()` is serialised as JSON, which
+        drops undefined keys, so on its own it reads as "leave this alone" and the
+        old building name would survive a deliberate clear. Same trap as
+        bookingUrl in saveUnit.
+      */
+      .unset(input.buildingName.trim() ? [] : ["buildingName"])
       .commit();
     revalidateSite();
     return { ok: true, fxRateAsOf, commonAreas };

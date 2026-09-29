@@ -69,6 +69,27 @@ describe("the address a driver pastes", () => {
     ).toBe("Calle Minerva Mirabal, El Batey, Sosúa, Puerto Plata, Dominican Republic");
   });
 
+  it("leads with the building, which a maps app matches better than a street number", () => {
+    expect(
+      fullAddress({
+        building: "Rizz Suites",
+        addressLine: "Calle Minerva Mirabal, El Batey",
+        city: "Sosúa",
+        region: "Puerto Plata",
+      }),
+    ).toBe(
+      "Rizz Suites, Calle Minerva Mirabal, El Batey, Sosúa, Puerto Plata, Dominican Republic",
+    );
+  });
+
+  it("says nothing about a building when there is no name for one", () => {
+    // Not every property is in a named building, and an empty one must not leave
+    // a leading comma in something a guest pastes.
+    expect(
+      fullAddress({ building: "", addressLine: "Calle X", city: "Sosúa", region: "Puerto Plata" }),
+    ).toBe("Calle X, Sosúa, Puerto Plata, Dominican Republic");
+  });
+
   it("drops blank parts rather than leaving a stray comma", () => {
     // An unfilled region must not produce "…, , Dominican Republic" in something
     // a guest is about to paste into a maps app.

@@ -42,12 +42,15 @@ export function mapSrc(lat: number, lng: number): string {
  * leave a stray comma in something a guest is about to paste.
  */
 export function fullAddress(parts: {
+  /** The building, when it has a name — a named building is easier to find than a street number. */
+  building?: string;
   addressLine: string;
   city: string;
   region: string;
   country?: string;
 }): string {
   return [
+    parts.building,
     parts.addressLine,
     parts.city,
     regionOnly(parts.region),

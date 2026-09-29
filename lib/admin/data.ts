@@ -269,6 +269,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
   const s = await getClient().fetch<
     | ({
         propertyName?: string;
+        buildingName?: string;
         city?: string;
         region?: string;
         whatsappNumber?: string;
@@ -299,6 +300,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
   >(adminSettingsQuery, {}, { cache: "no-store" });
   return {
     propertyName: s?.propertyName ?? "",
+    buildingName: s?.buildingName ?? "",
     city: s?.city ?? "",
     region: s?.region ?? "",
     whatsappNumber: s?.whatsappNumber ?? "",

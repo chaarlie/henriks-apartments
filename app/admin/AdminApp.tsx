@@ -2868,6 +2868,7 @@ function CommonAreasCard({
 
 const propertyFields = (s: AdminSettings): AdminPropertyInput => ({
   propertyName: s.propertyName,
+  buildingName: s.buildingName,
   city: s.city,
   region: s.region,
   whatsappNumber: s.whatsappNumber,
@@ -2977,6 +2978,7 @@ function PropertyView({
       ...d,
       commonAreas: res.commonAreas,
       propertyName: d.propertyName.trim(),
+      buildingName: d.buildingName.trim(),
       city: d.city.trim(),
       region: d.region.trim(),
       whatsappNumber: digits,
@@ -3026,6 +3028,20 @@ function PropertyView({
           <p className="hint">Shown in the header, the footer and the page titles on Google.</p>
           <Field label="Property name" req>
             <input className="ctrl" aria-label="Property name" value={d.propertyName} disabled={translating} onChange={(e) => set("propertyName", e.target.value)} />
+          </Field>
+          <Field label="Building name" opt="(if the building has its own)">
+            <input
+              className="ctrl"
+              aria-label="Building name"
+              value={d.buildingName}
+              disabled={translating}
+              onChange={(e) => set("buildingName", e.target.value)}
+            />
+            <p className="field-note">
+              Shown with the address and given to Google as the building these apartments sit
+              inside. Not a second name for the business — other operators let apartments in the
+              same building. Leave it empty to say nothing about it.
+            </p>
           </Field>
           <div className="grid2">
             <Field label="City">

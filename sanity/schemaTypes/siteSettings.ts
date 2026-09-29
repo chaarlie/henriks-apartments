@@ -16,6 +16,14 @@ export const siteSettings = defineType({
   ],
   fields: [
     defineField({name: 'propertyName', title: 'Property name', type: 'string', group: 'general'}),
+    defineField({
+      name: 'buildingName',
+      title: 'Building name',
+      type: 'string',
+      group: 'general',
+      description:
+        'The building the apartments are in, if it has a name of its own — e.g. Rizz Suites. Shown with the address and published to Google as the place these apartments sit inside. It is NOT a second name for this business: other operators let units in the same building. Leave empty to say nothing about it.',
+    }),
     defineField({name: 'city', title: 'City', type: 'string', group: 'general'}),
     defineField({name: 'region', title: 'Region', type: 'string', group: 'general'}),
     defineField({name: 'whatsappNumber', title: 'WhatsApp number', type: 'string', group: 'general'}),

@@ -4,9 +4,12 @@
 
 The property is already listed on Booking.com, and that listing is the
 **reference for per-unit facts** — size, bed configuration, bathroom count, and
-the amenity list. Henrik wants the site to carry the same information, because
-today the per-unit content in `lib/content.ts` is largely placeholder and the
-listing is the only place the real numbers exist.
+the amenity list. Henrik wants the site to carry the same information.
+
+The per-unit content has since been written from it — names, taglines, `about`,
+chips, specs — so this is now the reference for CHECKING a fact, not a backlog.
+Sanity holds the live copy; `lib/content.ts` is the typed fallback and is only as
+current as someone kept it.
 
 All four apartments share one listing page; the `#RD…` fragment is what selects
 a room, so it is the only part of the query string worth keeping. Strip the
@@ -64,21 +67,47 @@ The listing is a reference, not something to copy verbatim.
 - **Keep the accessibility facts.** Ground floor and wheelchair accessible are a
   real differentiator here and are easy to lose in the noise.
 
-## The current unit lineup is fictional
+## The unit lineup — REBUILT, and the ids still lie
 
-This is not a mapping problem. The four units in `lib/content.ts` — `studio`
-(34 m²), `one-bed` (90 m², 1.5 baths), `two-bed` (78 m², sleeps 5, two
-bedrooms), `loft` (44 m², garden) — **do not correspond to the four real
-apartments**. The listing has no studio, no two-bedroom and no loft: it has
-three 90 m² one-bedrooms and one 48 m² one-bedroom, each with a single king bed.
+The fictional lineup (`studio`, `one-bed`, `two-bed`, `loft`) is gone. The four
+units are 101 / 201 / 301 / 302, with real names, copy and prices.
 
-So `two-bed` advertises a two-bedroom sleeping five that does not exist. That is
-the one defect here that can actually cost a booking, and it outranks any
-amenity work.
+**The Sanity document ids were never renamed, and still spell the old lineup.**
+An id is fixed at creation, so renaming means recreating the document; the ids
+are invisible to guests and every `booking` references a unit by `_id`, so they
+were left alone. This is the mapping — check it before touching unit data:
 
-The fix is to **rebuild the unit set as 101 / 201 / 301 / 302**, not to rename
-the existing four. Doing so changes slugs, so check for published URLs and
-existing Sanity `booking` documents pointing at the old slugs first.
+| Slug | Sanity `_id` | Unit | Size | Baths | Floor | Outdoor |
+| --- | --- | --- | --- | --- | --- | --- |
+| `apartment-1` | `unit-two-bed` | **101** | 90 m² | 2 | ground | patio, wheelchair accessible |
+| `apartment-4` | `unit-loft` | **201** | 90 m² | 2 | 2nd | — |
+| `apartment-2` | `unit-studio` | **301** | 90 m² | 2 | top | — |
+| `apartment-3` | `unit-one-bed` | **302** | 48 m² | 1 | top | balcony + terrace |
 
-Rents are still unknown — every price in `lib/content.ts` is a placeholder
-attached to a unit that does not exist, so none of them carry over.
+`code` on each document carries the real number and is the field to trust.
+
+Rents are set: **$1,490/mo** ($89/night) for the three 90 m² units, **$1,150/mo**
+($75/night) for 302, deposit one month.
+
+The slugs are still `apartment-N`, which carries no information and does not
+track the floors. Changing them is now SAFE — a renamed apartment keeps its old
+addresses in `previousSlugs` and the page permanently redirects them — but it is
+also low value. Do it only alongside something that needs it.
+
+## The building has other operators in it
+
+Rizz Suites is a 27-condo development, not Henrik's property. At least two other
+commercial identities share the address: the developer (`rizzsuites.com`) and
+"Instyle Residences at RIZZ SUITES", a separate operator with its own Booking
+listing, TripAdvisor page and restaurant.
+
+So `buildingName` is published as schema.org `containedInPlace` — a place these
+apartments sit inside — and never as `alternateName`. Claiming the name would be
+inaccurate and a land grab on someone else's brand.
+
+It also means: do not create a Google Business Profile at this address, and do
+not chase "Rizz Suites" as a head term — the developer's own domain and a
+same-building competitor own it. The winnable queries are the comparison tail
+(`Rizz Suites price`, `Rizz Suites monthly`, `direct`), where Henrik's advantages
+are the ones nobody else there is selling: long stays, no commission, and costs
+stated in the open.

@@ -220,6 +220,15 @@ export interface SiteContent {
   locale?: import("@/lib/locales").Locale;
   property: {
     name: string;
+    /**
+     * The building these apartments sit inside, when it has a name of its own.
+     *
+     * A PLACE, not a second name for this business — other operators let units in
+     * the same building, so claiming the name as our own would be both inaccurate
+     * and a land grab. It is published as schema.org `containedInPlace` and shown
+     * with the address, which is what a guest arriving by car needs anyway.
+     */
+    buildingName: string;
     addressLine: string;
     city: string;
     region: string;
@@ -475,6 +484,7 @@ const houseRules: Term[] = [
 export const content: SiteContent = {
   property: {
     name: "Henrik Sosúa",
+    buildingName: "Rizz Suites",
     addressLine: "Calle Dr. Rosen, El Batey",
     city: "Sosúa",
     // The region alone — the country is a separate field in the JSON-LD, and

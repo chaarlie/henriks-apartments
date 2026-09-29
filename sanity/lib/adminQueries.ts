@@ -59,7 +59,7 @@ export const adminBookingsQuery = groq`
 
 export const adminSettingsQuery = groq`
   *[_id == "siteSettings"][0]{
-    propertyName, city, region, whatsappNumber,
+    propertyName, buildingName, city, region, whatsappNumber,
     languages, ownerSince, replyTime, hostNote,
     checkIn, checkOut, stayNote,
     fxRate, internetMbps, "fxRateAsOf": coalesce(fxRateAsOf, _updatedAt),

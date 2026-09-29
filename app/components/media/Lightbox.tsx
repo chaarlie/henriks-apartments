@@ -214,6 +214,18 @@ function Provider({
   return <LightboxContext value={value}>{children}</LightboxContext>;
 }
 
+/**
+ * The photo's shape, or 3:2 when the asset never reported its size.
+ *
+ * Shared because the dialog and the stage must agree exactly: the dialog is sized
+ * from it and the stage fills the dialog at the same ratio. Computing it twice is
+ * how the first attempt at this left a blue margin — the stage hugged the photo
+ * and the dialog stayed a fixed 1180px, so the bars moved from inside the stage to
+ * either side of it.
+ */
+const ratioOf = (p: LightboxPhoto | null): number =>
+  p?.width && p?.height ? p.width / p.height : 1.5;
+
 /** The frame. Renders nothing until something is open, so the markup for a
  *  closed viewer costs an empty <dialog> and no images. */
 function Dialog({ children }: { children: ReactNode }) {
@@ -235,7 +247,17 @@ function Dialog({ children }: { children: ReactNode }) {
         with `margin:auto`, and Tailwind's preflight zeroes margin on every
         element — without this the dialog pins to the top-left.
       */
-      className="m-auto max-h-[94vh] w-[min(1180px,94vw)] max-w-none overflow-hidden rounded-[18px] bg-ink p-0 text-white backdrop:bg-[rgba(3,18,30,0.86)] backdrop:backdrop-blur-sm"
+      className={`m-auto max-h-[94vh] max-w-none overflow-hidden rounded-[18px] bg-ink p-0 text-white backdrop:bg-[rgba(3,18,30,0.86)] backdrop:backdrop-blur-sm ${
+        reduced ? "" : "transition-[width] duration-200 ease-out"
+      }`}
+      /*
+        Width follows the PHOTO, so the frame hugs it and no background shows
+        beside it. Whichever of the three is smallest wins: the design's 1180px
+        ceiling, the viewport, or the width a 72vh-tall photo of this shape needs.
+        The caption and the thumbnail strip are plain blocks, so they take the same
+        width and stay flush with the image.
+      */
+      style={{ width: `min(1180px, 94vw, calc(72vh * ${ratioOf(current)}))` }}
     >
       {current && (
         <motion.div
@@ -259,31 +281,19 @@ function Stage({ children }: { children?: ReactNode }) {
   if (!current) return null;
 
   /*
-    The stage takes the PHOTO's shape, rather than the photo being letterboxed
-    into a fixed one.
+    Fills the dialog at the photo's own ratio. The dialog is already sized from
+    that same ratio (see ratioOf), so the image meets all four edges and the panel
+    behind it is never visible — whatever shape the photo is.
 
-    It was locked to `aspect-[3/2]` with `object-contain`, so anything shaped
-    differently showed the dark panel behind it: the two 16:9 photos in every
+    It used to be locked to `aspect-[3/2]` with `object-contain`, which showed the
+    panel behind anything shaped differently: the two 16:9 photos in every
     apartment lost a band top and bottom, and the portrait shot in 201 and 301 sat
-    between two wide blue margins.
-
-    Sized from the HEIGHT — `height: 72vh` with the photo's aspect ratio — because
-    an aspect ratio alone does not fix the portrait case. With a fixed width, a tall
-    photo hits max-height, the box keeps its width, and the side margins come
-    straight back. Deriving width from height lets the box narrow instead, so it
-    hugs the photo whichever way round it is. `max-w-full` then clamps anything
-    wider than the dialog, and the aspect ratio shrinks the height to match.
-
-    Dimensions come from the asset, and fall back to 3:2 rather than producing an
-    invalid `aspect-ratio` if one is ever missing.
+    between two wide margins.
   */
-  const ratio =
-    current.width && current.height ? `${current.width} / ${current.height}` : "3 / 2";
-
   return (
     <div
-      className="relative mx-auto max-h-[72vh] max-w-full overflow-hidden bg-[#04121E]"
-      style={{ aspectRatio: ratio, height: "72vh", width: "auto" }}
+      className="relative w-full overflow-hidden bg-[#04121E]"
+      style={{ aspectRatio: ratioOf(current) }}
     >
       {/*
         Both frames sit on the stage for a moment, so stepping through a set
